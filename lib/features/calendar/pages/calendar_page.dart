@@ -4,9 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
 import '../../../screens/entry_editor.dart';
 import '../../../state/providers.dart';
 import '../../../state/settings_controller.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../widgets/day_detail.dart';
 import '../widgets/month_grid.dart';
 import '../widgets/week_strip.dart';
@@ -60,68 +63,56 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final selectedEntries = visibleEntries.where((entry) => entry.displayDate == _selected).toList();
     final selectedShifts = visibleShifts.where((shift) => shift.displayDate == _selected).toList();
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-        children: [
-          _CalendarHeader(
-            title: _title(),
-            monthMode: _monthMode,
-            onPrevious: () => _shift(-1),
-            onNext: () => _shift(1),
-            onToday: _goToToday,
-            onModeChanged: (value) => setState(() {
-              _monthMode = value;
-              _visibleMonth = LocalDate(_selected.year, _selected.month, 1);
-            }),
-          ),
-          const SizedBox(height: 14),
-          if (entriesState.hasError)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                context.l10n.couldNotLoadDay('${entriesState.error}'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          if (shiftsState.hasError)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                context.l10n.couldNotLoadShifts('${shiftsState.error}'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          if (_monthMode)
-            MonthGrid(
-              month: _visibleMonth,
-              selected: _selected,
-              today: today,
-              weekStart: weekStart,
-              markers: markers,
-              shiftDays: shiftDays,
-              onSelected: _select,
-            )
-          else
-            WeekStrip(
-              selected: _selected,
-              today: today,
-              weekStart: weekStart,
-              markers: markers,
-              shiftDays: shiftDays,
-              onSelected: _select,
-            ),
-          const SizedBox(height: 16),
-          const Divider(),
-          CalendarDayDetail(
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      children: [
+        _CalendarHeader(
+          title: _title(),
+          monthMode: _monthMode,
+          onPrevious: () => _shift(-1),
+          onNext: () => _shift(1),
+          onToday: _goToToday,
+          onModeChanged: (value) => setState(() {
+            _monthMode = value;
+            _visibleMonth = LocalDate(_selected.year, _selected.month, 1);
+          }),
+        ),
+        const SizedBox(height: 14),
+        if (entriesState.hasError) ManeNotice(text: context.l10n.couldNotLoadDay('${entriesState.error}')),
+        if (shiftsState.hasError) ManeNotice(text: context.l10n.couldNotLoadShifts('${shiftsState.error}')),
+        SoftCard(
+          padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+          child: _monthMode
+              ? MonthGrid(
+                  month: _visibleMonth,
+                  selected: _selected,
+                  today: today,
+                  weekStart: weekStart,
+                  markers: markers,
+                  shiftDays: shiftDays,
+                  onSelected: _select,
+                )
+              : WeekStrip(
+                  selected: _selected,
+                  today: today,
+                  weekStart: weekStart,
+                  markers: markers,
+                  shiftDays: shiftDays,
+                  onSelected: _select,
+                ),
+        ),
+        const SizedBox(height: 12),
+        SoftCard(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          child: CalendarDayDetail(
             date: _selected,
             entries: selectedEntries,
             shifts: selectedShifts,
             spaces: spaces,
             onAdd: () => showEntryEditor(context, initialDate: _selected, spaces: spaces),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -191,39 +182,47 @@ class _CalendarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionLabel(context.l10n.calendar, color: c.accent),
         Row(
           children: [
-            Expanded(child: Text(title, style: theme.textTheme.headlineSmall)),
-            IconButton(
-              onPressed: onPrevious,
-              icon: const Icon(Icons.chevron_left),
+            Expanded(
+              child: Text(title, style: ManeType.headline(23, color: c.text)),
+            ),
+            GlassIconButton(
+              icon: Icons.chevron_left,
               tooltip: monthMode ? context.l10n.previousMonth : context.l10n.previousWeek,
+              size: 36,
+              onTap: onPrevious,
             ),
-            IconButton(
-              onPressed: onToday,
-              icon: const Icon(Icons.today_outlined),
+            const SizedBox(width: 8),
+            GlassIconButton(
+              icon: Icons.today_outlined,
               tooltip: context.l10n.jumpToToday,
+              size: 36,
+              onTap: onToday,
             ),
-            IconButton(
-              onPressed: onNext,
-              icon: const Icon(Icons.chevron_right),
+            const SizedBox(width: 8),
+            GlassIconButton(
+              icon: Icons.chevron_right,
               tooltip: monthMode ? context.l10n.nextMonth : context.l10n.nextWeek,
+              size: 36,
+              onTap: onNext,
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        SegmentedButton<bool>(
+        const SizedBox(height: 10),
+        ManeSegmented<bool>(
           segments: [
-            ButtonSegment(value: true, label: Text(context.l10n.monthView)),
-            ButtonSegment(value: false, label: Text(context.l10n.weekView)),
+            ManeSegment(value: true, label: context.l10n.monthView),
+            ManeSegment(value: false, label: context.l10n.weekView),
           ],
-          selected: {monthMode},
-          showSelectedIcon: false,
-          onSelectionChanged: (values) => onModeChanged(values.first),
+          selected: monthMode,
+          onChanged: onModeChanged,
+          compact: true,
         ),
       ],
     );

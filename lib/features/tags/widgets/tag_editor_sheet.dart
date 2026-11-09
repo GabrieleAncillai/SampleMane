@@ -4,15 +4,15 @@ import 'package:mane_core/mane_core.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
 import '../../../state/providers.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../tag_colors.dart';
 
 Future<void> showTagEditor(BuildContext context, {Tag? tag, required List<Space> spaces}) =>
-    showModalBottomSheet<void>(
+    showAppSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
       builder: (context) => TagEditorSheet(tag: tag, spaces: spaces),
     );
 
@@ -50,42 +50,26 @@ class _TagEditorSheetState extends ConsumerState<TagEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-        child: Form(
+    final c = context.mc;
+    return AppSheet(
+      title: widget.tag == null ? l10n.addTag : l10n.editTag,
+      children: [
+        Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.tag == null ? l10n.addTag : l10n.editTag,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    tooltip: l10n.close,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _nameController,
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(labelText: l10n.tagName, border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.tagName),
                 validator: (value) => value == null || value.trim().isEmpty ? l10n.tagNameRequired : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
                 initialValue: _spaceId,
-                decoration: InputDecoration(labelText: l10n.tagSpace, border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.tagSpace),
                 items: [
                   DropdownMenuItem<String?>(value: null, child: Text(l10n.tagSpaceAny)),
                   for (final space in widget.spaces)
@@ -108,51 +92,41 @@ class _TagEditorSheetState extends ConsumerState<TagEditorSheet> {
                 onChanged: (value) => setState(() => _spaceId = value),
               ),
               const SizedBox(height: 16),
-              Text(l10n.tagColor, style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 8),
+              Text(l10n.tagColor, style: ManeType.label(12.5, color: c.textSecondary)),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 children: [
                   for (final color in tagPalette)
-                    InkWell(
+                    Pressable(
                       onTap: () => setState(() => _color = color),
-                      customBorder: const CircleBorder(),
+                      scale: 0.9,
+                      semanticLabel: l10n.tagColor,
                       child: Container(
                         width: 34,
                         height: 34,
                         decoration: BoxDecoration(
                           color: tagColor(color),
                           shape: BoxShape.circle,
-                          border: color == _color
-                              ? Border.all(color: Theme.of(context).colorScheme.onSurface, width: 2.5)
-                              : null,
+                          border: color == _color ? Border.all(color: c.text, width: 2.5) : null,
                         ),
-                        child: color == _color
-                            ? Icon(Icons.check, size: 18, color: Theme.of(context).colorScheme.onPrimary)
-                            : null,
+                        child: color == _color ? Icon(Icons.check, size: 18, color: c.onAccent) : null,
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               FilledButton(
                 onPressed: _saving ? null : _save,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.save),
-                ),
+                child: _saving
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(l10n.save),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 

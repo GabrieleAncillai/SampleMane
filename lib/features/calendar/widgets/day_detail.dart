@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../../../widgets/entry_widgets.dart';
 import '../../shifts/widgets/shift_checklist_view.dart';
 
@@ -24,7 +27,7 @@ class CalendarDayDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final title = DateFormat.yMMMMEEEEd(locale).format(date.toDateTime());
     final checklistShifts = <String, ShiftOccurrence>{};
@@ -37,30 +40,32 @@ class CalendarDayDetail extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
-            IconButton(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add, size: 20),
-              tooltip: context.l10n.addOnThisDay,
+            Expanded(
+              child: Text(title, style: ManeType.title(15, color: c.text)),
             ),
+            GlassIconButton(icon: Icons.add, tooltip: context.l10n.addOnThisDay, size: 34, onTap: onAdd),
           ],
         ),
         if (shifts.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           for (final shift in shifts) ShiftTile(occurrence: shift),
           for (final shift in checklistShifts.values)
-            ShiftChecklistSection(patternId: shift.pattern.id, date: shift.date),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ShiftChecklistSection(patternId: shift.pattern.id, date: shift.date),
+            ),
         ],
         if (entries.isEmpty && shifts.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Text(
-              context.l10n.noEntriesOnDay,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
+          AppEmptyState(
+            icon: Icons.event_available_outlined,
+            title: context.l10n.noEntriesOnDay,
+            compact: true,
           )
         else
-          for (final entry in entries) EntryTile(occurrence: entry, spaces: spaces),
+          for (var index = 0; index < entries.length; index++) ...[
+            if (index > 0) const Divider(height: 1, indent: 44),
+            EntryTile(occurrence: entries[index], spaces: spaces, dense: true),
+          ],
       ],
     );
   }

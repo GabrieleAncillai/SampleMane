@@ -1,6 +1,8 @@
 # Mane: full docs
 
-Status: v0.5, release candidate. Last updated 2026-11-09.
+Status: v0.6, visual foundation complete. Last updated 2026-11-09. The active
+completion program is in [completion-plan.md](completion-plan.md); the
+constraint audit is in [compliance-audit.md](compliance-audit.md).
 
 This is the long version. The short version is in [overview.md](overview.md).
 The file-by-file map of the reference projects is in
@@ -736,21 +738,60 @@ shifts; `Ctrl+F` and `Ctrl+1..3` shortcuts; ARB parity plus a literal-scanner
 test; an O(1) recurrence ordinal; `.github/workflows/release.yml` and
 `docs/release.md` for signing and distribution.
 
-**Remaining v1.0 item:** real-device notification delivery, reboot, battery
+**Remaining v0.5 items:** real-device notification delivery, reboot, battery
 optimization and timezone changes still need the user's Android checklist.
-Everything else is shipped, tested and documented.
+Everything shipped in v0.5 is tested and documented, but v1.0 has a wider scope.
+
+### v0.6 Visual foundation and truth pass (done)
+
+- [x] Bundle the reference font family and a real type scale.
+- [x] Apply `ManeColors` through `context.mc` and add component themes.
+- [x] Port the shared UI kit and the reference-style shell.
+- [x] Sweep every shipped screen to use the kit.
+- [x] Add shell/component smoke or golden tests.
+- [x] Correct the reference map and screenshots.
+
+**Shipped in v0.6:** Nunito and the `ManeType` scale; a hand-authored palette
+with space, state, glass, nav and shadow tokens; component themes for app bar,
+cards, sheets, dialogs, snack bars, navigation, buttons, inputs, chips, switches,
+date and time pickers; the `lib/core/widgets` kit (`SoftCard`, `AppSheet`,
+`SectionLabel`, `Pressable`, `TinySwitch`, `GlassSurface`, `AppEmptyState`,
+`ManeNotice`, `FadeThrough`, `ManePage`, `ManeNavBar`, `ManeSegmented`,
+`ManeSearchField`); the dotted paper background; the floating shell; the screen
+sweep; `test/visual_kit_test.dart`; and `docs/screenshots/`.
+
+**Deviation from the references:** Mane keeps GymMane's Nunito, warm palette,
+round cards and settings rows, and Streak's floating nav, sheet motion and type
+hierarchy. It does not copy GymMane's photo/dot background picker or Streak's
+three selectable nav designs; those are product options Mane does not ship. The
+result is the adapted reference language, not a new visual identity.
+
+### v0.7 Calendar, recurrence and shift completeness
+
+- [ ] Day timeline with shift background blocks.
+- [ ] Multi-day entries and recurrence exceptions.
+- [ ] Tagged shifts and per-slot checklist keys.
+- [ ] Read-only ICS export, per-pattern sleep buffers and real-file ICS hardening.
+
+### v0.8 Data interchange, home tracking and privacy
+
+- [ ] GymMane schedule import, automatic local backups and CSV.
+- [ ] Inventory adjustments, shopping grouping and a maintenance view.
+- [ ] Optional local PIN app lock.
+
+### v0.9 MCP, LAN sync and notification reliability
+
+- [ ] Full MCP tool set and streamable HTTP sessions.
+- [ ] Persistent read-only LAN snapshots and a richer query payload.
+- [ ] Work-hours visibility, quiet hours, custom reminder times and actions.
 
 ### v1.0 finish line
 
-Mane is v1.0 when v0.1.5 through v0.5 are complete, the app is daily-usable
-offline on Android, Linux builds and runs, backup and restore are proven by
-tests, reminders survive reboot and timezone changes, LAN sync and MCP are
-optional and documented, English and Spanish are complete, and `flutter
-analyze`, both test suites and both platform builds pass.
-
-The v0.1.5 through v0.5 work is complete. v1.0 is waiting only on the user's
-real-device notification, reboot, battery-optimization and timezone checklist,
-documented in [device-checklist.md](device-checklist.md).
+Mane is v1.0 when v0.1.5 through v0.9 are complete, every generalized scenario in
+[completion-plan.md](completion-plan.md) passes, the visual layer follows the
+references or documents a deviation, the real-device checklist passes, and
+`flutter analyze`, both test suites, the format check and both platform builds
+succeed. v0.5 is shipped; v0.6 through v1.0 are the active program.
 
 ## 10. Contributing
 

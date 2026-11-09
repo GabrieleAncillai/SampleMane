@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/i18n/l10n.dart';
@@ -21,6 +22,10 @@ class ManeApp extends ConsumerWidget {
       locale: settings.locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: ManeTheme.systemBars(Theme.of(context).brightness),
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const AppShell(),
     );
   }

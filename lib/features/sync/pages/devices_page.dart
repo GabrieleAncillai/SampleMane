@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../../../models/local_identity.dart';
 import '../../../models/paired_device.dart';
 import '../../../models/remote_snapshot.dart';
@@ -26,18 +29,17 @@ class DevicesPage extends ConsumerWidget {
     final identity = ref.watch(identityProvider);
     final paired = ref.watch(pairedDevicesProvider).value ?? const <PairedDevice>[];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.devices),
-        actions: [
-          IconButton(
-            onPressed: () => ref.read(syncServiceProvider).refresh(),
-            tooltip: l10n.refreshDevices,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: identity.when(
+    return ManePage(
+      title: l10n.devices,
+      subtitle: l10n.devicesSubtitle,
+      actions: [
+        GlassIconButton(
+          icon: Icons.refresh,
+          tooltip: l10n.refreshDevices,
+          onTap: () => ref.read(syncServiceProvider).refresh(),
+        ),
+      ],
+      child: identity.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text('$error')),
         data: (value) {
@@ -107,11 +109,11 @@ class _IdentitySetupState extends ConsumerState<_IdentitySetup> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+      padding: const EdgeInsets.only(bottom: 20),
       children: [
-        Text(l10n.pairingIdentity, style: Theme.of(context).textTheme.headlineSmall),
+        Text(l10n.pairingIdentity, style: ManeType.headline(20, color: context.mc.text)),
         const SizedBox(height: 6),
-        Text(l10n.pairingIdentitySubtitle),
+        Text(l10n.pairingIdentitySubtitle, style: ManeType.body(13, color: context.mc.textSecondary)),
         const SizedBox(height: 20),
         TextField(
           controller: _username,
@@ -165,35 +167,36 @@ class _DevicesBody extends ConsumerWidget {
     return ValueListenableBuilder<SyncState>(
       valueListenable: sync.state,
       builder: (context, state, _) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        padding: const EdgeInsets.only(bottom: 20),
         children: [
           _IdentityCard(identity: identity, state: state),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Text(l10n.pairDevice, style: Theme.of(context).textTheme.titleMedium)),
+              Expanded(
+                child: Text(l10n.pairDevice, style: ManeType.title(16, color: context.mc.text)),
+              ),
               FilledButton.tonalIcon(
                 onPressed: () => Navigator.of(
                   context,
                 ).push(MaterialPageRoute<void>(builder: (_) => const PairDevicePage())),
-                icon: const Icon(Icons.add_link),
+                icon: const Icon(Icons.add_link, size: 18),
                 label: Text(l10n.pair),
               ),
             ],
           ),
           if (!state.discoveryAvailable && state.running)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                l10n.discoveryUnavailable,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
+            ManeNotice(text: l10n.discoveryUnavailable, tone: ManeNoticeTone.warning),
           const SizedBox(height: 12),
           if (devices.isEmpty)
-            Text(
-              l10n.noPairedDevices,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            SoftCard(
+              padding: EdgeInsets.zero,
+              child: AppEmptyState(
+                icon: Icons.devices_other_outlined,
+                title: l10n.noPairedDevices,
+                message: l10n.discoveryUnavailable,
+                compact: true,
+              ),
             )
           else
             for (final device in devices)
@@ -217,32 +220,47 @@ class _IdentityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    final c = context.mc;
+    return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.thisDevice, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('${identity.username} · ${identity.deviceName}'),
-          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(11)),
+                child: Icon(Icons.devices, size: 19, color: c.accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.thisDevice, style: ManeType.label(10.5, color: c.textTertiary)),
+                    Text(
+                      '${identity.username} · ${identity.deviceName}',
+                      style: ManeType.body(14, weight: FontWeight.w700, color: c.text),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
           Text(
             '${l10n.identityFingerprint}: ${shortFingerprint(fingerprintOfPemSync(identity.certificatePem))}',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: ManeType.body(11, color: c.textSecondary),
           ),
           const SizedBox(height: 4),
           Text(
             state.running ? l10n.serverOnPort(state.port) : l10n.serverOff,
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: ManeType.body(11, color: state.running ? c.success : c.textSecondary),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Wrap(
-            spacing: 8,
+            spacing: 4,
             children: [
               TextButton(onPressed: () => _editProfile(context, ref), child: Text(l10n.editIdentity)),
               TextButton(onPressed: () => _changePin(context, ref), child: Text(l10n.changePin)),
@@ -349,57 +367,74 @@ class _PairedDeviceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
+    final c = context.mc;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final lastSeen = device.lastSeenAt == null
         ? l10n.neverReached
         : l10n.lastSeen(DateFormat.yMMMd(locale).add_Hm().format(device.lastSeenAt!.toLocal()));
 
-    return Container(
+    return SoftCard(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(color: c.workSoft, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.phone_android, size: 18, color: c.work),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(device.name, style: theme.textTheme.titleSmall, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  device.name,
+                  style: ManeType.body(14, weight: FontWeight.w700, color: c.text),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              IconButton(
+              GlassIconButton(
+                icon: Icons.refresh,
                 tooltip: l10n.refreshDevices,
-                onPressed: () => ref.read(syncServiceProvider).refreshDevice(device.id),
-                icon: const Icon(Icons.refresh, size: 20),
+                size: 32,
+                onTap: () => ref.read(syncServiceProvider).refreshDevice(device.id),
               ),
-              IconButton(
+              const SizedBox(width: 6),
+              GlassIconButton(
+                icon: Icons.link_off,
                 tooltip: l10n.unpair,
-                onPressed: () => _confirmUnpair(context, ref),
-                icon: const Icon(Icons.link_off, size: 20),
+                size: 32,
+                onTap: () => _confirmUnpair(context, ref),
               ),
             ],
           ),
+          const SizedBox(height: 6),
           Text(
             '${device.username} · ${device.host.isEmpty ? '' : '${device.host}:${device.port}'}',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: ManeType.body(11.5, color: c.textSecondary),
           ),
           const SizedBox(height: 2),
-          Text(
-            lastSeen,
-            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
+          Text(lastSeen, style: ManeType.body(11, color: c.textTertiary)),
           if (error != null) ...[
             const SizedBox(height: 6),
-            Text(error!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+            Text(error!, style: ManeType.body(11.5, color: c.danger)),
           ],
           if (snapshot != null) ...[
             const SizedBox(height: 8),
-            Text(l10n.remoteToday(snapshot!.todayEntries.length, snapshot!.todayShifts.length)),
-            if (snapshot!.nextShiftLabel != null) Text(l10n.remoteNextShift(snapshot!.nextShiftLabel!)),
-            Text(l10n.remoteShopping(snapshot!.openShopping)),
+            Text(
+              l10n.remoteToday(snapshot!.todayEntries.length, snapshot!.todayShifts.length),
+              style: ManeType.body(12, color: c.text),
+            ),
+            if (snapshot!.nextShiftLabel != null)
+              Text(
+                l10n.remoteNextShift(snapshot!.nextShiftLabel!),
+                style: ManeType.body(12, color: c.textSecondary),
+              ),
+            Text(
+              l10n.remoteShopping(snapshot!.openShopping),
+              style: ManeType.body(12, color: c.textSecondary),
+            ),
           ],
         ],
       ),
@@ -436,31 +471,58 @@ class _PairDevicePageState extends ConsumerState<PairDevicePage> {
     final l10n = context.l10n;
     final identity = ref.watch(identityProvider).value;
     if (identity == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l10n.pairDevice)),
-        body: Center(
-          child: Padding(padding: const EdgeInsets.all(24), child: Text(l10n.identityRequired)),
-        ),
+      return ManePage(
+        title: l10n.pairDevice,
+        child: Center(child: Text(l10n.identityRequired)),
       );
     }
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.pairDevice),
-          bottom: TabBar(
-            tabs: [
-              Tab(text: l10n.showPairingCode),
-              Tab(text: l10n.enterPairingCode),
-            ],
+    return _PairTabs(identity: identity);
+  }
+}
+
+class _PairTabs extends StatefulWidget {
+  const _PairTabs({required this.identity});
+
+  final LocalIdentity identity;
+
+  @override
+  State<_PairTabs> createState() => _PairTabsState();
+}
+
+class _PairTabsState extends State<_PairTabs> {
+  bool _host = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return ManePage(
+      title: l10n.pairDevice,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ManeSegmented<bool>(
+              segments: [
+                ManeSegment(value: true, label: l10n.showPairingCode),
+                ManeSegment(value: false, label: l10n.enterPairingCode),
+              ],
+              selected: _host,
+              onChanged: (value) => setState(() => _host = value),
+              compact: true,
+            ),
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _HostPairingTab(identity: identity),
-            _GuestPairingTab(),
-          ],
-        ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: IndexedStack(
+              index: _host ? 0 : 1,
+              children: [
+                _HostPairingTab(identity: widget.identity),
+                const _GuestPairingTab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

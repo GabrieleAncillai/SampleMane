@@ -14,10 +14,15 @@ git clone https://github.com/InlitX/streak.git ../Streak
 | Area | GymMane | Streak | Notes |
 |---|---|---|---|
 | App shell, tabs, navigation | `lib/app/gymmane_app.dart`, `lib/app/app_shell.dart` | `lib/app/streak_app.dart`, `lib/app/home_shell.dart`, `lib/app/classic_nav_bar.dart`, `lib/core/minimal/minimal_nav.dart`, `lib/core/express/express_nav.dart` | Streak has several complete nav designs; GymMane has the simpler shell. |
-| Theme, colors, typography | `lib/theme/app_colors.dart`, `lib/theme/app_theme.dart` | `lib/app/theme/app_palette.dart`, `lib/app/theme/app_theme.dart`, `lib/app/theme/app_tokens.dart`, `lib/app/theme/color_themes.dart` | Use theme extensions, never scattered raw colors. |
+| Theme, colors, typography | `lib/theme/app_colors.dart`, `lib/theme/app_theme.dart`, `assets/fonts/` | `lib/app/theme/app_palette.dart`, `lib/app/theme/app_theme.dart`, `lib/app/theme/app_tokens.dart`, `lib/app/theme/color_themes.dart` | Shipped. Mane bundles Nunito from GymMane (`assets/fonts/`), uses `ManeColors` through `context.mc`, and `ManeType` for the scale. `ManeTheme` carries the component themes. |
+| Shared UI kit | `lib/widgets/ui_kit.dart`, `lib/widgets/glass.dart`, `lib/widgets/dialogs.dart` | `lib/core/widgets/section_label.dart`, `app_empty_state.dart`, `app_text_field.dart`, `sheet_action.dart`, `glass.dart`, `page_motion.dart` | Shipped in `lib/core/widgets/ui_kit.dart` plus its parts: `SoftCard`, `AppSheet`, `SectionLabel`, `Pressable`, `TinySwitch`, `GlassSurface`, `AppEmptyState`, `ManeNotice`, `FadeThrough`, `ManePage`, `ManeNavBar`, `ManeSegmented`, `ManeSearchField`. Adapted names, same interaction language. |
 | State and app architecture | `lib/state/fit_state.dart` and its `part` files | `lib/features/*/state/*_controller.dart` | GymMane is one `ChangeNotifier`; Streak is feature-first with `provider`. |
 | Local storage | `lib/services/local_store.dart` | `lib/core/database/local_store.dart`, `lib/core/database/data_location.dart` | Compare with Mane's Drift layer before adding more schema. |
 | Entry / habit editing | `lib/screens/exercise_detail_screen.dart`, `lib/screens/routine_edit_screen.dart`, `lib/screens/settings_screen.dart` | `lib/features/habits/pages/habit_details_page.dart`, `lib/features/habits/widgets/habit_form_schedule.dart`, `lib/features/habits/widgets/habit_form_kind.dart` | Sheets, validation, segmented controls, date/time picking. |
+| App lock and PIN pad | none | `lib/app/app_lock.dart`, `lib/app/app_lock_pin.dart`, `lib/app/pin_pad.dart`, `lib/app/pin_setup_page.dart` | Optional local lock over the existing PIN hash. v0.8. |
+| GymMane schedule import | `lib/state/fit_state.dart` (`weeklyPlan`, `routines`, `trainAt`), `lib/services/local_store.dart`, `lib/services/backup_zip.dart` | none | Read-only import of the weekly plan; never workout logs. v0.8. |
+| Automatic local backup | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/auto_sync.dart` | Rotation and older-schema upgrade without cloud. v0.8. |
+| CSV and calendar export | `lib/services/local_store.dart` (`exportCsv`), `lib/services/fit_export.dart`, `lib/services/plan_share.dart` | `lib/services/import_service.dart`, `lib/services/backup_service.dart` | File-export and share patterns. v0.7/v0.8. |
 | Calendar / month / week | `lib/screens/history_screen.dart`, `lib/screens/timeline_screen.dart` | `lib/features/habits/widgets/activity_calendar.dart`, `lib/core/express/express_month.dart`, `lib/features/habits/pages/day_timeline_page.dart`, `lib/features/habits/widgets/grid_habit_cards.dart` | Streak is the primary calendar reference. |
 | Notifications and reminders | `lib/services/alarm_store.dart`, `lib/services/rest_alarm.dart`, `lib/services/train_reminder.dart`, `lib/services/supplement_reminder.dart` | `lib/services/notification_service.dart`, `lib/services/reminder_schedule.dart`, `lib/services/reminder_sounds.dart` | Streak is the primary reminder reference. |
 | Backup and import | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart`, `lib/services/fitnotes_backup.dart`, `lib/services/workout_import.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/import_service.dart`, `lib/services/auto_sync.dart` | Versioned files, validation, test coverage. |
@@ -50,9 +55,10 @@ git clone https://github.com/InlitX/streak.git ../Streak
 - **Home inventory, ICS import, interval maintenance, sleep window and shift
   checklists.** Neither reference has these planner-specific domains. They are
   implemented and tested in `mane_core`, the repository and the
-  `home_inventory`, `import`, `shifts` and `sleep` feature folders. The visual
-  language and settings rows still come from the references. See the v0.3
-  deviation note in `docs/full-docs.md`.
+  `home_inventory`, `import`, `shifts` and `sleep` feature folders. The settings
+  rows follow the GymMane/Streak patterns; the visual layer is still stock
+  Material and is a v0.6 deliverable. See the v0.3 deviation note in
+  `docs/full-docs.md`.
 - **LAN pairing, query and MCP.** Streak has a shared-folder backup exchange,
   not LAN discovery. Mane implements pinned TLS, a short-code pairing
   handshake, signed read-only queries and a loopback MCP adapter. These stay in
@@ -63,6 +69,15 @@ git clone https://github.com/InlitX/streak.git ../Streak
   Search uses a Drift query in `lib/services/app_database.dart`; the widget
   follows the platform `home_widget` pattern with a Kotlin provider. See the
   v0.5 notes.
+
+- **Work-hours rules, quiet hours and full MCP tool coverage.** Neither
+  reference has these surfaces. They are a v0.9 deliverable, designed against
+  the planner model rather than copied. See `docs/completion-plan.md`.
+- **Visual layer.** v0.6 adapts GymMane's shell, Nunito, warm palette and
+  settings rows, plus Streak's floating nav, sheet shape and page motion. Mane
+  does not ship GymMane's photo/pattern background picker or Streak's three
+  selectable navigation styles; the palette, spacing and component names are
+  planner-specific. Reference screenshots are in `docs/screenshots/`.
 
 ## How to use this map
 

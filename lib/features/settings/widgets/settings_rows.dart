@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/ui_kit.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
+
 class SettingsSection extends StatelessWidget {
   const SettingsSection({super.key, required this.title, required this.children});
 
@@ -8,33 +12,23 @@ class SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final rows = <Widget>[];
     for (var index = 0; index < children.length; index++) {
-      if (index > 0) rows.add(const Divider(height: 1, indent: 56));
+      if (index > 0) rows.add(Divider(height: 1, indent: 58, color: c.border));
       rows.add(children[index]);
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 6),
-            child: Text(
-              title.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
-            ),
+          SectionLabel(title),
+          SoftCard(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            clip: true,
+            radius: 20,
             child: Column(children: rows),
           ),
         ],
@@ -61,25 +55,46 @@ class SettingsNavRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: _SettingsIcon(icon: icon),
-      title: Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle!),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (value != null)
-            Text(
-              value!,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right, size: 20),
-        ],
-      ),
+    final c = context.mc;
+    return Pressable(
       onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+        child: Row(
+          children: [
+            _SettingsIcon(icon: icon),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: ManeType.body(14, weight: FontWeight.w700, color: c.text),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: ManeType.body(11.5, color: c.textSecondary),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (value != null) ...[
+              const SizedBox(width: 8),
+              Text(value!, style: ManeType.label(11.5, color: c.textTertiary)),
+            ],
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, size: 19, color: c.textTertiary),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -102,12 +117,35 @@ class SettingsSwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
-      secondary: _SettingsIcon(icon: icon),
-      title: Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle!),
-      value: value,
-      onChanged: onChanged,
+    final c = context.mc;
+    return Pressable(
+      onTap: onChanged == null ? null : () => onChanged!(!value),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+        child: Row(
+          children: [
+            _SettingsIcon(icon: icon),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: ManeType.body(14, weight: FontWeight.w700, color: c.text),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 1),
+                    Text(subtitle!, style: ManeType.body(11.5, color: c.textSecondary)),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            TinySwitch(value: value, onChanged: onChanged, semanticLabel: title),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -128,33 +166,31 @@ class SettingsChoiceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.mc;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _SettingsIcon(icon: icon, compact: true),
-              const SizedBox(width: 16),
+              _SettingsIcon(icon: icon),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: Theme.of(context).textTheme.bodyLarge),
-                    if (subtitle != null)
-                      Text(
-                        subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                    Text(
+                      title,
+                      style: ManeType.body(14, weight: FontWeight.w700, color: c.text),
+                    ),
+                    if (subtitle != null) Text(subtitle!, style: ManeType.body(11.5, color: c.textSecondary)),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           Align(
             alignment: Alignment.centerLeft,
             child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: choice),
@@ -166,19 +202,18 @@ class SettingsChoiceRow extends StatelessWidget {
 }
 
 class _SettingsIcon extends StatelessWidget {
-  const _SettingsIcon({required this.icon, this.compact = false});
+  const _SettingsIcon({required this.icon});
 
   final IconData icon;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
+    final c = context.mc;
     return Container(
-      width: compact ? 24 : 32,
-      height: compact ? 24 : 32,
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-      child: Icon(icon, size: compact ? 15 : 18, color: color),
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(10)),
+      child: Icon(icon, size: 17, color: c.accent),
     );
   }
 }

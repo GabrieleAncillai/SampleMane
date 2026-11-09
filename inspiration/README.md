@@ -6,7 +6,9 @@ borrowing is welcome.
 
 GymMane and Streak by InlitX are the primary style references for the app. Use
 their screens, components, motion and typography first; use this folder for
-extra references and details worth adopting.
+extra references and details worth adopting. The concrete visual target and
+acceptance criteria are in `docs/completion-plan.md` (v0.6); this folder is for
+additional references, not a second design system.
 
 ## How to name files
 

@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
 import '../../../models/shopping_item.dart';
 import '../../../state/providers.dart';
 
-Future<void> showShoppingItemSheet(BuildContext context, {ShoppingItem? item}) => showModalBottomSheet<void>(
+Future<void> showShoppingItemSheet(BuildContext context, {ShoppingItem? item}) => showAppSheet<void>(
   context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  showDragHandle: true,
   builder: (context) => ShoppingItemSheet(item: item),
 );
 
@@ -56,36 +54,19 @@ class _ShoppingItemSheetState extends ConsumerState<ShoppingItemSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final homeItems = ref.watch(homeItemsProvider).value ?? const [];
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-        child: Form(
+    return AppSheet(
+      title: widget.item == null ? l10n.addShoppingItem : l10n.editShoppingItem,
+      children: [
+        Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.item == null ? l10n.addShoppingItem : l10n.editShoppingItem,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    tooltip: l10n.close,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _name,
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(labelText: l10n.itemName, border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.itemName),
                 validator: (value) => value == null || value.trim().isEmpty ? l10n.titleRequired : null,
               ),
               const SizedBox(height: 12),
@@ -95,17 +76,14 @@ class _ShoppingItemSheetState extends ConsumerState<ShoppingItemSheet> {
                     child: TextFormField(
                       controller: _quantity,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: l10n.quantity,
-                        border: const OutlineInputBorder(),
-                      ),
+                      decoration: InputDecoration(labelText: l10n.quantity),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _unit,
-                      decoration: InputDecoration(labelText: l10n.unit, border: const OutlineInputBorder()),
+                      decoration: InputDecoration(labelText: l10n.unit),
                     ),
                   ),
                 ],
@@ -113,7 +91,7 @@ class _ShoppingItemSheetState extends ConsumerState<ShoppingItemSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
                 initialValue: _homeItemId,
-                decoration: InputDecoration(labelText: l10n.linkedItem, border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.linkedItem),
                 items: [
                   DropdownMenuItem<String?>(value: null, child: Text(l10n.noLink)),
                   for (final item in homeItems)
@@ -125,26 +103,19 @@ class _ShoppingItemSheetState extends ConsumerState<ShoppingItemSheet> {
               TextFormField(
                 controller: _note,
                 maxLines: 2,
-                decoration: InputDecoration(labelText: l10n.note, border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.note),
               ),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: _saving ? null : _save,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.save),
-                ),
+                child: _saving
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(l10n.save),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 

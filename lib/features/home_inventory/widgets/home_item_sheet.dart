@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
 import '../../../models/home_item.dart';
 import '../../../state/providers.dart';
 
-Future<void> showHomeItemSheet(BuildContext context, {HomeItem? item}) => showModalBottomSheet<void>(
+Future<void> showHomeItemSheet(BuildContext context, {HomeItem? item}) => showAppSheet<void>(
   context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  showDragHandle: true,
   builder: (context) => HomeItemSheet(item: item),
 );
 
@@ -62,36 +60,19 @@ class _HomeItemSheetState extends ConsumerState<HomeItemSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-        child: Form(
+    return AppSheet(
+      title: widget.item == null ? l10n.addHomeItem : l10n.editHomeItem,
+      children: [
+        Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.item == null ? l10n.addHomeItem : l10n.editHomeItem,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    tooltip: l10n.close,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _name,
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(labelText: l10n.itemName, border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.itemName),
                 validator: (value) => value == null || value.trim().isEmpty ? l10n.titleRequired : null,
               ),
               const SizedBox(height: 12),
@@ -100,20 +81,14 @@ class _HomeItemSheetState extends ConsumerState<HomeItemSheet> {
                   Expanded(
                     child: TextFormField(
                       controller: _category,
-                      decoration: InputDecoration(
-                        labelText: l10n.category,
-                        border: const OutlineInputBorder(),
-                      ),
+                      decoration: InputDecoration(labelText: l10n.category),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _location,
-                      decoration: InputDecoration(
-                        labelText: l10n.location,
-                        border: const OutlineInputBorder(),
-                      ),
+                      decoration: InputDecoration(labelText: l10n.location),
                     ),
                   ),
                 ],
@@ -125,17 +100,14 @@ class _HomeItemSheetState extends ConsumerState<HomeItemSheet> {
                     child: TextFormField(
                       controller: _quantity,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: l10n.quantity,
-                        border: const OutlineInputBorder(),
-                      ),
+                      decoration: InputDecoration(labelText: l10n.quantity),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _unit,
-                      decoration: InputDecoration(labelText: l10n.unit, border: const OutlineInputBorder()),
+                      decoration: InputDecoration(labelText: l10n.unit),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -143,10 +115,7 @@ class _HomeItemSheetState extends ConsumerState<HomeItemSheet> {
                     child: TextFormField(
                       controller: _reorder,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: l10n.reorderLevel,
-                        border: const OutlineInputBorder(),
-                      ),
+                      decoration: InputDecoration(labelText: l10n.reorderLevel),
                     ),
                   ),
                 ],
@@ -155,26 +124,19 @@ class _HomeItemSheetState extends ConsumerState<HomeItemSheet> {
               TextFormField(
                 controller: _notes,
                 maxLines: 2,
-                decoration: InputDecoration(labelText: l10n.note, border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: l10n.note),
               ),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: _saving ? null : _save,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.save),
-                ),
+                child: _saving
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(l10n.save),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 

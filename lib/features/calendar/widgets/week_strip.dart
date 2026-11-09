@@ -3,6 +3,9 @@ import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/date_labels.dart';
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/pressable.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 
 class WeekStrip extends StatelessWidget {
   const WeekStrip({
@@ -63,10 +66,10 @@ class _WeekDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final isSelected = date == selected;
     final isToday = date == today;
-    final ink = isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
+    final ink = isSelected ? c.onAccent : c.text;
     final count = markerColors.length + (hasShift ? 1 : 0);
     final height = 78 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.45);
 
@@ -74,18 +77,18 @@ class _WeekDay extends StatelessWidget {
       button: true,
       selected: isSelected,
       label: context.l10n.calendarDaySemantics('${shortWeekday(context, date.weekday)} ${date.day}', count),
-      child: InkWell(
+      child: Pressable(
         key: ValueKey('week-day-${date.iso}'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        scale: 0.94,
         child: Container(
           height: height,
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(14),
+            color: isSelected ? c.accent : c.surfaceAlt,
+            borderRadius: BorderRadius.circular(15),
             border: isToday && !isSelected
-                ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.55), width: 1.4)
+                ? Border.all(color: c.accent.withValues(alpha: 0.55), width: 1.3)
                 : null,
           ),
           child: Column(
@@ -93,18 +96,15 @@ class _WeekDay extends StatelessWidget {
             children: [
               Text(
                 shortWeekday(context, date.weekday).toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: isSelected ? ink.withValues(alpha: 0.8) : theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 0.5,
-                ),
+                style: ManeType.label(9.5, color: isSelected ? ink.withValues(alpha: 0.8) : c.textTertiary),
               ),
               const SizedBox(height: 2),
               Text(
                 '${date.day}',
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: ManeType.title(
+                  15.5,
                   color: ink,
-                  fontWeight: isSelected || isToday ? FontWeight.w600 : null,
-                ),
+                ).copyWith(fontWeight: isSelected || isToday ? FontWeight.w800 : FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Row(
@@ -112,18 +112,18 @@ class _WeekDay extends StatelessWidget {
                 children: [
                   for (final color in markerColors.take(3))
                     Container(
-                      width: 5,
-                      height: 5,
+                      width: 4.5,
+                      height: 4.5,
                       margin: const EdgeInsets.symmetric(horizontal: 1),
                       decoration: BoxDecoration(color: Color(color), shape: BoxShape.circle),
                     ),
                   if (hasShift)
                     Container(
-                      width: 12,
+                      width: 11,
                       height: 2,
                       margin: const EdgeInsets.only(left: 3),
                       decoration: BoxDecoration(
-                        color: isSelected ? ink.withValues(alpha: 0.7) : theme.colorScheme.tertiary,
+                        color: isSelected ? ink.withValues(alpha: 0.7) : c.work,
                         borderRadius: BorderRadius.circular(1),
                       ),
                     ),

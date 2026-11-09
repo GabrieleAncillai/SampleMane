@@ -25,5 +25,10 @@ repositories. Mane itself is GPL-3.0-only; see [LICENSE](LICENSE) and
 
 ## Assets
 
+- **Nunito** (bundled in `assets/fonts/`, SIL Open Font License 1.1). The same
+  face GymMane uses for its shell and type scale. The license text ships beside
+  the font in `assets/fonts/Nunito-OFL.txt`.
+- Material Icons are provided by Flutter through `uses-material-design`.
+
 Fonts, icons, illustrations, sounds and sample data are credited here when they
 are added. Do not copy an asset without recording its source and license.

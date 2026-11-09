@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/l10n.dart';
 import '../../../core/i18n/reminder_label.dart';
+import '../../../core/widgets/ui_kit.dart';
 import '../../../models/app_settings.dart';
 import '../../../state/providers.dart';
 import '../../../state/settings_controller.dart';
@@ -32,10 +33,10 @@ class SettingsPage extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsProvider.notifier);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.settings)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+    return ManePage(
+      title: l10n.settings,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 20),
         children: [
           SettingsSection(
             title: l10n.appearanceSection,
@@ -43,44 +44,43 @@ class SettingsPage extends ConsumerWidget {
               SettingsChoiceRow(
                 icon: Icons.brightness_6_outlined,
                 title: l10n.theme,
-                choice: SegmentedButton<ThemeMode>(
+                choice: ManeSegmented<ThemeMode>(
                   segments: [
-                    ButtonSegment(value: ThemeMode.system, label: Text(l10n.themeSystem)),
-                    ButtonSegment(value: ThemeMode.light, label: Text(l10n.themeLight)),
-                    ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeDark)),
+                    ManeSegment(value: ThemeMode.system, label: l10n.themeSystem),
+                    ManeSegment(value: ThemeMode.light, label: l10n.themeLight),
+                    ManeSegment(value: ThemeMode.dark, label: l10n.themeDark),
                   ],
-                  selected: {settings.themeMode},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (values) => controller.setThemeMode(values.first),
+                  selected: settings.themeMode,
+                  onChanged: controller.setThemeMode,
+                  compact: true,
                 ),
               ),
               SettingsChoiceRow(
                 icon: Icons.translate,
                 title: l10n.language,
-                choice: SegmentedButton<String>(
+                choice: ManeSegmented<String>(
                   segments: [
-                    ButtonSegment(value: 'system', label: Text(l10n.languageSystem)),
-                    ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
-                    ButtonSegment(value: 'es', label: Text(l10n.languageSpanish)),
+                    ManeSegment(value: 'system', label: l10n.languageSystem),
+                    ManeSegment(value: 'en', label: l10n.languageEnglish),
+                    ManeSegment(value: 'es', label: l10n.languageSpanish),
                   ],
-                  selected: {settings.locale?.languageCode ?? 'system'},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (values) =>
-                      controller.setLocale(values.first == 'system' ? null : Locale(values.first)),
+                  selected: settings.locale?.languageCode ?? 'system',
+                  onChanged: (value) => controller.setLocale(value == 'system' ? null : Locale(value)),
+                  compact: true,
                 ),
               ),
               SettingsChoiceRow(
                 icon: Icons.calendar_view_week_outlined,
                 title: l10n.weekStartsOn,
-                choice: SegmentedButton<int>(
+                choice: ManeSegmented<int>(
                   segments: [
-                    ButtonSegment(value: DateTime.monday, label: Text(l10n.weekStartMonday)),
-                    ButtonSegment(value: DateTime.saturday, label: Text(l10n.weekStartSaturday)),
-                    ButtonSegment(value: DateTime.sunday, label: Text(l10n.weekStartSunday)),
+                    ManeSegment(value: DateTime.monday, label: l10n.weekStartMonday),
+                    ManeSegment(value: DateTime.saturday, label: l10n.weekStartSaturday),
+                    ManeSegment(value: DateTime.sunday, label: l10n.weekStartSunday),
                   ],
-                  selected: {settings.weekStart},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (values) => controller.setWeekStart(values.first),
+                  selected: settings.weekStart,
+                  onChanged: controller.setWeekStart,
+                  compact: true,
                 ),
               ),
             ],
@@ -400,23 +400,15 @@ class SettingsPage extends ConsumerWidget {
   }
 
   Future<void> _showSleepBuffers(BuildContext context, WidgetRef ref) async {
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-        child: _SleepBuffersSheet(initial: ref.read(settingsProvider)),
-      ),
+      builder: (context) => _SleepBuffersSheet(initial: ref.read(settingsProvider)),
     );
   }
 
   Future<void> _showDefaultReminders(BuildContext context, WidgetRef ref) async {
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
-      useSafeArea: true,
-      showDragHandle: true,
       builder: (context) => _DefaultRemindersSheet(
         initial: ref.read(settingsProvider).defaultReminderOffsets,
         offsets: _reminderOffsets,
@@ -463,56 +455,36 @@ class _SleepBuffersSheetState extends ConsumerState<_SleepBuffersSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return AppSheet(
+      title: l10n.sleepBuffers,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-          child: Row(
-            children: [
-              Expanded(child: Text(l10n.sleepBuffers, style: Theme.of(context).textTheme.titleLarge)),
-              TextButton(
-                onPressed: () async {
-                  final controller = ref.read(settingsProvider.notifier);
-                  await controller.setSleepCommuteMinutes(
-                    _value(_commute, widget.initial.sleepCommuteMinutes),
-                  );
-                  await controller.setSleepWindDownMinutes(
-                    _value(_windDown, widget.initial.sleepWindDownMinutes),
-                  );
-                  await controller.setSleepWakeBufferMinutes(
-                    _value(_wake, widget.initial.sleepWakeBufferMinutes),
-                  );
-                  if (context.mounted) Navigator.of(context).pop();
-                },
-                child: Text(l10n.save),
-              ),
-            ],
-          ),
+        TextField(
+          controller: _commute,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: l10n.commute),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Column(
-            children: [
-              TextField(
-                controller: _commute,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: l10n.commute, border: const OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _windDown,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: l10n.windDown, border: const OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _wake,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: l10n.wakeBuffer, border: const OutlineInputBorder()),
-              ),
-            ],
-          ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _windDown,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: l10n.windDown),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _wake,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: l10n.wakeBuffer),
+        ),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: () async {
+            final controller = ref.read(settingsProvider.notifier);
+            await controller.setSleepCommuteMinutes(_value(_commute, widget.initial.sleepCommuteMinutes));
+            await controller.setSleepWindDownMinutes(_value(_windDown, widget.initial.sleepWindDownMinutes));
+            await controller.setSleepWakeBufferMinutes(_value(_wake, widget.initial.sleepWakeBufferMinutes));
+            if (context.mounted) Navigator.of(context).pop();
+          },
+          child: Text(l10n.save),
         ),
       ],
     );
@@ -541,44 +513,30 @@ class _DefaultRemindersSheetState extends ConsumerState<_DefaultRemindersSheet> 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return AppSheet(
+      title: l10n.defaultReminders,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-          child: Row(
-            children: [
-              Expanded(child: Text(l10n.defaultReminders, style: Theme.of(context).textTheme.titleLarge)),
-              TextButton(
-                onPressed: () async {
-                  await ref.read(settingsProvider.notifier).setDefaultReminderOffsets(_selected.toList());
-                  if (context.mounted) Navigator.of(context).pop();
-                },
-                child: Text(l10n.save),
-              ),
-            ],
+        for (final offset in widget.offsets)
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _selected.contains(offset),
+            title: Text(reminderOffsetLabel(context, offset)),
+            onChanged: (selected) => setState(() {
+              if (selected == true) {
+                _selected.add(offset);
+              } else {
+                _selected.remove(offset);
+              }
+            }),
           ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: () async {
+            await ref.read(settingsProvider.notifier).setDefaultReminderOffsets(_selected.toList());
+            if (context.mounted) Navigator.of(context).pop();
+          },
+          child: Text(l10n.save),
         ),
-        Flexible(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              for (final offset in widget.offsets)
-                CheckboxListTile(
-                  value: _selected.contains(offset),
-                  title: Text(reminderOffsetLabel(context, offset)),
-                  onChanged: (selected) => setState(() {
-                    if (selected == true) {
-                      _selected.add(offset);
-                    } else {
-                      _selected.remove(offset);
-                    }
-                  }),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
       ],
     );
   }

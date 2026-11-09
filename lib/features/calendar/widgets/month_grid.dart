@@ -4,6 +4,9 @@ import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/date_labels.dart';
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/pressable.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 
 /// A six-week month grid with per-day markers.
 class MonthGrid extends StatelessWidget {
@@ -31,7 +34,7 @@ class MonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final first = month.startOfWeek(weekStart);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final dayFormat = DateFormat.MMMd(locale);
@@ -46,16 +49,13 @@ class MonthGrid extends StatelessWidget {
                 child: Center(
                   child: Text(
                     shortWeekday(context, weekday).toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      letterSpacing: 0.6,
-                    ),
+                    style: ManeType.label(9.5, color: c.textTertiary),
                   ),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         for (var row = 0; row < 6; row++)
           Row(
             children: [
@@ -102,35 +102,35 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final inMonth = date.month == month.month && date.year == month.year;
     final isSelected = date == selected;
     final isToday = date == today;
-    final selectedInk = theme.colorScheme.onPrimary;
+    final selectedInk = c.onAccent;
     final textColor = isSelected
         ? selectedInk
         : inMonth
-        ? theme.colorScheme.onSurface
-        : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4);
+        ? c.text
+        : c.textTertiary.withValues(alpha: 0.55);
     final count = markerColors.length + (hasShift ? 1 : 0);
-    final height = 50 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.45);
+    final height = 48 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.45);
 
     return Semantics(
       button: true,
       selected: isSelected,
       label: context.l10n.calendarDaySemantics(semanticsDate, count),
-      child: InkWell(
+      child: Pressable(
         key: ValueKey('calendar-day-${date.iso}'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        scale: 0.93,
         child: Container(
           height: height,
           margin: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.primary : null,
-            borderRadius: BorderRadius.circular(10),
+            color: isSelected ? c.accent : null,
+            borderRadius: BorderRadius.circular(12),
             border: isToday && !isSelected
-                ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.55), width: 1.4)
+                ? Border.all(color: c.accent.withValues(alpha: 0.55), width: 1.3)
                 : null,
           ),
           child: Column(
@@ -138,10 +138,7 @@ class _DayCell extends StatelessWidget {
             children: [
               Text(
                 '${date.day}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: textColor,
-                  fontWeight: isSelected || isToday ? FontWeight.w600 : null,
-                ),
+                style: ManeType.body(13.5, weight: FontWeight.w600, color: textColor),
               ),
               const SizedBox(height: 3),
               SizedBox(
@@ -152,8 +149,8 @@ class _DayCell extends StatelessWidget {
                     if (inMonth)
                       for (final color in markerColors.take(3))
                         Container(
-                          width: 5,
-                          height: 5,
+                          width: 4.5,
+                          height: 4.5,
                           margin: const EdgeInsets.symmetric(horizontal: 1),
                           decoration: BoxDecoration(color: Color(color), shape: BoxShape.circle),
                         ),
@@ -164,9 +161,9 @@ class _DayCell extends StatelessWidget {
                 height: 2,
                 child: hasShift && inMonth
                     ? Container(
-                        width: 16,
+                        width: 14,
                         decoration: BoxDecoration(
-                          color: isSelected ? selectedInk.withValues(alpha: 0.7) : theme.colorScheme.tertiary,
+                          color: isSelected ? selectedInk.withValues(alpha: 0.7) : c.work,
                           borderRadius: BorderRadius.circular(1),
                         ),
                       )

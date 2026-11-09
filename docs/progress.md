@@ -4,8 +4,10 @@ Keep this file current. A fresh context window should be able to resume from it.
 
 ## Current milestone
 
-v0.5 complete. v1.0 is waiting only on the user's real-device notification,
-reboot, battery-optimization and timezone checklist.
+v0.6 is complete. The active program is v0.7 → v1.0, tracked in
+`docs/completion-plan.md`. The next slice is v0.7: day timeline, multi-day
+entries, recurrence exceptions, tagged shifts, per-slot checklists, ICS export
+and ICS hardening. The constraint audit is in `docs/compliance-audit.md`.
 
 ## Reference notes
 
@@ -179,6 +181,39 @@ reboot, battery-optimization and timezone checklist.
   Linux bundle, checksums and GitHub release.
 - Tests: 85 app/database/widget tests and 71 core tests.
 
+### v0.6
+
+- Completion program and compliance audit added: `docs/completion-plan.md`,
+  `docs/compliance-audit.md`.
+- Android cloud backup and device transfer disabled for the app's data, with a
+  data-extraction rule. User-exported JSON remains the only backup path.
+- CI now checks formatting and builds a Linux debug bundle; Zed has a
+  `verify: all` task and a format-check task.
+- Documentation truth pass: v1.0 scope, known gaps and reference-map claims now
+  match the code.
+- Bundled Nunito (the GymMane face) with a display/headline/title/body/label
+  scale in `lib/theme/app_typography.dart`.
+- Rewrote `ManeColors` as the single palette (space, state, glass, nav and
+  shadow tokens) and rebuilt `ManeTheme` with app bar, card, sheet, dialog,
+  snack bar, navigation bar, button, input, chip, switch, date and time picker
+  themes. Screens read `context.mc`, not generated Material roles.
+- Added the shared UI kit under `lib/core/widgets`: `SoftCard`, `AppSheet`,
+  `SectionLabel`, `Pressable`, `GlassIconButton`, `GlassPill`, `TinySwitch`,
+  `GlassSurface`, `AppEmptyState`, `ManeNotice`, `FadeThrough`, `ManePage`,
+  `ManeAddButton`, `ManeNavBar`, `ManeSegmented`, `ManeSearchField` and the
+  dotted `AppBackground`.
+- Replaced the stock shell with a transparent scaffold, paper background, custom
+  header, floating nav and companion add button. Ctrl+1..3 and the tag filter
+  still work.
+- Swept Today, Week, Calendar, Settings, Tags, Shift patterns, Home inventory,
+  Shopping, Devices, pairing, MCP, Search and About onto the kit. Entry, shift,
+  tag, reminder and household sheets use `showAppSheet`.
+- Added `test/visual_kit_test.dart` (theme tokens, kit behaviour, nav selection,
+  custom page header, sheet handle) and rendered reference screenshots to
+  `docs/screenshots/`.
+- Validation: format clean, analyze clean, 90 app tests and 71 core tests pass,
+  Linux debug and Android debug APK build.
+
 ## Known limitations
 
 - Real-device notification delivery, reboot rescheduling, battery optimization
@@ -199,17 +234,24 @@ reboot, battery-optimization and timezone checklist.
   Unsupported events are reported as skipped. Re-import deduplicates but does
   not update changed events.
 - Shift checklist completions are shared by two slots of the same pattern on
-  the same date; the roadmap keys completion by pattern, date and item.
+  the same date; the roadmap keys completion by pattern, date and item. v0.7
+  adds the slot key and a migration.
 - Multi-day recurring entries remain unsupported; multi-day all-day events are
-  shown per day.
+  shown per day. v0.7 adds multi-day editing.
+- The visual layer is stock Material 3: `ManeColors` is used only by the theme,
+  the shell uses `AppBar`/`NavigationBar`/FAB and there is no bundled font or
+  motion layer. v0.6 ports the reference component language.
+- There is no read-only ICS export or GymMane schedule import yet. v0.7 and
+  v0.8 add them.
 - MCP is loopback-only and implements the core tools JSON-RPC surface, not
-  SSE/streamable sessions. LAN-bound MCP is not implemented.
+  SSE/streamable sessions. v0.9 expands the tools and session handling.
+- LAN snapshots are in memory and are not persisted or merged. v0.9 persists
+  read-only snapshots. A companion app's ContentProvider is not integrated
+  because no app and authority were specified; the documented JSON export is
+  the v0.4 path and GymMane backup import is v0.8 work.
 - mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
   needs the user's real-device check. Pairing sessions live in memory and are
   cancelled by an app restart.
-- LAN snapshots are in memory and are not persisted or merged. A companion
-  app's ContentProvider is not integrated because no app and authority were
-  specified; the documented JSON export is the v0.4 path.
 - The Android home-screen widget refreshes when the app starts or resumes; it
   is Android-only and has no configuration screen.
 - Accessibility is a first pass, not a certified screen-reader or contrast
@@ -219,18 +261,22 @@ reboot, battery-optimization and timezone checklist.
 
 ## Next three steps
 
-1. Run the real-device checklist on the user's Android device: notification
-   permission, delivery, reboot, battery optimization and timezone change.
-2. Fix anything the device checklist finds, with a regression test where the
-   behavior is testable off-device.
-3. Tag v1.0 only after the device checklist passes; keep the release keystore
-   as a user-provided step.
+1. Deliver v0.6: theme tokens and fonts, component themes, the shared UI kit,
+   the reference-style shell and the screen sweep, with screenshots or golden
+   tests.
+2. Deliver v0.7: day timeline, multi-day entries, recurrence exceptions,
+   tagged shifts, per-slot checklist keys, per-pattern sleep buffers, ICS export
+   and ICS hardening.
+3. Continue through v0.8 and v0.9, then run the full real-device checklist and
+   tag v1.0 only when every scenario in `docs/completion-plan.md` passes.
 
 ## Commands and results
 
 - `flutter pub get` — ok.
 - `dart run build_runner build --force-jit` — ok.
 - `flutter gen-l10n` — ok.
+- `dart format --line-length 110 --output=none --set-exit-if-changed` — clean
+  (108 hand-written Dart files).
 - `flutter analyze --no-fatal-infos` — no issues.
 - `flutter test` — 85 passed (database, migrations v1→v5, timezone, calendar,
   tags, reminders, backup and pairing-secret exclusion, shift editor and

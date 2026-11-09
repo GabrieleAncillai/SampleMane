@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../core/i18n/l10n.dart';
+import '../core/widgets/ui_kit.dart';
 import '../state/providers.dart';
 import '../state/settings_controller.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 import '../widgets/entry_widgets.dart';
 import 'entry_editor.dart';
 
@@ -46,43 +49,29 @@ class _WeekScreenState extends ConsumerState<WeekScreen> {
       (shiftsByDate[occurrence.displayDate] ??= []).add(occurrence);
     }
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-        children: [
-          _WeekHeader(
-            start: start,
-            onPrevious: () => setState(() => _offsetWeeks--),
-            onNext: () => setState(() => _offsetWeeks++),
-            onToday: () => setState(() => _offsetWeeks = 0),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      children: [
+        _WeekHeader(
+          start: start,
+          onPrevious: () => setState(() => _offsetWeeks--),
+          onNext: () => setState(() => _offsetWeeks++),
+          onToday: () => setState(() => _offsetWeeks = 0),
+        ),
+        const SizedBox(height: 16),
+        if (entriesState.hasError) ManeNotice(text: context.l10n.couldNotLoadDay('${entriesState.error}')),
+        if (shiftsState.hasError) ManeNotice(text: context.l10n.couldNotLoadShifts('${shiftsState.error}')),
+        for (var index = 0; index < 7; index++) ...[
+          _DaySection(
+            date: start.addDays(index),
+            isToday: start.addDays(index) == today,
+            entries: entriesByDate[start.addDays(index)] ?? const [],
+            shifts: shiftsByDate[start.addDays(index)] ?? const [],
+            spaces: spaces,
           ),
-          const SizedBox(height: 16),
-          if (entriesState.hasError)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                context.l10n.couldNotLoadDay('${entriesState.error}'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          if (shiftsState.hasError)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                context.l10n.couldNotLoadShifts('${shiftsState.error}'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          for (var index = 0; index < 7; index++)
-            _DaySection(
-              date: start.addDays(index),
-              isToday: start.addDays(index) == today,
-              entries: entriesByDate[start.addDays(index)] ?? const [],
-              shifts: shiftsByDate[start.addDays(index)] ?? const [],
-              spaces: spaces,
-            ),
+          const SizedBox(height: 10),
         ],
-      ),
+      ],
     );
   }
 }
@@ -102,44 +91,41 @@ class _WeekHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final end = start.addDays(6);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final format = DateFormat.MMMd(locale);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.week.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.primary,
-            letterSpacing: 1.6,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
+        SectionLabel(context.l10n.week, color: c.accent),
         Row(
           children: [
             Expanded(
               child: Text(
                 '${format.format(start.toDateTime())} – ${format.format(end.toDateTime())}',
-                style: theme.textTheme.headlineSmall,
+                style: ManeType.headline(23, color: c.text),
               ),
             ),
-            IconButton(
-              onPressed: onPrevious,
-              icon: const Icon(Icons.chevron_left),
+            GlassIconButton(
+              icon: Icons.chevron_left,
               tooltip: context.l10n.previousWeek,
+              size: 36,
+              onTap: onPrevious,
             ),
-            IconButton(
-              onPressed: onToday,
-              icon: const Icon(Icons.today_outlined),
+            const SizedBox(width: 8),
+            GlassIconButton(
+              icon: Icons.today_outlined,
               tooltip: context.l10n.jumpToToday,
+              size: 36,
+              onTap: onToday,
             ),
-            IconButton(
-              onPressed: onNext,
-              icon: const Icon(Icons.chevron_right),
+            const SizedBox(width: 8),
+            GlassIconButton(
+              icon: Icons.chevron_right,
               tooltip: context.l10n.nextWeek,
+              size: 36,
+              onTap: onNext,
             ),
           ],
         ),
@@ -165,46 +151,39 @@ class _DaySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
+    final c = context.mc;
     final empty = entries.isEmpty && shifts.isEmpty;
     final locale = Localizations.localeOf(context).toLanguageTag();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
-      decoration: BoxDecoration(
-        color: isToday
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
-            : theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return SoftCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
+      color: isToday ? c.accentSoft : c.surface,
+      borderColor: isToday ? c.accent.withValues(alpha: 0.35) : c.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              SizedBox(
-                width: 46,
+              Container(
+                width: 42,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isToday ? c.accent : c.surfaceAlt,
+                  borderRadius: BorderRadius.circular(13),
+                ),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       DateFormat.E(locale).format(date.toDateTime()).toUpperCase(),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: isToday ? theme.colorScheme.primary : muted,
-                        letterSpacing: 1,
-                      ),
+                      style: ManeType.label(9.5, color: isToday ? c.onAccent : c.textTertiary),
                     ),
-                    Text(
-                      '${date.day}',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: isToday ? theme.colorScheme.primary : null,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text('${date.day}', style: ManeType.title(16, color: isToday ? c.onAccent : c.text)),
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               Expanded(
                 child: shifts.isEmpty
                     ? const SizedBox.shrink()
@@ -214,28 +193,29 @@ class _DaySection extends StatelessWidget {
                         children: shifts.map((item) => ShiftChip(occurrence: item)).toList(),
                       ),
               ),
-              IconButton(
-                onPressed: () => showEntryEditor(context, initialDate: date, spaces: spaces),
-                icon: const Icon(Icons.add, size: 20),
+              GlassIconButton(
+                icon: Icons.add,
                 tooltip: context.l10n.addOnThisDay,
+                size: 34,
+                onTap: () => showEntryEditor(context, initialDate: date, spaces: spaces),
               ),
             ],
           ),
           if (empty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(46, 2, 8, 4),
-              child: Text(
-                context.l10n.nothingPlanned,
-                style: theme.textTheme.bodySmall?.copyWith(color: muted),
-              ),
+              padding: const EdgeInsets.fromLTRB(54, 8, 8, 2),
+              child: Text(context.l10n.nothingPlanned, style: ManeType.body(12, color: c.textTertiary)),
             )
           else if (entries.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(left: 10),
+              padding: const EdgeInsets.only(left: 4, top: 6),
               child: Column(
-                children: entries
-                    .map((item) => EntryTile(occurrence: item, spaces: spaces, dense: true))
-                    .toList(),
+                children: [
+                  for (var index = 0; index < entries.length; index++) ...[
+                    if (index > 0) const Divider(height: 1, indent: 44),
+                    EntryTile(occurrence: entries[index], spaces: spaces, dense: true),
+                  ],
+                ],
               ),
             ),
         ],

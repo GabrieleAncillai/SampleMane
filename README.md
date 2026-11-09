@@ -12,16 +12,24 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.5 release candidate. Today, Week and Calendar tabs, tags,
-flexible shifts, reminders, settings, backup/restore, home inventory, shopping,
-maintenance, sleep, ICS and companion import, optional LAN pairing, a local MCP
-endpoint, global search, an Android home-screen widget and English/Spanish
-coverage are in place. v1.0 waits on the user's real-device notification,
-reboot, battery and timezone checklist.
+**Status:** v0.6 shipped. The active v0.7 → v1.0 completion program is in
+[docs/completion-plan.md](docs/completion-plan.md). Today, Week and Calendar
+tabs, tags, flexible shifts, reminders, settings, backup/restore, home
+inventory, shopping, maintenance, sleep, ICS and companion import, optional LAN
+pairing, a local MCP endpoint, global search, an Android home-screen widget, the
+reference-style shell and UI kit, and English/Spanish coverage are in place.
+The remaining work is real-file calendar and GymMane import, fuller MCP/sync,
+work-hours rules, per-slot checklists, multi-day entries, backup automation,
+app lock and the real-device checklist. See
+[docs/compliance-audit.md](docs/compliance-audit.md) for the verified gaps.
 
 ## Docs
 
 - [Overview](docs/overview.md): the short version.
+- [Completion plan](docs/completion-plan.md): the active v0.6 → v1.0 milestones,
+  feature matrix, scenarios and acceptance criteria.
+- [Compliance audit](docs/compliance-audit.md): the constraint audit and open
+  findings.
 - [Full docs](docs/full-docs.md): architecture, data model, feature areas,
   roadmap and decisions.
 - [Reference map](docs/reference-map.md): the exact GymMane and Streak files to
@@ -77,6 +85,8 @@ reboot, battery and timezone checklist.
   write tools behind a second setting.
 - Global search across entry titles and notes, tag names and household items.
 - An Android home-screen widget with today's plan and the next shift.
+- A reference-style visual foundation: Nunito, `ManeColors`/`ManeType`, component
+  themes, a shared UI kit, a floating shell and a dotted paper background.
 - Accessibility basics: semantics on calendar days and shifts, text scaling in
   the calendar, keyboard shortcuts for search and tab switching.
 - A schema v1/v2/v3/v4 to v5 migration tested against real prior rows.
@@ -84,6 +94,18 @@ reboot, battery and timezone checklist.
   rules.
 - Android debug APK, Linux debug build and a tagged release workflow for split
   APKs and a Linux bundle.
+
+## Completion program
+
+- v0.6: reference visual foundation, UI kit and shell. Done.
+- v0.7: day timeline, multi-day entries, recurrence exceptions, tagged shifts,
+  per-slot checklists, ICS export and real-file ICS hardening.
+- v0.8: GymMane schedule import, automatic local backups, CSV, home-tracking
+  views and optional app lock.
+- v0.9: full MCP tool set and sessions, persistent LAN snapshots, work-hours and
+  quiet-hours rules, custom reminder times and actions.
+- v1.0: device verification, accessibility/contrast audit, final docs and a
+  signed release.
 
 ## Planned after v1.0
 

@@ -4,9 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../core/i18n/l10n.dart';
+import '../core/widgets/ui_kit.dart';
 import '../features/sleep/sleep_window_card.dart';
 import '../state/providers.dart';
 import '../state/settings_controller.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 import '../widgets/entry_widgets.dart';
 import 'entry_editor.dart';
 
@@ -23,6 +26,7 @@ class TodayScreen extends ConsumerWidget {
     final entriesState = ref.watch(entriesProvider(range));
     final shiftsState = ref.watch(shiftsProvider(range));
     final l10n = context.l10n;
+    final c = context.mc;
 
     final entries = settings.hideWorkSpace
         ? (entriesState.value ?? const <EntryOccurrence>[])
@@ -33,27 +37,40 @@ class TodayScreen extends ConsumerWidget {
         ? const <ShiftOccurrence>[]
         : shiftsState.value ?? const <ShiftOccurrence>[];
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 28, 20, 100),
-        children: [
-          _TodayHeader(date: today),
-          const SizedBox(height: 16),
-          const SleepWindowCard(),
-          const SizedBox(height: 4),
-          if (shifts.isNotEmpty) ...[
-            _SectionLabel(l10n.shiftsSection),
-            const SizedBox(height: 8),
-            ...shifts.map((item) => ShiftTile(occurrence: item)),
-            const SizedBox(height: 8),
-          ],
-          if (shiftsState.hasError) Text(l10n.couldNotLoadShifts('${shiftsState.error}')),
-          if (entriesState.hasError)
-            Text(l10n.couldNotLoadDay('${entriesState.error}'))
-          else
-            _EntriesSection(entries: entries, spaces: spaces),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      children: [
+        _TodayHeader(date: today),
+        const SizedBox(height: 18),
+        const SleepWindowCard(),
+        if (shifts.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          SectionLabel(l10n.shiftsSection),
+          for (final item in shifts) ShiftTile(occurrence: item),
         ],
-      ),
+        if (shiftsState.hasError) _ErrorNotice(text: l10n.couldNotLoadShifts('${shiftsState.error}')),
+        if (entriesState.hasError)
+          _ErrorNotice(text: l10n.couldNotLoadDay('${entriesState.error}'))
+        else
+          _EntriesSection(entries: entries, spaces: spaces),
+        if (entries.isEmpty && shifts.isEmpty) ...[
+          const SizedBox(height: 10),
+          SoftCard(
+            padding: EdgeInsets.zero,
+            color: c.surface.withValues(alpha: 0.7),
+            child: AppEmptyState(
+              icon: Icons.event_available_outlined,
+              title: l10n.noPlanToday,
+              message: l10n.noPlanTodayHint,
+              action: FilledButton.tonalIcon(
+                onPressed: () => showEntryEditor(context, spaces: spaces),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.addSomething),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -65,50 +82,21 @@ class _TodayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
+    final c = context.mc;
     final locale = Localizations.localeOf(context).toLanguageTag();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SectionLabel(context.l10n.today, color: c.accent),
         Text(
-          context.l10n.today.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.primary,
-            letterSpacing: 1.6,
-            fontWeight: FontWeight.w600,
-          ),
+          DateFormat('EEEE', locale).format(date.toDateTime()),
+          style: ManeType.display(31, color: c.text),
         ),
-        const SizedBox(height: 6),
-        Text(DateFormat('EEEE', locale).format(date.toDateTime()), style: theme.textTheme.headlineMedium),
+        const SizedBox(height: 2),
         Text(
           DateFormat.yMMMMd(locale).format(date.toDateTime()),
-          style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+          style: ManeType.body(14, color: c.textSecondary),
         ),
-      ],
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(child: Divider()),
       ],
     );
   }
@@ -122,9 +110,7 @@ class _EntriesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) {
-      return _EmptyState(onAdd: () => showEntryEditor(context, spaces: spaces));
-    }
+    if (entries.isEmpty) return const SizedBox.shrink();
 
     final grouped = <String, List<EntryOccurrence>>{};
     for (final occurrence in entries) {
@@ -136,14 +122,28 @@ class _EntriesSection extends StatelessWidget {
       final items = grouped.remove(space.id);
       if (items == null || items.isEmpty) continue;
       children
+        ..add(const SizedBox(height: 10))
         ..add(_SpaceHeader(space: space))
-        ..addAll(items.map((item) => EntryTile(occurrence: item, spaces: spaces)));
+        ..add(
+          SoftCard(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            clip: true,
+            child: Column(
+              children: [
+                for (var index = 0; index < items.length; index++) ...[
+                  if (index > 0) const Divider(height: 1, indent: 44),
+                  EntryTile(occurrence: items[index], spaces: spaces),
+                ],
+              ],
+            ),
+          ),
+        );
     }
 
-    for (final leftOver in grouped.values) {
-      children.addAll(leftOver.map((item) => EntryTile(occurrence: item, spaces: spaces)));
+    if (grouped.isNotEmpty) {
+      final leftovers = grouped.values.expand((items) => items).toList();
+      children.addAll(leftovers.map((item) => EntryTile(occurrence: item, spaces: spaces)));
     }
-
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children);
   }
 }
@@ -155,63 +155,45 @@ class _SpaceHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 4),
+      padding: const EdgeInsets.only(bottom: 8, left: 2),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 7,
+            height: 7,
             decoration: BoxDecoration(color: Color(space.colorValue), shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
-          Text(
-            space.name.toUpperCase(),
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(child: Divider()),
+          Text(space.name.toUpperCase(), style: ManeType.kicker(color: context.mc.textTertiary)),
         ],
       ),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd});
+class _ErrorNotice extends StatelessWidget {
+  const _ErrorNotice({required this.text});
 
-  final VoidCallback onAdd;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
+    final c = context.mc;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        color: c.dangerSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.danger.withValues(alpha: 0.25)),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Icon(Icons.event_available_outlined, size: 40, color: muted),
-          const SizedBox(height: 12),
-          Text(context.l10n.noPlanToday, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            context.l10n.noPlanTodayHint,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(color: muted),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.tonalIcon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add),
-            label: Text(context.l10n.addSomething),
+          Icon(Icons.error_outline, size: 18, color: c.danger),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text, style: ManeType.body(12.5, color: c.danger)),
           ),
         ],
       ),

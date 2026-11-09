@@ -7,6 +7,9 @@ import 'package:uuid/uuid.dart';
 import '../core/i18n/l10n.dart';
 import '../core/i18n/recurrence_label.dart';
 import '../core/i18n/reminder_label.dart';
+import '../core/widgets/ui_kit.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 import '../features/reminders/widgets/reminder_offset_sheet.dart';
 import '../models/reminder.dart';
 import '../state/providers.dart';
@@ -26,11 +29,8 @@ Future<void> showEntryEditor(
   LocalDate? initialDate,
   required List<Space> spaces,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: true,
     builder: (context) => EntryEditorSheet(entry: entry, initialDate: initialDate, spaces: spaces),
   );
 }
@@ -129,7 +129,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final l10n = context.l10n;
     final title = widget.entry == null ? l10n.newEntry : l10n.editEntry;
     final locale = Localizations.localeOf(context).toLanguageTag();
@@ -137,18 +137,18 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
         .where((tag) => tag.appliesTo(_spaceId))
         .toList();
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-        child: Form(
+    return AppSheet(
+      children: [
+        Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
-                  Expanded(child: Text(title, style: theme.textTheme.headlineSmall)),
+                  Expanded(
+                    child: Text(title, style: ManeType.headline(20, color: c.text)),
+                  ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
@@ -162,10 +162,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
                 textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: l10n.titleQuestion,
-                  border: const OutlineInputBorder(),
-                ),
+                decoration: InputDecoration(labelText: l10n.titleQuestion),
                 validator: (value) => value == null || value.trim().isEmpty ? l10n.titleRequired : null,
               ),
               const SizedBox(height: 12),
@@ -272,14 +269,12 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                   padding: const EdgeInsets.fromLTRB(4, 6, 0, 0),
                   child: Row(
                     children: [
-                      Icon(Icons.public, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      Icon(Icons.public, size: 14, color: c.textTertiary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           l10n.timesDefinedIn(_timeZone),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                          style: ManeType.body(11.5, color: c.textSecondary),
                         ),
                       ),
                     ],
@@ -316,10 +311,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 TextFormField(
                   controller: _repeatDaysController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: l10n.repeatAfterDaysLabel,
-                    border: const OutlineInputBorder(),
-                  ),
+                  decoration: InputDecoration(labelText: l10n.repeatAfterDaysLabel),
                   validator: (value) {
                     final days = int.tryParse(value?.trim() ?? '');
                     return days == null || days <= 0 ? l10n.daysRequired : null;
@@ -327,7 +319,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 ),
               const SizedBox(height: 12),
               if (availableTags.isNotEmpty) ...[
-                Text(l10n.tags, style: theme.textTheme.labelLarge),
+                Text(l10n.tags, style: ManeType.label(12.5, color: c.textSecondary)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
@@ -352,7 +344,9 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: Text(l10n.reminders, style: theme.textTheme.labelLarge)),
+                  Expanded(
+                    child: Text(l10n.reminders, style: ManeType.label(12.5, color: c.textSecondary)),
+                  ),
                   TextButton.icon(
                     onPressed: _saving ? null : _editReminders,
                     icon: const Icon(Icons.notifications_outlined, size: 18),
@@ -361,10 +355,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 ],
               ),
               if (_reminderOffsets.isEmpty)
-                Text(
-                  l10n.remindersOff,
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                )
+                Text(l10n.remindersOff, style: ManeType.body(11.5, color: c.textTertiary))
               else
                 Wrap(
                   spacing: 6,
@@ -382,11 +373,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 controller: _notesController,
                 maxLines: 3,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  labelText: l10n.notesOptional,
-                  border: const OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
+                decoration: InputDecoration(labelText: l10n.notesOptional, alignLabelWithHint: true),
               ),
               const SizedBox(height: 20),
               FilledButton(
@@ -405,13 +392,13 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
               if (widget.entry != null)
                 TextButton(
                   onPressed: _saving ? null : _delete,
-                  style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                  style: TextButton.styleFrom(foregroundColor: c.danger),
                   child: Text(l10n.delete),
                 ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -629,7 +616,6 @@ class _LabeledDropdown<T> extends StatelessWidget {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       ),
       child: DropdownButtonHideUnderline(
@@ -659,11 +645,7 @@ class _PickerRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, size: 20),
-          border: const OutlineInputBorder(),
-        ),
+        decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon, size: 20)),
         child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );

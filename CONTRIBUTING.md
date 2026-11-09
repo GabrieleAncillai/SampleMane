@@ -29,6 +29,12 @@ genuinely new or neither project has an equivalent. Record the reason in
 If code is copied or closely adapted, the license stays GPL-3.0-only and the
 attribution goes in `CREDITS.md` and the About screen.
 
+The visual layer is part of the rule, not a later polish item. Until a separate
+Mane visual identity is defined, the target is GymMane's shell/settings/type and
+Streak's calendar/sheets/motion. The active milestones and acceptance criteria
+are in [docs/completion-plan.md](docs/completion-plan.md); the open gaps are in
+[docs/compliance-audit.md](docs/compliance-audit.md).
+
 ## Two rules that never bend
 
 1. **No accounts, no logins, no remote user data.** Ever.
@@ -99,6 +105,9 @@ The project follows the conventions used by InlitX projects (Streak and GymMane)
 - **No literal business rules in the UI.** Recurrence, shift and time rules live
   in `mane_core`.
 - Use `ManeColors` from `lib/theme/app_colors.dart`; do not scatter raw colors.
+  In screens, prefer `context.mc` over generated Material color roles.
+- Visual changes need a reference component or a documented deviation, plus a
+  screenshot or golden test.
 - Run `dart format` before pushing, keep `flutter analyze` clean.
 - English is the source locale and Spanish is the first translation. Follow the
   ARB setup in GymMane and Streak: `l10n.yaml`, `lib/l10n/app_en.arb`,

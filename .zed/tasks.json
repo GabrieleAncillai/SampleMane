@@ -71,6 +71,20 @@
     "save": "all"
   },
   {
+    "label": "lint: format check",
+    "command": "find lib test packages/mane_core/lib packages/mane_core/test -type f -name '*.dart' -not -name '*.g.dart' -not -name 'app_localizations*.dart' -print0 | xargs -0 dart format --line-length 110 --output=none --set-exit-if-changed",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "none"
+  },
+  {
+    "label": "verify: all",
+    "command": "flutter analyze --no-fatal-infos && flutter test && (cd packages/mane_core && dart test) && flutter build linux --debug && flutter build apk --debug",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
     "label": "build: linux debug",
     "command": "flutter build linux --debug",
     "use_new_terminal": false,

@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
 import '../../../state/providers.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../../../state/settings_controller.dart';
 import '../../settings/widgets/settings_rows.dart';
 import '../../sync/pages/devices_page.dart';
@@ -19,23 +22,19 @@ class McpPage extends ConsumerWidget {
     final controller = ref.read(settingsProvider.notifier);
     final identity = ref.watch(identityProvider).value;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.mcpEndpoint)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+    return ManePage(
+      title: l10n.mcpEndpoint,
+      subtitle: l10n.mcpEndpointSubtitle,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 20),
         children: [
           if (identity == null)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            SoftCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(l10n.identityRequired),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   FilledButton.tonal(
                     onPressed: () => Navigator.of(
                       context,
@@ -83,27 +82,26 @@ class McpPage extends ConsumerWidget {
                     children: [
                       SelectableText(
                         'http://127.0.0.1:${McpServer.port}${McpServer.path}',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: ManeType.body(13, weight: FontWeight.w700, color: context.mc.text),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         settings.mcpEnabled ? l10n.mcpRunning(McpServer.port) : l10n.mcpStopped,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        style: ManeType.body(
+                          11.5,
+                          color: settings.mcpEnabled ? context.mc.success : context.mc.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
                       SelectableText(
                         identity.mcpToken,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                        style: ManeType.body(
+                          11.5,
+                          color: context.mc.textSecondary,
+                        ).copyWith(fontFamily: 'monospace'),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        l10n.mcpTokenHint,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      Text(l10n.mcpTokenHint, style: ManeType.body(11.5, color: context.mc.textSecondary)),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -132,12 +130,7 @@ class McpPage extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        l10n.mcpLoopbackHint,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      Text(l10n.mcpLoopbackHint, style: ManeType.body(11.5, color: context.mc.textSecondary)),
                     ],
                   ),
                 ),

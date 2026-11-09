@@ -48,6 +48,28 @@ jobs:
         run: dart test
         working-directory: packages/mane_core
 
+      - name: Check formatting
+        run: |
+          find lib test packages/mane_core/lib packages/mane_core/test \
+            -type f -name '*.dart' -not -name '*.g.dart' \
+            -not -name 'app_localizations*.dart' -print0 \
+            | xargs -0 dart format --line-length 110 --output=none --set-exit-if-changed
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            liblzma-dev \
+            libavahi-client-dev \
+            libavahi-gobject-dev \
+            libdbus-1-dev \
+            ninja-build \
+            pkg-config
+
+      - name: Build Linux debug bundle
+        run: flutter build linux --debug
+
       - name: Build debug APK
         run: flutter build apk --debug
 

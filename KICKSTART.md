@@ -6,15 +6,16 @@ does not stop between milestones.
 
 ## Mission
 
-Take Mane from its current milestone to the v1.0 finish line in `AGENTS.md`,
-one verified milestone at a time. Do not skip milestones, and do not start the
-next one with a known failure.
+Take Mane from the v0.5 baseline through the v0.6 → v1.0 completion program in
+`docs/completion-plan.md`. Do not skip milestones, and do not start the next one
+with a known failure.
 
 ## Before acting
 
-Read `AGENTS.md`, `docs/reference-map.md`, `docs/full-docs.md`,
-`docs/overview.md`, `CONTRIBUTING.md`, `CREDITS.md`, `ADDITIONAL_TERMS.md`,
-`.zed/tasks.json` and `docs/progress.md`.
+Read `AGENTS.md`, `docs/completion-plan.md`, `docs/compliance-audit.md`,
+`docs/reference-map.md`, `docs/full-docs.md`, `docs/overview.md`,
+`CONTRIBUTING.md`, `CREDITS.md`, `ADDITIONAL_TERMS.md`, `.zed/tasks.json` and
+`docs/progress.md`.
 
 Do not read `doc-personal/`. Never copy its contents into code, docs, commits,
 issues or prompts.
@@ -64,6 +65,8 @@ round-trip. Every bug gets a regression test.
   `(cd packages/mane_core && dart test)`, `flutter build linux --debug` and
   `flutter build apk --debug`.
 - Run `dart format --output=none --set-exit-if-changed` on hand-written Dart.
+- Run the visual/reference check: screenshots or golden tests for visual work,
+  and a reference-map update for any new component or screen.
 - Search for prints, TODOs, dead code and stray `DateTime.now()` in domain logic.
 - Check `git status` for secrets, generated junk, `doc-personal/` and build
   artifacts.

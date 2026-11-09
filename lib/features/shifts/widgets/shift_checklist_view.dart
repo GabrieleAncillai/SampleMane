@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../../../models/shift_checklist.dart';
 import '../../../state/providers.dart';
 
@@ -50,7 +52,7 @@ class _ShiftChecklistSectionState extends ConsumerState<ShiftChecklistSection> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     return FutureBuilder<(List<ShiftChecklistItem>, Set<String>)>(
       future: _future,
       builder: (context, snapshot) {
@@ -67,10 +69,7 @@ class _ShiftChecklistSectionState extends ConsumerState<ShiftChecklistSection> {
               Text(
                 '${context.l10n.shiftChecklist} · '
                 '${context.l10n.checklistDone(completed, items.length)}',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 0.4,
-                ),
+                style: ManeType.label(10.5, color: c.textTertiary),
               ),
               for (final item in items)
                 CheckboxListTile(
@@ -78,7 +77,7 @@ class _ShiftChecklistSectionState extends ConsumerState<ShiftChecklistSection> {
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
                   value: done.contains(item.id),
-                  title: Text(item.label, style: theme.textTheme.bodyMedium),
+                  title: Text(item.label, style: ManeType.body(13, color: c.text)),
                   onChanged: (value) => _toggle(item, value == true),
                 ),
             ],

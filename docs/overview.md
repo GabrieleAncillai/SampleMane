@@ -47,16 +47,24 @@ should follow with little extra work.
 
 ## Status
 
-v0.5 release candidate. Today, Week and Calendar tabs, tags, flexible shifts
-with per-shift checklists, reminders, settings, backup/restore, home inventory,
-shopping lists, interval maintenance, a soft sleep window, ICS and companion
-import, optional LAN pairing, a local MCP endpoint and global search exist. An
-Android home-screen widget shows today's plan. English and Spanish are covered.
-v1.0 waits on the user's real-device notification, reboot, battery and
-timezone checklist.
+v0.6 shipped. The active v0.7 → v1.0 completion program is in
+[completion-plan.md](completion-plan.md). Today, Week and Calendar tabs, tags,
+flexible shifts with per-shift checklists, reminders, settings, backup/restore,
+home inventory, shopping lists, interval maintenance, a soft sleep window, ICS
+and companion import, optional LAN pairing, a local MCP endpoint and global
+search exist. An Android home-screen widget shows today's plan, and the app now
+uses the adapted GymMane/Streak visual language. English and Spanish are
+covered. Remaining work includes real-file ICS and GymMane import, fuller
+MCP/sync, work-hours rules, per-slot checklists, multi-day entries, backup
+automation, app lock and the real-device checklist. The constraint audit is in
+[compliance-audit.md](compliance-audit.md).
 
 - [Full docs](full-docs.md): architecture, data model, feature areas and roadmap.
+- [Completion plan](completion-plan.md): the active v0.6 → v1.0 milestones and
+  acceptance criteria.
+- [Compliance audit](compliance-audit.md): constraint status and open findings.
 - [Reference map](reference-map.md): where to look in GymMane and Streak.
+- [Screenshots](screenshots/): the v0.6 visual foundation rendered from the app.
 - [Contributing](../CONTRIBUTING.md): setup, layout, house style and tests.
 - [Agent brief](../AGENTS.md): self-contained kickoff prompt for a coding agent.
 

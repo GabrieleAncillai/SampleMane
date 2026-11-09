@@ -172,12 +172,17 @@ Treat this as the baseline. Verify it before changing anything.
   and importing, companion import, pairing crypto, TLS pinning, replay
   rejection, MCP auth and tools, sync orchestration, search, widget data and
   the shift editor flow.
-- CI in `.github/workflows/build.yml`: analyze, both test suites and a debug
-  APK build.
+- CI in `.github/workflows/build.yml`: format check, analyze, both test suites,
+  a Linux debug build and a debug APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
   device deploy.
 
-**Known gaps:**
+**Known gaps:** the v0.5 baseline is functionally green but is not the full
+completion scope. The product/visual layer, real-file ICS coverage, GymMane
+schedule import, full MCP tool set, persisted LAN snapshots, work-hours rules,
+multi-day entries and per-slot checklists are tracked in
+`docs/completion-plan.md`; the constraint audit is in
+`docs/compliance-audit.md`. Do not claim v1.0 from this list alone.
 
 - Real-device notification delivery, reboot, battery optimization and
   timezone-change behavior still need the user's Android device checklist.
@@ -729,16 +734,59 @@ tools; and a read-only companion export import. See the v0.4 notes in
 **Shipped in v0.5:** global search; an Android `home_widget` provider; calendar
 and week error banners; semantics and text scaling; ARB parity and literal
 scanners; an O(1) count-rule ordinal; `.github/workflows/release.yml` and
-`docs/release.md`. **v1.0 is waiting only on the user's real-device
-notification, reboot, battery and timezone checklist.**
+`docs/release.md`. The v0.5 surface is complete, but v1.0 has a wider scope.
+
+### v0.6 Visual foundation and truth pass
+
+- [ ] Bundle the reference font family and a real type scale.
+- [ ] Apply `ManeColors` through `context.mc` and add component themes.
+- [ ] Port the shared UI kit (cards, sheets, section labels, pressables, glass,
+  empty state, page motion).
+- [ ] Replace the stock app bar/nav bar/FAB shell with the reference-style shell.
+- [ ] Sweep every shipped screen to use the kit.
+- [ ] Add shell/component golden or widget smoke tests.
+- [ ] Correct the reference map and screenshots to match reality.
+
+### v0.7 Calendar, recurrence and shift completeness
+
+- [ ] Day timeline with shift background blocks.
+- [ ] Multi-day all-day and timed entries.
+- [ ] Recurrence skip dates, modified occurrences and ordinal rules.
+- [ ] Tagged shift patterns and shift-aware tag filtering.
+- [ ] Per-slot shift checklist keys (schema migration + test).
+- [ ] Read-only ICS export.
+- [ ] Per-pattern commute/wind-down overrides for the sleep window.
+- [ ] ICS hardening: `EXDATE`, `RECURRENCE-ID`, Windows `TZID` aliases,
+  multi-day timed events and update-on-reimport.
+
+### v0.8 Data interchange, home tracking and privacy
+
+- [ ] Read-only GymMane schedule import (`weeklyPlan`, `routines`, `trainAt`).
+- [ ] Automatic local backups with rotation and older-schema upgrade.
+- [ ] CSV export/import for entries, shopping and inventory.
+- [ ] Inventory adjustments/dashboard, shopping grouping and a maintenance view.
+- [ ] Optional local PIN app lock.
+
+### v0.9 MCP, LAN sync and notification reliability
+
+- [ ] Full MCP tool set (search, range lists, update/delete/uncomplete, shifts,
+  home, shopping, tags, sleep) with writes behind the existing switch.
+- [ ] Streamable HTTP session handling for MCP clients.
+- [ ] Persistent read-only LAN snapshots and a richer query payload.
+- [ ] Work-hours visibility and quiet hours, including notification suppression.
+- [ ] Custom reminder times and notification actions where supported.
+- [ ] Document timezone-safe absolute scheduling and rebuild on resume/boot.
 
 ### v1.0 finish line
 
 Mane is v1.0 when:
 
-- v0.1.5 through v0.5 are complete and documented.
-- The app is daily-usable offline on Android.
-- Linux desktop builds and runs.
+- v0.1.5 through v0.9 are complete and documented, with the acceptance criteria
+  in `docs/completion-plan.md`.
+- The app is daily-usable offline on Android and Linux.
+- Every generalized scenario in `docs/completion-plan.md` passes.
+- The visual layer follows the GymMane/Streak references or documents a
+  deliberate deviation.
 - Calendar, flexible shifts, reminders, tags, settings, home inventory and
   backup are complete.
 - Backup and restore are proven by tests.
@@ -755,9 +803,9 @@ Mane is v1.0 when:
   debug-signed build a production release.
 - The About screen shows GPL-3.0 and the upstream InlitX attribution.
 
-**Status:** every item above is shipped and tested except real-device reminder
-reliability. The v1.0 tag waits on the user's Android notification, reboot,
-battery and timezone checklist.
+**Status:** v0.5 is shipped and tested; v0.6 through v1.0 are the active
+completion program. The old "only the device checklist remains" statement was
+incorrect. See `docs/completion-plan.md` and `docs/progress.md`.
 
 ## 14. Working method
 
@@ -793,8 +841,12 @@ to the next milestone.
 - [ ] Critical UI flows have a widget test, or documented manual steps.
 - [ ] `flutter analyze --no-fatal-infos` is clean.
 - [ ] `flutter test` and `(cd packages/mane_core && dart test)` pass.
+- [ ] The format check in the Zed tasks or CI passes.
 - [ ] Linux debug and Android debug builds pass.
-- [ ] `docs/full-docs.md` and the roadmap checkboxes are updated.
+- [ ] Visual changes show the reference style or document the deviation, with a
+      screenshot or golden test.
+- [ ] `docs/full-docs.md`, `docs/completion-plan.md` and the roadmap checkboxes
+      are updated.
 - [ ] The solution follows a GymMane/Streak reference, or the deviation is
       documented.
 - [ ] No new account, cloud, telemetry or unnecessary network dependency.
@@ -862,6 +914,10 @@ These are settled. Do not reopen them without the user asking.
    reference projects.
 7. **Real-device testing:** the user has an Android device and will test
    reminders, notifications, reboot and timezone behavior.
+8. **Visual language:** GymMane for the shell, settings and type; Streak for the
+   calendar, sheets and motion. There is no separate Mane visual identity until
+   the user explicitly defines one. "Mane style" means the adapted reference
+   language, not stock Material defaults.
 
 Remaining implementation choices (decide, document, keep moving): default week
 start, default reminder lead times, exact home-inventory fields, and the first

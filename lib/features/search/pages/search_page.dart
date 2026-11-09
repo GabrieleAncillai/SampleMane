@@ -5,9 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
 import '../../../models/home_item.dart';
 import '../../../models/search_results.dart';
 import '../../../state/providers.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../../../widgets/entry_widgets.dart';
 import '../../home_inventory/pages/home_inventory_page.dart';
 
@@ -53,77 +56,52 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _controller,
-          focusNode: _focus,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(hintText: l10n.searchHint, border: InputBorder.none),
-          onChanged: _changed,
-          onSubmitted: (value) {
-            _debounce?.cancel();
-            if (value.trim().isNotEmpty) _run(value.trim());
-          },
-        ),
-        actions: [
-          if (_controller.text.isNotEmpty)
-            IconButton(
-              tooltip: l10n.cancel,
-              onPressed: () {
-                _controller.clear();
-                _changed('');
-                _focus.requestFocus();
-              },
-              icon: const Icon(Icons.close),
-            ),
+    return ManePage(
+      title: l10n.search,
+      child: Column(
+        children: [
+          ManeSearchField(
+            controller: _controller,
+            focusNode: _focus,
+            autofocus: true,
+            hint: l10n.searchHint,
+            onChanged: _changed,
+            onSubmitted: (value) {
+              _debounce?.cancel();
+              if (value.trim().isNotEmpty) _run(value.trim());
+            },
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _query.isEmpty
+                ? AppEmptyState(icon: Icons.search, title: l10n.search, message: l10n.searchPrompt)
+                : FutureBuilder<SearchResults>(
+                    future: _results,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return AppEmptyState(
+                          icon: Icons.error_outline,
+                          title: l10n.search,
+                          message: '${snapshot.error}',
+                        );
+                      }
+                      final results = snapshot.data;
+                      if (results == null) return const SizedBox.shrink();
+                      if (results.isEmpty) {
+                        return AppEmptyState(
+                          icon: Icons.search_off,
+                          title: l10n.searchNoResults(_query),
+                          message: l10n.searchPrompt,
+                        );
+                      }
+                      return _Results(results: results);
+                    },
+                  ),
+          ),
         ],
-      ),
-      body: _query.isEmpty
-          ? _Prompt(text: l10n.searchPrompt)
-          : FutureBuilder<SearchResults>(
-              future: _results,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return _Prompt(text: '${snapshot.error}');
-                }
-                final results = snapshot.data;
-                if (results == null) return const SizedBox.shrink();
-                if (results.isEmpty) return _Prompt(text: l10n.searchNoResults(_query));
-                return _Results(results: results);
-              },
-            ),
-    );
-  }
-}
-
-class _Prompt extends StatelessWidget {
-  const _Prompt({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search, size: 40, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: 12),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -142,49 +120,52 @@ class _Results extends ConsumerWidget {
     final today = localDateAt(ref.watch(nowProvider), viewerTimeZone);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.only(bottom: 24),
       children: [
         if (results.entries.isNotEmpty) ...[
-          _SectionHeader(l10n.searchEntries),
-          for (final entry in results.entries)
-            EntryTile(
-              occurrence: EntryOccurrence(
-                date: entry.date ?? today,
-                displayDate: entry.date == null ? today : entry.displayDateIn(viewerTimeZone),
-                entry: entry,
-                completed: entry.status == EntryStatus.done,
-                startAt: entry.startAt,
-                endAt: entry.endAt,
-              ),
-              spaces: spaces,
+          SectionLabel(l10n.searchEntries),
+          SoftCard(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            clip: true,
+            child: Column(
+              children: [
+                for (var index = 0; index < results.entries.length; index++) ...[
+                  if (index > 0) const Divider(height: 1, indent: 44),
+                  EntryTile(
+                    occurrence: EntryOccurrence(
+                      date: results.entries[index].date ?? today,
+                      displayDate: results.entries[index].date == null
+                          ? today
+                          : results.entries[index].displayDateIn(viewerTimeZone),
+                      entry: results.entries[index],
+                      completed: results.entries[index].status == EntryStatus.done,
+                      startAt: results.entries[index].startAt,
+                      endAt: results.entries[index].endAt,
+                    ),
+                    spaces: spaces,
+                  ),
+                ],
+              ],
             ),
+          ),
         ],
         if (results.homeItems.isNotEmpty) ...[
-          _SectionHeader(l10n.searchHomeItems),
-          for (final item in results.homeItems) _HomeTile(item: item),
+          const SizedBox(height: 18),
+          SectionLabel(l10n.searchHomeItems),
+          SoftCard(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            clip: true,
+            child: Column(
+              children: [
+                for (var index = 0; index < results.homeItems.length; index++) ...[
+                  if (index > 0) const Divider(height: 1, indent: 52),
+                  _HomeTile(item: results.homeItems[index]),
+                ],
+              ],
+            ),
+          ),
         ],
       ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 4),
-      child: Text(
-        label.toUpperCase(),
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-          letterSpacing: 1.2,
-        ),
-      ),
     );
   }
 }
@@ -196,26 +177,65 @@ class _HomeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final details = [
       if (item.category.isNotEmpty) item.category,
       if (item.location.isNotEmpty) item.location,
       '${_quantity(item.quantity)}${item.unit.isEmpty ? '' : ' ${item.unit}'}',
     ];
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: const Icon(Icons.inventory_2_outlined),
-      title: Text(item.name),
-      subtitle: Text(details.join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: item.isLowStock
-          ? Chip(
-              label: Text(context.l10n.lowStock),
-              labelStyle: theme.textTheme.labelSmall,
-              visualDensity: VisualDensity.compact,
-            )
-          : null,
-      onTap: () =>
-          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const HomeInventoryPage())),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Pressable(
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (_) => const HomeInventoryPage())),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(color: c.homeSoft, borderRadius: BorderRadius.circular(11)),
+                    child: Icon(Icons.inventory_2_outlined, size: 19, color: c.home),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 7),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: ManeType.body(14, weight: FontWeight.w700, color: c.text),
+                          ),
+                          Text(
+                            details.join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: ManeType.body(11.5, color: c.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (item.isLowStock)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: c.dangerSoft, borderRadius: BorderRadius.circular(8)),
+              child: Text(context.l10n.lowStock, style: ManeType.label(10, color: c.danger)),
+            ),
+        ],
+      ),
     );
   }
 

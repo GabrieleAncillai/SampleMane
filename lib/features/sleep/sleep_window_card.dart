@@ -5,6 +5,8 @@ import 'package:mane_core/mane_core.dart';
 import '../../core/i18n/l10n.dart';
 import '../../state/providers.dart';
 import '../../state/settings_controller.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/entry_widgets.dart';
 
 /// A soft block showing the gap between today's last commitment and tomorrow's
@@ -48,8 +50,8 @@ class SleepWindowCard extends ConsumerWidget {
     );
     if (window.bedtime == null && window.wakeTime == null) return const SizedBox.shrink();
 
-    final theme = Theme.of(context);
-    final color = window.warning ? theme.colorScheme.error : theme.colorScheme.primary;
+    final c = context.mc;
+    final color = window.warning ? c.danger : c.accent;
     final l10n = context.l10n;
     final lines = <String>[
       if (window.bedtime case final bedtime?)
@@ -64,30 +66,30 @@ class SleepWindowCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
+        color: window.warning ? c.dangerSoft : c.accentSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.bedtime_outlined, size: 20, color: color),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+            child: Icon(Icons.bedtime_outlined, size: 18, color: color),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.sleepWindow, style: theme.textTheme.labelLarge?.copyWith(color: color)),
+                Text(l10n.sleepWindow, style: ManeType.label(13, color: c.text)),
                 const SizedBox(height: 2),
-                Text(
-                  lines.join(' · '),
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
+                Text(lines.join(' · '), style: ManeType.body(11.5, color: c.textSecondary)),
                 if (window.warning) ...[
                   const SizedBox(height: 4),
-                  Text(
-                    l10n.sleepWarning,
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
-                  ),
+                  Text(l10n.sleepWarning, style: ManeType.body(11.5, color: c.danger)),
                 ],
               ],
             ),

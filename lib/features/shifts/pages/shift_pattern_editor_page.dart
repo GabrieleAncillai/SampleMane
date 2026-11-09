@@ -5,6 +5,9 @@ import 'package:mane_core/mane_core.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../core/widgets/ui_kit.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_typography.dart';
 import '../../../models/shift_checklist.dart';
 import '../../../state/providers.dart';
 
@@ -101,22 +104,16 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
     final preview = _preview();
     final conflicts = preview?.findConflicts() ?? const <ShiftConflict>[];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.pattern == null ? l10n.newShiftPattern : l10n.editShiftPattern),
-        actions: [
-          if (widget.pattern != null)
-            IconButton(
-              onPressed: _saving ? null : _delete,
-              icon: const Icon(Icons.delete_outline),
-              tooltip: l10n.delete,
-            ),
-        ],
-      ),
-      body: Form(
+    return ManePage(
+      title: widget.pattern == null ? l10n.newShiftPattern : l10n.editShiftPattern,
+      actions: [
+        if (widget.pattern != null)
+          GlassIconButton(icon: Icons.delete_outline, tooltip: l10n.delete, onTap: _saving ? null : _delete),
+      ],
+      child: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          padding: const EdgeInsets.only(bottom: 20),
           children: [
             TextFormField(
               controller: _nameController,
@@ -153,11 +150,7 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
             const SizedBox(height: 12),
             TextFormField(
               controller: _timeZoneController,
-              decoration: InputDecoration(
-                labelText: l10n.timeZone,
-                hintText: 'Europe/Madrid',
-                border: const OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(labelText: l10n.timeZone, hintText: 'Europe/Madrid'),
               validator: (value) {
                 final zone = value?.trim() ?? '';
                 if (zone.isEmpty || !isKnownTimeZone(zone)) return l10n.invalidTimeZone;
@@ -187,7 +180,6 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
                 decoration: InputDecoration(
                   labelText: l10n.anchorDate,
                   prefixIcon: const Icon(Icons.event_outlined, size: 20),
-                  border: const OutlineInputBorder(),
                 ),
                 child: Text(DateFormat.yMMMMEEEEd(locale).format(_anchorDate.toDateTime())),
               ),
@@ -228,10 +220,7 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
                           key: ValueKey('checklist-${_checklist[index].id}'),
                           initialValue: _checklist[index].label,
                           textCapitalization: TextCapitalization.sentences,
-                          decoration: InputDecoration(
-                            labelText: l10n.checklistItemLabel,
-                            border: const OutlineInputBorder(),
-                          ),
+                          decoration: InputDecoration(labelText: l10n.checklistItemLabel),
                           onChanged: (value) => _checklist[index] = _checklist[index].copyWith(label: value),
                         ),
                       ),
@@ -279,17 +268,13 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
 
   Widget _buildDay(int index, String locale) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
     final date = _anchorDate.addDays(index);
     final daySlots = _slots.where((slot) => slot.dayIndex == index).toList();
 
-    return Container(
+    return SoftCard(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 6),
+      radius: 18,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -298,27 +283,24 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
               Expanded(
                 child: Text(
                   '${l10n.cycleDay(index + 1)} · ${DateFormat.E(locale).format(date.toDateTime())}',
-                  style: theme.textTheme.titleSmall,
+                  style: ManeType.title(13.5, color: context.mc.text),
                 ),
               ),
               Text(
                 DateFormat.MMMd(locale).format(date.toDateTime()),
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: ManeType.body(11.5, color: context.mc.textSecondary),
               ),
             ],
           ),
           if (daySlots.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Text(
-                l10n.noSlots,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
+              child: Text(l10n.noSlots, style: ManeType.body(11.5, color: context.mc.textTertiary)),
             ),
           for (final slot in daySlots) _buildSlot(slot),
           TextButton.icon(
             onPressed: () => _addSlot(index),
-            icon: const Icon(Icons.add, size: 18),
+            icon: const Icon(Icons.add, size: 17),
             label: Text(l10n.addSlot),
           ),
         ],
@@ -332,8 +314,9 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
       margin: const EdgeInsets.only(top: 6),
       padding: const EdgeInsets.fromLTRB(10, 6, 4, 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
+        color: context.mc.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.mc.border),
       ),
       child: Column(
         children: [
@@ -343,11 +326,7 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
                 child: TextFormField(
                   key: ValueKey('slot-label-${slot.id}'),
                   initialValue: slot.label,
-                  decoration: InputDecoration(
-                    labelText: l10n.slotLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
+                  decoration: InputDecoration(labelText: l10n.slotLabel, isDense: true),
                   onChanged: (value) => slot.label = value,
                 ),
               ),
@@ -395,19 +374,36 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
         : '';
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        color: context.mc.surfaceAlt,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.mc.border),
       ),
-      child: ListTile(
-        dense: true,
-        title: Text('${DateFormat.yMMMd(locale).format(exception.date.toDateTime())} · $type$times'),
-        subtitle: exception.note.isEmpty ? null : Text(exception.note),
-        trailing: IconButton(
-          onPressed: () => setState(() => _exceptions.remove(exception)),
-          icon: const Icon(Icons.close, size: 18),
-          tooltip: l10n.delete,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${DateFormat.yMMMd(locale).format(exception.date.toDateTime())} · $type$times',
+                    style: ManeType.body(12.5, color: context.mc.text),
+                  ),
+                  if (exception.note.isNotEmpty)
+                    Text(exception.note, style: ManeType.body(11.5, color: context.mc.textSecondary)),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () => setState(() => _exceptions.remove(exception)),
+            icon: const Icon(Icons.close, size: 18),
+            tooltip: l10n.delete,
+          ),
+        ],
       ),
     );
   }
@@ -608,23 +604,9 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-          if (actionLabel != null) TextButton(onPressed: onAction, child: Text(actionLabel!)),
-        ],
-      ),
+    return SectionLabel(
+      title,
+      trailing: actionLabel == null ? null : TextButton(onPressed: onAction, child: Text(actionLabel!)),
     );
   }
 }
@@ -642,7 +624,7 @@ class _TimeField extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true),
+        decoration: InputDecoration(labelText: label, isDense: true),
         child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
@@ -658,15 +640,12 @@ class _Preview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.mc;
     final l10n = context.l10n;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final occurrences = pattern.occurrencesBetween(today, today.addDays(27), viewerTimeZone: deviceTimeZone);
     if (occurrences.isEmpty) {
-      return Text(
-        l10n.noSlots,
-        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-      );
+      return Text(l10n.noSlots, style: ManeType.body(11.5, color: c.textSecondary));
     }
 
     return Column(
@@ -680,7 +659,7 @@ class _Preview extends StatelessWidget {
                   width: 92,
                   child: Text(
                     DateFormat.MMMEd(locale).format(occurrence.displayDate.toDateTime()),
-                    style: theme.textTheme.bodySmall,
+                    style: ManeType.body(11.5, color: c.textSecondary),
                   ),
                 ),
                 Expanded(
@@ -693,7 +672,7 @@ class _Preview extends StatelessWidget {
                 Text(
                   '${_formatTime(context, occurrence.startAt, deviceTimeZone)} – '
                   '${_formatTime(context, occurrence.endAt, deviceTimeZone)}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: ManeType.body(11.5, color: c.textSecondary),
                 ),
               ],
             ),
@@ -749,10 +728,7 @@ class _ExceptionDialogState extends State<_ExceptionDialog> {
             InkWell(
               onTap: _pickDate,
               child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: l10n.exceptionDate,
-                  border: const OutlineInputBorder(),
-                ),
+                decoration: InputDecoration(labelText: l10n.exceptionDate),
                 child: Text(DateFormat.yMMMd(locale).format(_date.toDateTime())),
               ),
             ),
@@ -866,7 +842,7 @@ class _DialogTimeField extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true),
+        decoration: InputDecoration(labelText: label),
         child: Text(value),
       ),
     );
