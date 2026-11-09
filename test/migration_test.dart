@@ -14,7 +14,7 @@ void main() {
     initializeTimeZones();
   });
 
-  test('migrates real v1 data to v2 without losing anything', () async {
+  test('migrates real v1 data to the current schema without losing anything', () async {
     final directory = await Directory.systemTemp.createTemp('mane-migration');
     final path = '${directory.path}/mane.sqlite';
     final createdAt = DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000;
@@ -132,6 +132,68 @@ void main() {
     expect(columns.map((row) => row.data['name']), contains('time_zone'));
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 2);
+    expect(version.data.values.single, 3);
+  });
+
+  test('migrates real v2 data and keeps tags usable', () async {
+    final directory = await Directory.systemTemp.createTemp('mane-migration-v2');
+    final path = '${directory.path}/mane.sqlite';
+    final createdAt = DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000;
+
+    final raw = sqlite3.open(path);
+    raw.execute(File('test/fixtures/schema_v2.sql').readAsStringSync());
+    raw.execute(
+      'INSERT INTO space_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['personal', 'Personal', 0xFFB07D5C, 0, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO entry_records '
+      '(id, space_id, title, kind, date_key, all_day, status, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['taxes', 'personal', 'Taxes', 'deadline', 20261115, 1, 'open', createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shift_pattern_records '
+      '(id, space_id, name, time_zone, cycle_days, anchor_date_key, enabled, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['bank', 'personal', 'Bank', 'Europe/Madrid', 7, 20261109, 1, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shift_slot_records (pattern_id, day_index, label, start_minute, end_minute) '
+      'VALUES (?, ?, ?, ?, ?)',
+      ['bank', 0, 'Open', 540, 900],
+    );
+    raw.execute('INSERT INTO setting_records (key, value) VALUES (?, ?)', ['themeMode', 'dark']);
+    raw.dispose();
+
+    final database = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(() async {
+      await database.close();
+      await directory.delete(recursive: true);
+    });
+
+    final entries = await database
+        .watchEntriesBetween(LocalDate.parse('2026-11-15'), LocalDate.parse('2026-11-15'), 'Europe/Madrid')
+        .first;
+    expect(entries.single.entry.title, 'Taxes');
+    expect(entries.single.entry.tagIds, isEmpty);
+
+    final shifts = await database
+        .watchShiftsBetween(LocalDate.parse('2026-11-09'), LocalDate.parse('2026-11-09'), 'Europe/Madrid')
+        .first;
+    expect(shifts.single.slot.label, 'Open');
+
+    await database.saveTag(const Tag(id: 'tax', name: 'Tax', colorValue: 0xFFB07D5C, position: 0));
+    final entry = entries.single.entry.copyWith(tagIds: {'tax'});
+    await database.saveEntry(entry);
+    final tagged = await database
+        .watchEntriesBetween(LocalDate.parse('2026-11-15'), LocalDate.parse('2026-11-15'), 'Europe/Madrid')
+        .first;
+    expect(tagged.single.entry.tagIds, {'tax'});
+    expect((await database.watchTags().first).single.name, 'Tax');
+
+    final version = await database.customSelect('PRAGMA user_version').getSingle();
+    expect(version.data.values.single, 3);
   });
 }

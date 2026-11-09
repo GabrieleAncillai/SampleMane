@@ -7,6 +7,8 @@ import 'package:mane_core/mane_core.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../models/reminder.dart';
+
 part 'app_database.g.dart';
 
 @DataClassName('SpaceRow')
@@ -21,6 +23,30 @@ class SpaceRecords extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('TagRow')
+class TagRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get spaceId => text().nullable().references(SpaceRecords, #id)();
+  TextColumn get name => text()();
+  IntColumn get color => integer()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('EntryTagRow')
+class EntryTagRecords extends Table {
+  TextColumn get entryId => text().references(EntryRecords, #id)();
+  TextColumn get tagId => text().references(TagRecords, #id)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {entryId, tagId};
 }
 
 @DataClassName('EntryRow')
@@ -144,6 +170,8 @@ class SettingRecords extends Table {
   tables: [
     SpaceRecords,
     EntryRecords,
+    TagRecords,
+    EntryTagRecords,
     CompletionRecords,
     ReminderRecords,
     ShiftPatternRecords,
@@ -161,13 +189,14 @@ class AppDatabase extends _$AppDatabase {
   final String defaultTimeZone;
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
       if (from < 2) await _migrateToV2(m);
+      if (from < 3) await _migrateToV3(m);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -207,36 +236,72 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<Map<String, String>> readSettings() async {
+    final rows = await select(settingRecords).get();
+    return {for (final row in rows) row.key: row.value};
+  }
+
+  Future<void> writeSetting(String key, String value) =>
+      into(settingRecords).insertOnConflictUpdate(SettingRecordsCompanion.insert(key: key, value: value));
+
   Stream<List<EntryOccurrence>> watchEntriesBetween(LocalDate start, LocalDate end, String viewerTimeZone) {
-    final query = select(entryRecords).join([
-      leftOuterJoin(
-        completionRecords,
-        completionRecords.entryId.equalsExp(entryRecords.id) &
-            completionRecords.dateKey.isBetweenValues(start.addDays(-2).key, end.addDays(2).key),
-      ),
-    ])..where(entryRecords.deletedAt.isNull());
+    final query = _entriesQuery(start, end);
+    return query.watch().map((rows) => _expandEntryRows(rows, start, end, viewerTimeZone));
+  }
 
-    return query.watch().map((rows) {
-      final entries = <String, Entry>{};
-      final completions = <String, Set<LocalDate>>{};
+  Future<List<EntryOccurrence>> loadEntriesBetween(
+    LocalDate start,
+    LocalDate end,
+    String viewerTimeZone,
+  ) async {
+    final rows = await _entriesQuery(start, end).get();
+    return _expandEntryRows(rows, start, end, viewerTimeZone);
+  }
 
-      for (final row in rows) {
-        final entryRow = row.readTable(entryRecords);
-        entries.putIfAbsent(entryRow.id, () => _entryFromRow(entryRow));
-        final completion = row.readTableOrNull(completionRecords);
-        if (completion != null) {
-          (completions[entryRow.id] ??= <LocalDate>{}).add(LocalDate.fromKey(completion.dateKey));
-        }
+  JoinedSelectStatement _entriesQuery(LocalDate start, LocalDate end) => select(entryRecords).join([
+    leftOuterJoin(
+      completionRecords,
+      completionRecords.entryId.equalsExp(entryRecords.id) &
+          completionRecords.dateKey.isBetweenValues(start.addDays(-2).key, end.addDays(2).key),
+    ),
+    leftOuterJoin(entryTagRecords, entryTagRecords.entryId.equalsExp(entryRecords.id)),
+  ])..where(entryRecords.deletedAt.isNull());
+
+  List<EntryOccurrence> _expandEntryRows(
+    List<TypedResult> rows,
+    LocalDate start,
+    LocalDate end,
+    String viewerTimeZone,
+  ) {
+    final entryRows = <String, EntryRow>{};
+    final completions = <String, Set<LocalDate>>{};
+    final tagIds = <String, Set<String>>{};
+
+    for (final row in rows) {
+      final entryRow = row.readTable(entryRecords);
+      entryRows[entryRow.id] = entryRow;
+      final completion = row.readTableOrNull(completionRecords);
+      if (completion != null) {
+        (completions[entryRow.id] ??= <LocalDate>{}).add(LocalDate.fromKey(completion.dateKey));
       }
+      final tag = row.readTableOrNull(entryTagRecords);
+      if (tag != null) {
+        (tagIds[entryRow.id] ??= <String>{}).add(tag.tagId);
+      }
+    }
 
-      return expandEntries(
-        entries: entries.values,
-        start: start,
-        end: end,
-        viewerTimeZone: viewerTimeZone,
-        completions: completions,
-      );
-    });
+    final entries = <String, Entry>{
+      for (final row in entryRows.values)
+        row.id: _entryFromRow(row, tagIds: tagIds[row.id] ?? const <String>{}),
+    };
+
+    return expandEntries(
+      entries: entries.values,
+      start: start,
+      end: end,
+      viewerTimeZone: viewerTimeZone,
+      completions: completions,
+    );
   }
 
   Stream<List<ShiftOccurrence>> watchShiftsBetween(LocalDate start, LocalDate end, String viewerTimeZone) {
@@ -246,43 +311,8 @@ class AppDatabase extends _$AppDatabase {
     ])..where(shiftPatternRecords.deletedAt.isNull() & shiftPatternRecords.enabled.equals(true));
 
     return query.watch().map((rows) {
-      final patterns = <String, ShiftPatternRow>{};
-      final slots = <String, Map<int, ShiftSlot>>{};
-      final exceptions = <String, Map<int, ShiftException>>{};
-
-      for (final row in rows) {
-        final patternRow = row.readTable(shiftPatternRecords);
-        patterns[patternRow.id] = patternRow;
-
-        final slotRow = row.readTableOrNull(shiftSlotRecords);
-        if (slotRow != null) {
-          (slots[patternRow.id] ??= <int, ShiftSlot>{})[slotRow.id] = ShiftSlot(
-            dayIndex: slotRow.dayIndex,
-            label: slotRow.label,
-            startMinute: slotRow.startMinute,
-            endMinute: slotRow.endMinute,
-          );
-        }
-
-        final exceptionRow = row.readTableOrNull(shiftExceptionRecords);
-        if (exceptionRow != null) {
-          (exceptions[patternRow.id] ??= <int, ShiftException>{})[exceptionRow.id] = ShiftException(
-            date: LocalDate.fromKey(exceptionRow.dateKey),
-            type: ShiftExceptionType.values.byName(exceptionRow.type),
-            startMinute: exceptionRow.startMinute,
-            endMinute: exceptionRow.endMinute,
-            note: exceptionRow.note,
-          );
-        }
-      }
-
       final occurrences = <ShiftOccurrence>[];
-      for (final patternRow in patterns.values) {
-        final pattern = _patternFromRow(
-          patternRow,
-          slots[patternRow.id]?.values.toList() ?? const <ShiftSlot>[],
-          exceptions[patternRow.id]?.values.toList() ?? const <ShiftException>[],
-        );
+      for (final pattern in _patternsFromRows(rows)) {
         for (final occurrence in pattern.occurrencesBetween(
           start.addDays(-2),
           end.addDays(2),
@@ -304,14 +334,122 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Stream<List<ShiftPattern>> watchShiftPatterns() {
+    final query = select(shiftPatternRecords).join([
+      leftOuterJoin(shiftSlotRecords, shiftSlotRecords.patternId.equalsExp(shiftPatternRecords.id)),
+      leftOuterJoin(shiftExceptionRecords, shiftExceptionRecords.patternId.equalsExp(shiftPatternRecords.id)),
+    ])..where(shiftPatternRecords.deletedAt.isNull());
+
+    return query.watch().map((rows) {
+      final patterns = _patternsFromRows(rows);
+      patterns.sort((a, b) {
+        final bySpace = a.spaceId.compareTo(b.spaceId);
+        if (bySpace != 0) return bySpace;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+      return patterns;
+    });
+  }
+
   Future<void> saveEntry(Entry entry) {
-    return into(entryRecords).insertOnConflictUpdate(_entryCompanion(entry));
+    return transaction(() async {
+      await into(entryRecords).insertOnConflictUpdate(_entryCompanion(entry));
+      await (delete(entryTagRecords)..where((row) => row.entryId.equals(entry.id))).go();
+      for (final tagId in entry.tagIds) {
+        await into(entryTagRecords).insert(
+          EntryTagRecordsCompanion.insert(entryId: entry.id, tagId: tagId),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+    });
+  }
+
+  Stream<List<Tag>> watchTags() {
+    final query = select(tagRecords)..where((row) => row.deletedAt.isNull());
+    return query.watch().map((rows) {
+      final tags = rows.map(_tagFromRow).toList()
+        ..sort((a, b) {
+          final byPosition = a.position.compareTo(b.position);
+          if (byPosition != 0) return byPosition;
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+      return tags;
+    });
+  }
+
+  Future<void> saveTag(Tag tag) async {
+    final now = DateTime.now();
+    final existing = await (select(tagRecords)..where((row) => row.id.equals(tag.id))).getSingleOrNull();
+    await into(tagRecords).insertOnConflictUpdate(
+      TagRecordsCompanion(
+        id: Value(tag.id),
+        spaceId: Value(tag.spaceId),
+        name: Value(tag.name),
+        color: Value(tag.colorValue),
+        position: Value(tag.position),
+        createdAt: Value(existing?.createdAt ?? now),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  Future<void> softDeleteTag(String id) {
+    return transaction(() async {
+      final now = DateTime.now();
+      await (delete(entryTagRecords)..where((row) => row.tagId.equals(id))).go();
+      await (update(tagRecords)..where((row) => row.id.equals(id))).write(
+        TagRecordsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+      );
+    });
   }
 
   Future<void> setEntryStatus(String id, EntryStatus status) async {
     await (update(entryRecords)..where((row) => row.id.equals(id))).write(
       EntryRecordsCompanion(status: Value(status.name), updatedAt: Value(DateTime.now())),
     );
+  }
+
+  Future<Entry?> readEntry(String id) async {
+    final row = await (select(entryRecords)..where((entry) => entry.id.equals(id))).getSingleOrNull();
+    if (row == null) return null;
+    final tags = await (select(entryTagRecords)..where((tag) => tag.entryId.equals(id))).get();
+    return _entryFromRow(row, tagIds: {for (final tag in tags) tag.tagId});
+  }
+
+  Future<List<Reminder>> readRemindersForEntry(String entryId) async {
+    final rows = await (select(reminderRecords)..where((row) => row.entryId.equals(entryId))).get();
+    final reminders = rows.map(_reminderFromRow).toList()
+      ..sort((a, b) => a.offsetMinutes.compareTo(b.offsetMinutes));
+    return reminders;
+  }
+
+  Future<Map<String, List<Reminder>>> readAllReminders() async {
+    final rows = await (select(reminderRecords)..where((row) => row.enabled.equals(true))).get();
+    final byEntry = <String, List<Reminder>>{};
+    for (final row in rows) {
+      (byEntry[row.entryId] ??= <Reminder>[]).add(_reminderFromRow(row));
+    }
+    for (final reminders in byEntry.values) {
+      reminders.sort((a, b) => a.offsetMinutes.compareTo(b.offsetMinutes));
+    }
+    return byEntry;
+  }
+
+  Future<void> saveRemindersForEntry(String entryId, List<Reminder> reminders) {
+    return transaction(() async {
+      await (delete(reminderRecords)..where((row) => row.entryId.equals(entryId))).go();
+      for (final reminder in reminders) {
+        await into(reminderRecords).insert(
+          ReminderRecordsCompanion.insert(
+            id: reminder.id.isEmpty ? Reminder.idFor(entryId, reminder.offsetMinutes) : reminder.id,
+            entryId: entryId,
+            offsetMinutes: reminder.offsetMinutes,
+            enabled: Value(reminder.enabled),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
   }
 
   /// Marks one occurrence of a recurring entry done without touching the
@@ -391,6 +529,47 @@ class AppDatabase extends _$AppDatabase {
     await (update(shiftPatternRecords)..where((row) => row.id.equals(id))).write(
       ShiftPatternRecordsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
     );
+  }
+
+  List<ShiftPattern> _patternsFromRows(Iterable<TypedResult> rows) {
+    final patternRows = <String, ShiftPatternRow>{};
+    final slots = <String, Map<int, ShiftSlot>>{};
+    final exceptions = <String, Map<int, ShiftException>>{};
+
+    for (final row in rows) {
+      final patternRow = row.readTable(shiftPatternRecords);
+      patternRows[patternRow.id] = patternRow;
+
+      final slotRow = row.readTableOrNull(shiftSlotRecords);
+      if (slotRow != null) {
+        (slots[patternRow.id] ??= <int, ShiftSlot>{})[slotRow.id] = ShiftSlot(
+          dayIndex: slotRow.dayIndex,
+          label: slotRow.label,
+          startMinute: slotRow.startMinute,
+          endMinute: slotRow.endMinute,
+        );
+      }
+
+      final exceptionRow = row.readTableOrNull(shiftExceptionRecords);
+      if (exceptionRow != null) {
+        (exceptions[patternRow.id] ??= <int, ShiftException>{})[exceptionRow.id] = ShiftException(
+          date: LocalDate.fromKey(exceptionRow.dateKey),
+          type: ShiftExceptionType.values.byName(exceptionRow.type),
+          startMinute: exceptionRow.startMinute,
+          endMinute: exceptionRow.endMinute,
+          note: exceptionRow.note,
+        );
+      }
+    }
+
+    return [
+      for (final row in patternRows.values)
+        _patternFromRow(
+          row,
+          slots[row.id]?.values.toList() ?? const <ShiftSlot>[],
+          exceptions[row.id]?.values.toList() ?? const <ShiftException>[],
+        ),
+    ];
   }
 
   Future<void> _migrateToV2(Migrator m) async {
@@ -484,6 +663,11 @@ class AppDatabase extends _$AppDatabase {
       spaceRecords,
     )..where((row) => row.id.equals('home'))).write(const SpaceRecordsCompanion(position: Value(2)));
   }
+
+  Future<void> _migrateToV3(Migrator m) async {
+    await m.createTable(tagRecords);
+    await m.createTable(entryTagRecords);
+  }
 }
 
 const _defaultSpaces = <Space>[
@@ -503,7 +687,13 @@ LazyDatabase _openConnection() {
 Space _spaceFromRow(SpaceRow row) =>
     Space(id: row.id, name: row.name, colorValue: row.color, position: row.position);
 
-Entry _entryFromRow(EntryRow row) => Entry(
+Tag _tagFromRow(TagRow row) =>
+    Tag(id: row.id, spaceId: row.spaceId, name: row.name, colorValue: row.color, position: row.position);
+
+Reminder _reminderFromRow(ReminderRow row) =>
+    Reminder(id: row.id, entryId: row.entryId, offsetMinutes: row.offsetMinutes, enabled: row.enabled);
+
+Entry _entryFromRow(EntryRow row, {Set<String> tagIds = const <String>{}}) => Entry(
   id: row.id,
   spaceId: row.spaceId,
   title: row.title,
@@ -514,6 +704,7 @@ Entry _entryFromRow(EntryRow row) => Entry(
   startMinute: row.startMinute,
   endMinute: row.endMinute,
   timeZone: row.timeZone,
+  tagIds: tagIds,
   allDay: row.allDay,
   status: EntryStatus.values.byName(row.status),
   recurrence: row.recurrenceJson == null

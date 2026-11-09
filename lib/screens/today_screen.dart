@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mane_core/mane_core.dart';
 
+import '../core/i18n/l10n.dart';
 import '../state/providers.dart';
+import '../state/settings_controller.dart';
 import '../widgets/entry_widgets.dart';
 import 'entry_editor.dart';
 
@@ -15,9 +17,20 @@ class TodayScreen extends ConsumerWidget {
     final deviceTimeZone = ref.watch(deviceTimeZoneProvider);
     final today = localDateAt(ref.watch(nowProvider), deviceTimeZone);
     final range = (start: today, end: today);
+    final settings = ref.watch(settingsProvider);
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
-    final entries = ref.watch(entriesProvider(range));
-    final shifts = ref.watch(shiftsProvider(range));
+    final entriesState = ref.watch(entriesProvider(range));
+    final shiftsState = ref.watch(shiftsProvider(range));
+    final l10n = context.l10n;
+
+    final entries = settings.hideWorkSpace
+        ? (entriesState.value ?? const <EntryOccurrence>[])
+              .where((entry) => entry.entry.spaceId != 'work')
+              .toList()
+        : entriesState.value ?? const <EntryOccurrence>[];
+    final shifts = settings.hideWorkSpace
+        ? const <ShiftOccurrence>[]
+        : shiftsState.value ?? const <ShiftOccurrence>[];
 
     return SafeArea(
       child: ListView(
@@ -25,30 +38,17 @@ class TodayScreen extends ConsumerWidget {
         children: [
           _TodayHeader(date: today),
           const SizedBox(height: 20),
-          shifts.when(
-            data: (items) {
-              if (items.isEmpty) return const SizedBox.shrink();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _SectionLabel('Shifts'),
-                  const SizedBox(height: 8),
-                  ...items.map((item) => ShiftTile(occurrence: item)),
-                  const SizedBox(height: 8),
-                ],
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (error, stack) => Text('Could not load shifts: $error'),
-          ),
-          entries.when(
-            data: (items) => _EntriesSection(entries: items, spaces: spaces),
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (error, stack) => Text('Could not load your day: $error'),
-          ),
+          if (shifts.isNotEmpty) ...[
+            _SectionLabel(l10n.shiftsSection),
+            const SizedBox(height: 8),
+            ...shifts.map((item) => ShiftTile(occurrence: item)),
+            const SizedBox(height: 8),
+          ],
+          if (shiftsState.hasError) Text(l10n.couldNotLoadShifts('${shiftsState.error}')),
+          if (entriesState.hasError)
+            Text(l10n.couldNotLoadDay('${entriesState.error}'))
+          else
+            _EntriesSection(entries: entries, spaces: spaces),
         ],
       ),
     );
@@ -64,11 +64,12 @@ class _TodayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'TODAY',
+          context.l10n.today.toUpperCase(),
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.primary,
             letterSpacing: 1.6,
@@ -76,9 +77,9 @@ class _TodayHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(DateFormat('EEEE').format(date.toDateTime()), style: theme.textTheme.headlineMedium),
+        Text(DateFormat('EEEE', locale).format(date.toDateTime()), style: theme.textTheme.headlineMedium),
         Text(
-          DateFormat('d MMMM yyyy').format(date.toDateTime()),
+          DateFormat.yMMMMd(locale).format(date.toDateTime()),
           style: theme.textTheme.bodyMedium?.copyWith(color: muted),
         ),
       ],
@@ -196,10 +197,10 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.event_available_outlined, size: 40, color: muted),
           const SizedBox(height: 12),
-          Text('Nothing planned for today.', style: theme.textTheme.titleMedium),
+          Text(context.l10n.noPlanToday, style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            'That is allowed. If something is missing, add it now.',
+            context.l10n.noPlanTodayHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: muted),
           ),
@@ -207,7 +208,7 @@ class _EmptyState extends StatelessWidget {
           FilledButton.tonalIcon(
             onPressed: onAdd,
             icon: const Icon(Icons.add),
-            label: const Text('Add something'),
+            label: Text(context.l10n.addSomething),
           ),
         ],
       ),

@@ -4,7 +4,13 @@ import 'package:intl/intl.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/i18n/l10n.dart';
+import '../core/i18n/recurrence_label.dart';
+import '../core/i18n/reminder_label.dart';
+import '../features/reminders/widgets/reminder_offset_sheet.dart';
+import '../models/reminder.dart';
 import '../state/providers.dart';
+import '../state/settings_controller.dart';
 
 const _editorFallbackSpaces = <Space>[
   Space(id: 'personal', name: 'Personal', colorValue: 0xFFB07D5C, position: 0),
@@ -52,6 +58,9 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   late int _endMinute;
   late _Repeat _repeat;
   late String _deviceTimeZone;
+  late Set<String> _tagIds;
+  late Set<int> _reminderOffsets;
+  bool _remindersLoaded = true;
   bool _saving = false;
 
   List<Space> get _spaces => widget.spaces.isEmpty ? _editorFallbackSpaces : widget.spaces;
@@ -76,6 +85,34 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     _startMinute = entry?.startMinute ?? 9 * 60;
     _endMinute = entry?.endMinute ?? 10 * 60;
     _repeat = _repeatFrom(entry?.recurrence);
+    _tagIds = {...?entry?.tagIds};
+    if (entry == null) {
+      _reminderOffsets = {...ref.read(settingsProvider).defaultReminderOffsets};
+    } else {
+      _reminderOffsets = <int>{};
+      _remindersLoaded = false;
+      _loadReminders(entry.id);
+    }
+  }
+
+  Future<void> _loadReminders(String entryId) async {
+    try {
+      final reminders = await ref.read(repositoryProvider).readRemindersForEntry(entryId);
+      if (!mounted) return;
+      setState(() {
+        _reminderOffsets = {
+          for (final reminder in reminders)
+            if (reminder.enabled) reminder.offsetMinutes,
+        };
+        _remindersLoaded = true;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _remindersLoaded = true);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotLoadReminders('$error'))));
+    }
   }
 
   @override
@@ -88,7 +125,12 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final title = widget.entry == null ? 'New entry' : 'Edit entry';
+    final l10n = context.l10n;
+    final title = widget.entry == null ? l10n.newEntry : l10n.editEntry;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final availableTags = (ref.watch(tagsProvider).value ?? const <Tag>[])
+        .where((tag) => tag.appliesTo(_spaceId))
+        .toList();
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -105,7 +147,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
-                    tooltip: 'Close',
+                    tooltip: l10n.close,
                   ),
                 ],
               ),
@@ -115,15 +157,18 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'What is it?', border: OutlineInputBorder()),
-                validator: (value) => value == null || value.trim().isEmpty ? 'Give it a name' : null,
+                decoration: InputDecoration(
+                  labelText: l10n.titleQuestion,
+                  border: const OutlineInputBorder(),
+                ),
+                validator: (value) => value == null || value.trim().isEmpty ? l10n.titleRequired : null,
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: _LabeledDropdown<String>(
-                      label: 'Space',
+                      label: l10n.space,
                       value: _spaceId,
                       items: _spaces
                           .map(
@@ -148,18 +193,30 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                           )
                           .toList(),
                       onChanged: (value) {
-                        if (value != null) setState(() => _spaceId = value);
+                        if (value != null) {
+                          setState(() {
+                            _spaceId = value;
+                            final allowed = (ref.read(tagsProvider).value ?? const <Tag>[])
+                                .where((tag) => tag.appliesTo(value))
+                                .map((tag) => tag.id)
+                                .toSet();
+                            _tagIds.removeWhere((id) => !allowed.contains(id));
+                          });
+                        }
                       },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _LabeledDropdown<EntryKind>(
-                      label: 'Type',
+                      label: l10n.type,
                       value: _kind,
                       items: EntryKind.values
                           .map(
-                            (kind) => DropdownMenuItem<EntryKind>(value: kind, child: Text(_kindLabel(kind))),
+                            (kind) => DropdownMenuItem<EntryKind>(
+                              value: kind,
+                              child: Text(entryKindLabel(context, kind)),
+                            ),
                           )
                           .toList(),
                       onChanged: (value) {
@@ -172,14 +229,14 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
               const SizedBox(height: 12),
               _PickerRow(
                 icon: Icons.event_outlined,
-                label: 'Date',
-                value: DateFormat('EEE d MMM yyyy').format(_date.toDateTime()),
+                label: l10n.date,
+                value: DateFormat.yMMMEd(locale).format(_date.toDateTime()),
                 onTap: _pickDate,
               ),
               const SizedBox(height: 4),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('All day'),
+                title: Text(l10n.allDay),
                 value: _allDay,
                 onChanged: (value) => setState(() => _allDay = value),
               ),
@@ -189,7 +246,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                     Expanded(
                       child: _PickerRow(
                         icon: Icons.schedule,
-                        label: 'Starts',
+                        label: l10n.starts,
                         value: _timeLabel(_startMinute),
                         onTap: _pickStartTime,
                       ),
@@ -198,7 +255,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                     Expanded(
                       child: _PickerRow(
                         icon: Icons.schedule_outlined,
-                        label: 'Ends',
+                        label: l10n.ends,
                         value: _timeLabel(_endMinute),
                         onTap: _pickEndTime,
                       ),
@@ -214,7 +271,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Times are defined in $_timeZone',
+                          l10n.timesDefinedIn(_timeZone),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -225,11 +282,14 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 ),
               const SizedBox(height: 12),
               _LabeledDropdown<_Repeat>(
-                label: 'Repeat',
+                label: l10n.repeat,
                 value: _repeat,
                 items: _Repeat.values
                     .map(
-                      (repeat) => DropdownMenuItem<_Repeat>(value: repeat, child: Text(_repeatLabel(repeat))),
+                      (repeat) => DropdownMenuItem<_Repeat>(
+                        value: repeat,
+                        child: Text(_repeatLabel(context, repeat)),
+                      ),
                     )
                     .toList(),
                 onChanged: (value) {
@@ -237,19 +297,71 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 },
               ),
               const SizedBox(height: 12),
+              if (availableTags.isNotEmpty) ...[
+                Text(l10n.tags, style: theme.textTheme.labelLarge),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final tag in availableTags)
+                      FilterChip(
+                        label: Text(tag.name),
+                        selected: _tagIds.contains(tag.id),
+                        avatar: CircleAvatar(backgroundColor: Color(tag.colorValue), radius: 5),
+                        onSelected: (selected) => setState(() {
+                          if (selected) {
+                            _tagIds.add(tag.id);
+                          } else {
+                            _tagIds.remove(tag.id);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: Text(l10n.reminders, style: theme.textTheme.labelLarge)),
+                  TextButton.icon(
+                    onPressed: _saving ? null : _editReminders,
+                    icon: const Icon(Icons.notifications_outlined, size: 18),
+                    label: Text(l10n.addReminder),
+                  ),
+                ],
+              ),
+              if (_reminderOffsets.isEmpty)
+                Text(
+                  l10n.remindersOff,
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                )
+              else
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final offset in (_reminderOffsets.toList()..sort()))
+                      InputChip(
+                        label: Text(reminderOffsetLabel(context, offset)),
+                        onDeleted: _saving ? null : () => setState(() => _reminderOffsets.remove(offset)),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _notesController,
                 maxLines: 3,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (optional)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.notesOptional,
+                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
               ),
               const SizedBox(height: 20),
               FilledButton(
-                onPressed: _saving ? null : _save,
+                onPressed: _saving || !_remindersLoaded ? null : _save,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: _saving
@@ -258,14 +370,14 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(widget.entry == null ? 'Add entry' : 'Save changes'),
+                      : Text(widget.entry == null ? l10n.addEntry : l10n.saveChanges),
                 ),
               ),
               if (widget.entry != null)
                 TextButton(
                   onPressed: _saving ? null : _delete,
                   style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                  child: const Text('Delete'),
+                  child: Text(l10n.delete),
                 ),
             ],
           ),
@@ -277,7 +389,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   String _timeLabel(int minutes) {
     final normalized = minutes % 1440;
     final label = TimeOfDay(hour: normalized ~/ 60, minute: normalized % 60).format(context);
-    return minutes >= 1440 ? '$label (+1)' : label;
+    return minutes >= 1440 ? '$label ${context.l10n.overnightSuffix}' : label;
   }
 
   Future<void> _pickDate() async {
@@ -322,9 +434,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
     if (!_allDay && _endMinute <= _startMinute) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('The end time has to be after the start.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.endAfterStartError)));
       return;
     }
 
@@ -340,6 +450,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
       startMinute: _allDay ? null : _startMinute,
       endMinute: _allDay ? null : _endMinute,
       timeZone: _allDay ? null : _timeZone,
+      tagIds: _tagIds,
       allDay: _allDay,
       status: widget.entry?.status ?? EntryStatus.open,
       recurrence: _buildRecurrence(),
@@ -348,11 +459,27 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     );
 
     try {
-      await ref.read(repositoryProvider).saveEntry(entry);
+      final repository = ref.read(repositoryProvider);
+      await repository.saveEntry(entry);
+      await repository.saveRemindersForEntry(entry.id, [
+        for (final offset in _reminderOffsets)
+          Reminder(id: Reminder.idFor(entry.id, offset), entryId: entry.id, offsetMinutes: offset),
+      ]);
+      if (_reminderOffsets.isNotEmpty) {
+        final allowed = await ref.read(notificationServiceProvider).ensurePermissions();
+        if (!allowed && mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(context.l10n.notificationPermissionDenied)));
+        }
+      }
+      await ref.read(reminderCoordinatorProvider).reschedule();
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save: $error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotSave('$error'))));
       return;
     }
 
@@ -366,11 +493,17 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete this entry?'),
-        content: const Text('It will disappear from your plan.'),
+        title: Text(context.l10n.deleteEntryQuestion),
+        content: Text(context.l10n.deleteEntryBody),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.l10n.delete),
+          ),
         ],
       ),
     );
@@ -379,15 +512,25 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     setState(() => _saving = true);
     try {
       await ref.read(repositoryProvider).deleteEntry(entry.id);
+      await ref.read(reminderCoordinatorProvider).reschedule();
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not delete: $error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotDelete('$error'))));
       return;
     }
 
     if (!mounted) return;
     Navigator.of(context).pop();
+  }
+
+  Future<void> _editReminders() async {
+    final result = await showReminderOffsetSheet(context, initial: _reminderOffsets);
+    if (result != null && mounted) {
+      setState(() => _reminderOffsets = result);
+    }
   }
 
   RecurrenceRule? _buildRecurrence() {
@@ -427,19 +570,12 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     _Repeat.yearly => RecurrenceFrequency.yearly,
   };
 
-  String _repeatLabel(_Repeat repeat) => switch (repeat) {
-    _Repeat.never => 'Never',
-    _Repeat.daily => 'Every day',
-    _Repeat.weekly => 'Every week',
-    _Repeat.monthly => 'Every month',
-    _Repeat.yearly => 'Every year',
-  };
-
-  String _kindLabel(EntryKind kind) => switch (kind) {
-    EntryKind.task => 'Task',
-    EntryKind.event => 'Event',
-    EntryKind.obligation => 'Obligation',
-    EntryKind.deadline => 'Deadline',
+  String _repeatLabel(BuildContext context, _Repeat repeat) => switch (repeat) {
+    _Repeat.never => context.l10n.repeatNever,
+    _Repeat.daily => context.l10n.repeatDaily,
+    _Repeat.weekly => context.l10n.repeatWeekly,
+    _Repeat.monthly => context.l10n.repeatMonthly,
+    _Repeat.yearly => context.l10n.repeatYearly,
   };
 }
 

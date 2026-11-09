@@ -1,0 +1,790 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:mane_core/mane_core.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/i18n/l10n.dart';
+import '../../../state/providers.dart';
+
+class ShiftPatternEditorPage extends ConsumerStatefulWidget {
+  const ShiftPatternEditorPage({super.key, this.pattern});
+
+  final ShiftPattern? pattern;
+
+  @override
+  ConsumerState<ShiftPatternEditorPage> createState() => _ShiftPatternEditorPageState();
+}
+
+class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _timeZoneController;
+  late String _spaceId;
+  late int _cycleDays;
+  late LocalDate _anchorDate;
+  late List<_SlotDraft> _slots;
+  late List<ShiftException> _exceptions;
+  late String _deviceTimeZone;
+  int _nextDraftId = 0;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final pattern = widget.pattern;
+    _deviceTimeZone = ref.read(deviceTimeZoneProvider);
+    _nameController = TextEditingController(text: pattern?.name ?? '');
+    _timeZoneController = TextEditingController(text: pattern?.timeZone ?? _deviceTimeZone);
+    _spaceId = pattern?.spaceId ?? 'work';
+    _cycleDays = pattern?.cycleDays ?? 7;
+    _anchorDate = pattern?.anchorDate ?? localDateAt(ref.read(nowProvider), _deviceTimeZone);
+    _slots = [
+      for (final slot in pattern?.slots ?? const <ShiftSlot>[])
+        _SlotDraft(
+          id: _nextDraftId++,
+          dayIndex: slot.dayIndex,
+          label: slot.label,
+          startMinute: slot.startMinute,
+          endMinute: slot.endMinute,
+        ),
+    ];
+    _exceptions = [...?pattern?.exceptions];
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _timeZoneController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final activeSpace = spaces.any((space) => space.id == _spaceId) ? _spaceId : spaces.first.id;
+    _spaceId = activeSpace;
+
+    final preview = _preview();
+    final conflicts = preview?.findConflicts() ?? const <ShiftConflict>[];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.pattern == null ? l10n.newShiftPattern : l10n.editShiftPattern),
+        actions: [
+          if (widget.pattern != null)
+            IconButton(
+              onPressed: _saving ? null : _delete,
+              icon: const Icon(Icons.delete_outline),
+              tooltip: l10n.delete,
+            ),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          children: [
+            TextFormField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(labelText: l10n.patternName, border: const OutlineInputBorder()),
+              validator: (value) => value == null || value.trim().isEmpty ? l10n.patternNameRequired : null,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _spaceId,
+              decoration: InputDecoration(labelText: l10n.space, border: const OutlineInputBorder()),
+              items: [
+                for (final space in spaces)
+                  DropdownMenuItem(
+                    value: space.id,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(color: Color(space.colorValue), shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(space.name),
+                      ],
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _spaceId = value);
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _timeZoneController,
+              decoration: InputDecoration(
+                labelText: l10n.timeZone,
+                hintText: 'Europe/Madrid',
+                border: const OutlineInputBorder(),
+              ),
+              validator: (value) {
+                final zone = value?.trim() ?? '';
+                if (zone.isEmpty || !isKnownTimeZone(zone)) return l10n.invalidTimeZone;
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: Text(l10n.cycleLength, style: theme.textTheme.bodyLarge)),
+                IconButton(
+                  onPressed: _cycleDays > 1 ? () => _setCycleDays(_cycleDays - 1) : null,
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                Text(l10n.cycleLengthValue(_cycleDays), style: theme.textTheme.titleMedium),
+                IconButton(
+                  onPressed: _cycleDays < 28 ? () => _setCycleDays(_cycleDays + 1) : null,
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: _pickAnchorDate,
+              borderRadius: BorderRadius.circular(4),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: l10n.anchorDate,
+                  prefixIcon: const Icon(Icons.event_outlined, size: 20),
+                  border: const OutlineInputBorder(),
+                ),
+                child: Text(DateFormat.yMMMMEEEEd(locale).format(_anchorDate.toDateTime())),
+              ),
+            ),
+            const SizedBox(height: 20),
+            for (var index = 0; index < _cycleDays; index++) _buildDay(index, locale),
+            const SizedBox(height: 8),
+            _SectionHeader(title: l10n.exceptions, actionLabel: l10n.addException, onAction: _addException),
+            if (_exceptions.isEmpty)
+              Text(
+                l10n.noExceptions,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              )
+            else
+              for (final exception in _exceptions) _buildException(exception, locale),
+            const SizedBox(height: 20),
+            _SectionHeader(title: l10n.preview),
+            if (preview != null && conflicts.isNotEmpty)
+              Text(
+                l10n.conflictsFound,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+              )
+            else if (preview != null)
+              Text(
+                l10n.noConflicts,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            if (preview != null && conflicts.isEmpty)
+              _Preview(
+                pattern: preview,
+                deviceTimeZone: _deviceTimeZone,
+                today: localDateAt(ref.watch(nowProvider), _deviceTimeZone),
+              ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: _saving
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(l10n.savePattern),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDay(int index, String locale) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final date = _anchorDate.addDays(index);
+    final daySlots = _slots.where((slot) => slot.dayIndex == index).toList();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${l10n.cycleDay(index + 1)} · ${DateFormat.E(locale).format(date.toDateTime())}',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              Text(
+                DateFormat.MMMd(locale).format(date.toDateTime()),
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          if (daySlots.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(
+                l10n.noSlots,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ),
+          for (final slot in daySlots) _buildSlot(slot),
+          TextButton.icon(
+            onPressed: () => _addSlot(index),
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l10n.addSlot),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlot(_SlotDraft slot) {
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.fromLTRB(10, 6, 4, 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey('slot-label-${slot.id}'),
+                  initialValue: slot.label,
+                  decoration: InputDecoration(
+                    labelText: l10n.slotLabel,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: (value) => slot.label = value,
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() => _slots.remove(slot)),
+                icon: const Icon(Icons.close, size: 18),
+                tooltip: l10n.removeSlot,
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _TimeField(
+                  label: l10n.startTime,
+                  value: _timeLabel(slot.startMinute),
+                  onTap: () => _pickTime(slot, true),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _TimeField(
+                  label: l10n.endTime,
+                  value: _timeLabel(slot.endMinute),
+                  onTap: () => _pickTime(slot, false),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildException(ShiftException exception, String locale) {
+    final l10n = context.l10n;
+    final type = switch (exception.type) {
+      ShiftExceptionType.free => l10n.exceptionFree,
+      ShiftExceptionType.override => l10n.exceptionOverride,
+      ShiftExceptionType.extra => l10n.exceptionExtra,
+    };
+    final times = exception.hasTimes
+        ? ' · ${_timeLabel(exception.startMinute!)} – ${_timeLabel(exception.endMinute!)}'
+        : '';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        dense: true,
+        title: Text('${DateFormat.yMMMd(locale).format(exception.date.toDateTime())} · $type$times'),
+        subtitle: exception.note.isEmpty ? null : Text(exception.note),
+        trailing: IconButton(
+          onPressed: () => setState(() => _exceptions.remove(exception)),
+          icon: const Icon(Icons.close, size: 18),
+          tooltip: l10n.delete,
+        ),
+      ),
+    );
+  }
+
+  String _timeLabel(int minutes) {
+    final normalized = minutes % 1440;
+    final label = TimeOfDay(hour: normalized ~/ 60, minute: normalized % 60).format(context);
+    return minutes >= 1440 ? '$label ${context.l10n.overnightSuffix}' : label;
+  }
+
+  void _setCycleDays(int value) {
+    setState(() {
+      _cycleDays = value;
+      _slots.removeWhere((slot) => slot.dayIndex >= value);
+    });
+  }
+
+  void _addSlot(int dayIndex) {
+    setState(() {
+      _slots.add(
+        _SlotDraft(
+          id: _nextDraftId++,
+          dayIndex: dayIndex,
+          label: '',
+          startMinute: 9 * 60,
+          endMinute: 17 * 60,
+        ),
+      );
+    });
+  }
+
+  Future<void> _pickTime(_SlotDraft slot, bool isStart) async {
+    final current = isStart ? slot.startMinute : slot.endMinute;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: (current ~/ 60) % 24, minute: current % 60),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      final value = picked.hour * 60 + picked.minute;
+      if (isStart) {
+        final duration = slot.endMinute - slot.startMinute;
+        slot.startMinute = value;
+        slot.endMinute = value + duration;
+      } else {
+        slot.endMinute = value > slot.startMinute ? value : value + 1440;
+      }
+    });
+  }
+
+  Future<void> _pickAnchorDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _anchorDate.toDateTime(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _anchorDate = LocalDate.fromDateTime(picked));
+  }
+
+  Future<void> _addException() async {
+    final exception = await showDialog<ShiftException>(
+      context: context,
+      builder: (context) => _ExceptionDialog(initialDate: _anchorDate),
+    );
+    if (exception != null && mounted) {
+      setState(() => _exceptions.add(exception));
+    }
+  }
+
+  ShiftPattern? _preview() {
+    try {
+      return ShiftPattern(
+        id: widget.pattern?.id ?? 'preview',
+        spaceId: _spaceId,
+        name: _nameController.text.trim(),
+        timeZone: _timeZoneController.text.trim(),
+        cycleDays: _cycleDays,
+        anchorDate: _anchorDate,
+        slots: [
+          for (final draft in _slots)
+            ShiftSlot(
+              dayIndex: draft.dayIndex,
+              label: draft.label,
+              startMinute: draft.startMinute,
+              endMinute: draft.endMinute,
+            ),
+        ],
+        exceptions: _exceptions,
+        enabled: true,
+      );
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    final pattern = _preview();
+    if (pattern == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.invalidTimeZone)));
+      return;
+    }
+    if (pattern.findConflicts().isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.conflictsFound)));
+      return;
+    }
+
+    setState(() => _saving = true);
+    final saved = ShiftPattern(
+      id: widget.pattern?.id ?? const Uuid().v4(),
+      spaceId: pattern.spaceId,
+      name: pattern.name,
+      timeZone: pattern.timeZone,
+      cycleDays: pattern.cycleDays,
+      anchorDate: pattern.anchorDate,
+      slots: pattern.slots,
+      exceptions: pattern.exceptions,
+      enabled: widget.pattern?.enabled ?? true,
+    );
+    try {
+      await ref.read(repositoryProvider).saveShiftPattern(saved);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotSave('$error'))));
+      return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _delete() async {
+    final pattern = widget.pattern;
+    if (pattern == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.deletePatternQuestion),
+        content: Text(context.l10n.deletePatternBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await ref.read(repositoryProvider).deleteShiftPattern(pattern.id);
+    if (mounted) Navigator.of(context).pop();
+  }
+}
+
+class _SlotDraft {
+  _SlotDraft({
+    required this.id,
+    required this.dayIndex,
+    required this.label,
+    required this.startMinute,
+    required this.endMinute,
+  });
+
+  final int id;
+  final int dayIndex;
+  String label;
+  int startMinute;
+  int endMinute;
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.actionLabel, this.onAction});
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          if (actionLabel != null) TextButton(onPressed: onAction, child: Text(actionLabel!)),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimeField extends StatelessWidget {
+  const _TimeField({required this.label, required this.value, required this.onTap});
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true),
+        child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+    );
+  }
+}
+
+class _Preview extends StatelessWidget {
+  const _Preview({required this.pattern, required this.deviceTimeZone, required this.today});
+
+  final ShiftPattern pattern;
+  final String deviceTimeZone;
+  final LocalDate today;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final occurrences = pattern.occurrencesBetween(today, today.addDays(27), viewerTimeZone: deviceTimeZone);
+    if (occurrences.isEmpty) {
+      return Text(
+        l10n.noSlots,
+        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      );
+    }
+
+    return Column(
+      children: [
+        for (final occurrence in occurrences.take(40))
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 92,
+                  child: Text(
+                    DateFormat.MMMEd(locale).format(occurrence.displayDate.toDateTime()),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    occurrence.slot.label.isEmpty ? pattern.name : occurrence.slot.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  '${_formatTime(context, occurrence.startAt, deviceTimeZone)} – '
+                  '${_formatTime(context, occurrence.endAt, deviceTimeZone)}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatTime(BuildContext context, DateTime instant, String timeZone) {
+    final local = localDateTimeAt(instant, timeZone);
+    return TimeOfDay(hour: local.hour, minute: local.minute).format(context);
+  }
+}
+
+class _ExceptionDialog extends StatefulWidget {
+  const _ExceptionDialog({required this.initialDate});
+
+  final LocalDate initialDate;
+
+  @override
+  State<_ExceptionDialog> createState() => _ExceptionDialogState();
+}
+
+class _ExceptionDialogState extends State<_ExceptionDialog> {
+  late LocalDate _date;
+  ShiftExceptionType _type = ShiftExceptionType.free;
+  int _startMinute = 9 * 60;
+  int _endMinute = 17 * 60;
+  final _noteController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _date = widget.initialDate;
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    return AlertDialog(
+      title: Text(l10n.addException),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: l10n.exceptionDate,
+                  border: const OutlineInputBorder(),
+                ),
+                child: Text(DateFormat.yMMMd(locale).format(_date.toDateTime())),
+              ),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<ShiftExceptionType>(
+              initialValue: _type,
+              decoration: InputDecoration(labelText: l10n.type, border: const OutlineInputBorder()),
+              items: [
+                DropdownMenuItem(value: ShiftExceptionType.free, child: Text(l10n.exceptionFree)),
+                DropdownMenuItem(value: ShiftExceptionType.override, child: Text(l10n.exceptionOverride)),
+                DropdownMenuItem(value: ShiftExceptionType.extra, child: Text(l10n.exceptionExtra)),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _type = value);
+              },
+            ),
+            if (_type != ShiftExceptionType.free) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _DialogTimeField(
+                      label: l10n.startTime,
+                      value: _timeLabel(_startMinute),
+                      onTap: () => _pickTime(true),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _DialogTimeField(
+                      label: l10n.endTime,
+                      value: _timeLabel(_endMinute),
+                      onTap: () => _pickTime(false),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 10),
+            TextField(
+              controller: _noteController,
+              decoration: InputDecoration(labelText: l10n.exceptionNote, border: const OutlineInputBorder()),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancel)),
+        FilledButton(onPressed: _save, child: Text(l10n.save)),
+      ],
+    );
+  }
+
+  String _timeLabel(int minutes) {
+    final normalized = minutes % 1440;
+    final label = TimeOfDay(hour: normalized ~/ 60, minute: normalized % 60).format(context);
+    return minutes >= 1440 ? '$label ${context.l10n.overnightSuffix}' : label;
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date.toDateTime(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && mounted) setState(() => _date = LocalDate.fromDateTime(picked));
+  }
+
+  Future<void> _pickTime(bool isStart) async {
+    final current = isStart ? _startMinute : _endMinute;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: (current ~/ 60) % 24, minute: current % 60),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      final value = picked.hour * 60 + picked.minute;
+      if (isStart) {
+        final duration = _endMinute - _startMinute;
+        _startMinute = value;
+        _endMinute = value + duration;
+      } else {
+        _endMinute = value > _startMinute ? value : value + 1440;
+      }
+    });
+  }
+
+  void _save() {
+    Navigator.of(context).pop(
+      ShiftException(
+        date: _date,
+        type: _type,
+        startMinute: _type == ShiftExceptionType.free ? null : _startMinute,
+        endMinute: _type == ShiftExceptionType.free ? null : _endMinute,
+        note: _noteController.text.trim(),
+      ),
+    );
+  }
+}
+
+class _DialogTimeField extends StatelessWidget {
+  const _DialogTimeField({required this.label, required this.value, required this.onTap});
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true),
+        child: Text(value),
+      ),
+    );
+  }
+}

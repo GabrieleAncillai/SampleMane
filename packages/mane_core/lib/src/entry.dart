@@ -28,6 +28,7 @@ class Entry {
     this.startMinute,
     this.endMinute,
     this.timeZone,
+    this.tagIds = const <String>{},
     this.allDay = false,
     this.status = EntryStatus.open,
     this.recurrence,
@@ -62,6 +63,9 @@ class Entry {
 
   /// IANA timezone the wall-clock fields are defined in. Null for all-day.
   final String? timeZone;
+
+  /// Tags attached to this entry. The join rows live in `entry_tags`.
+  final Set<String> tagIds;
 
   /// Resolved anchor instants in UTC. Null for all-day or unscheduled entries.
   final DateTime? startAt;
@@ -118,6 +122,7 @@ class Entry {
     Object? startMinute = _unset,
     Object? endMinute = _unset,
     Object? timeZone = _unset,
+    Set<String>? tagIds,
     bool? allDay,
     EntryStatus? status,
     Object? recurrence = _unset,
@@ -134,6 +139,7 @@ class Entry {
     startMinute: identical(startMinute, _unset) ? this.startMinute : startMinute as int?,
     endMinute: identical(endMinute, _unset) ? this.endMinute : endMinute as int?,
     timeZone: identical(timeZone, _unset) ? this.timeZone : timeZone as String?,
+    tagIds: tagIds ?? this.tagIds,
     allDay: allDay ?? this.allDay,
     status: status ?? this.status,
     recurrence: identical(recurrence, _unset) ? this.recurrence : recurrence as RecurrenceRule?,

@@ -12,10 +12,10 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.1.5. The domain model, recurrence and flexible shift engines,
-the v2 SQLite schema and migration, and the Today/Week UI are in place. Timed
-entries and shifts are timezone-aware; all-day items stay date-only. The
-calendar, notifications, tags, settings and backup are next.
+**Status:** v0.2 daily use. Today, Week and Calendar tabs, tags, the shift-pattern
+editor, reminders, settings and versioned backup/restore are in place, with
+English and Spanish localization. Timed entries and shifts remain timezone-aware;
+all-day items stay date-only. Home inventory and ICS import are next.
 
 ## Docs
 
@@ -33,32 +33,38 @@ calendar, notifications, tags, settings and backup are next.
 
 ## Working now
 
-- Today and Week screens with entries and shift blocks.
+- Today, Week and Calendar tabs, with month/week modes, per-space markers,
+  shift bars, day detail, month/week navigation and jump-to-today.
 - Personal, Work and Home spaces, add/edit/soft-delete entries.
 - Timezone-aware timed entries and shift patterns. Device travel moves the
   displayed local time; all-day dates never shift.
 - Flexible shifts: cycles longer than a week, several slots per day, overnight
-  slots, and free/override/extra date exceptions.
+  slots, and free/override/extra date exceptions. A pattern editor previews the
+  next 28 days and blocks overlapping shifts.
 - Daily, weekly, monthly and yearly recurrence with `until` and `count`,
   expanded in the entry's stored IANA timezone.
 - Per-occurrence completion that survives travel and a database restart.
-- A schema v1 to v2 migration tested against real v1 rows.
+- Tags with a manager, entry chips and a global tag filter.
+- Multiple reminders per entry, Android notification permission and exact-alarm
+  handling, a 90-day queue rebuilt on start/resume/timezone change, and taps
+  that open the entry.
+- Settings for theme, English/Spanish, week start, hiding Work, default
+  reminders, data backup, sync/MCP switches and About.
+- Versioned JSON backup and a validated, transactional restore.
+- A schema v1/v2 to v3 migration tested against real prior rows.
 - A pure Dart domain package with the timezone, recurrence and shift rules.
 - Android debug APK and Linux debug build.
 
 ## Planned
 
-- Month and week calendar, modelled on Streak.
-- Local notifications and multiple reminders.
-- Tags for jobs and people/groups.
 - Home inventory, shopping and grocery lists.
 - Interval-after-completion maintenance and a sleep window.
 - Read-only ICS import.
-- Settings and versioned backup/restore.
+- Shift checklists.
 - Optional LAN sync between the user's own devices, automatic on the same
   network.
 - Optional local MCP endpoint for a desktop agent, off by default.
-- English and Spanish localization.
+- Search, home-screen widgets and a full accessibility pass.
 
 ## Stack
 

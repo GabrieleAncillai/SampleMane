@@ -53,6 +53,13 @@ class LocalDate implements Comparable<LocalDate> {
   /// The Monday of this date's ISO week.
   LocalDate get mondayOfWeek => addDays(1 - weekday);
 
+  /// The first day of this date's week when weeks start on [weekStart]
+  /// (1 = Monday ... 7 = Sunday).
+  LocalDate startOfWeek(int weekStart) {
+    final start = weekStart >= 1 && weekStart <= 7 ? weekStart : DateTime.monday;
+    return addDays(-((weekday - start) % 7));
+  }
+
   LocalDate addDays(int days) {
     final shifted = DateTime.utc(year, month, day).add(Duration(days: days));
     return LocalDate(shifted.year, shifted.month, shifted.day);

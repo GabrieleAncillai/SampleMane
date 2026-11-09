@@ -47,10 +47,11 @@ should follow with little extra work.
 
 ## Status
 
-v0.1.5. The domain model, recurrence and flexible shift engines, the v2 SQLite
-schema and migration, and a first Today/Week UI exist. Timed entries and shifts
-are timezone-aware; all-day items stay date-only. Calendar view, notifications,
-tags, settings and backup are next.
+v0.2 daily use. Today, Week and Calendar tabs, tags, the shift-pattern editor,
+reminders, settings and versioned backup/restore exist, with English and
+Spanish localization. Timed entries and shifts are timezone-aware; all-day
+items stay date-only. Home inventory, ICS import and the remaining v0.3 work
+are next.
 
 - [Full docs](full-docs.md): architecture, data model, feature areas and roadmap.
 - [Reference map](reference-map.md): where to look in GymMane and Streak.

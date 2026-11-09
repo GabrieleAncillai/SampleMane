@@ -4,8 +4,11 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:mane_core/mane_core.dart';
 
 import 'app/mane_app.dart';
+import 'models/app_settings.dart';
 import 'services/app_database.dart';
+import 'services/notification_service.dart';
 import 'state/providers.dart';
+import 'state/settings_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,11 +16,16 @@ Future<void> main() async {
   final timeZone = await _deviceTimeZone();
   final database = AppDatabase.open(defaultTimeZone: timeZone);
   await database.seedDefaults();
+  final settings = AppSettings.fromMap(await database.readSettings());
+  final notifications = NotificationService();
+  await notifications.initialize(deviceTimeZone: timeZone);
   runApp(
     ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(database),
-        deviceTimeZoneProvider.overrideWithValue(timeZone),
+        deviceTimeZoneProvider.overrideWith(() => DeviceTimeZoneController(initial: timeZone)),
+        notificationServiceProvider.overrideWithValue(notifications),
+        initialSettingsProvider.overrideWithValue(settings),
       ],
       child: const ManeApp(),
     ),

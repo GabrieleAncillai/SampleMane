@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mane_core/mane_core.dart';
 
+import '../core/i18n/l10n.dart';
+import '../core/i18n/recurrence_label.dart';
 import '../screens/entry_editor.dart';
 import '../state/providers.dart';
 
@@ -20,27 +22,20 @@ String _formatRange(BuildContext context, DateTime startAt, DateTime endAt, Stri
       startLocal.year != endLocal.year ||
       startLocal.month != endLocal.month ||
       startLocal.day != endLocal.day;
-  return crossesDay ? '$start – $end (+1)' : '$start – $end';
+  return crossesDay ? '$start – $end ${context.l10n.overnightSuffix}' : '$start – $end';
 }
 
 String formatEntryTime(BuildContext context, EntryOccurrence occurrence, String viewerTimeZone) {
   final entry = occurrence.entry;
-  if (entry.allDay) return 'All day';
+  if (entry.allDay) return context.l10n.allDay;
   final startAt = occurrence.startAt ?? entry.startAt;
   final endAt = occurrence.endAt ?? entry.endAt;
-  if (startAt == null || endAt == null) return 'All day';
+  if (startAt == null || endAt == null) return context.l10n.allDay;
   return _formatRange(context, startAt, endAt, viewerTimeZone);
 }
 
 String formatShiftTime(BuildContext context, ShiftOccurrence occurrence, String viewerTimeZone) =>
     _formatRange(context, occurrence.startAt, occurrence.endAt, viewerTimeZone);
-
-String kindLabel(EntryKind kind) => switch (kind) {
-  EntryKind.task => 'Task',
-  EntryKind.event => 'Event',
-  EntryKind.obligation => 'Obligation',
-  EntryKind.deadline => 'Deadline',
-};
 
 class EntryTile extends ConsumerWidget {
   const EntryTile({super.key, required this.occurrence, required this.spaces, this.dense = false});
@@ -65,7 +60,8 @@ class EntryTile extends ConsumerWidget {
     final details = <String>[
       space.name,
       formatEntryTime(context, occurrence, viewerTimeZone),
-      if (entry.recurrence != null) entry.recurrence!.describe(),
+      if (entry.recurrence != null)
+        recurrenceLabel(context, entry.recurrence!, entry.date ?? occurrence.date),
       if (!dense && entry.notes.isNotEmpty) entry.notes,
     ];
 
@@ -86,7 +82,7 @@ class EntryTile extends ConsumerWidget {
                       .setOccurrenceCompleted(entry.id, occurrence.date, value == true);
                 }
               },
-              semanticLabel: 'Mark ${entry.title} as done',
+              semanticLabel: context.l10n.markAsDone(entry.title),
             )
           : Icon(Icons.event_outlined, color: muted),
       title: Text(

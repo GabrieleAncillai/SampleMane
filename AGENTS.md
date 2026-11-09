@@ -103,7 +103,7 @@ replacement, chatbot inside the app.
 
 Treat this as the baseline. Verify it before changing anything.
 
-**Done (v0.1 and v0.1.5):**
+**Done (v0.1 through v0.2):**
 
 - Pure Dart domain package in `packages/mane_core` with:
   - `LocalDate` (date-only values for all-day items)
@@ -124,12 +124,24 @@ Treat this as the baseline. Verify it before changing anything.
 - Timed entries and shifts are timezone-aware: wall-clock template fields in an
   IANA timezone plus resolved UTC anchor instants, expanded in the stored zone
   and displayed in the device zone.
-- Personal, Work and Home are the three seeded spaces, with a v1 to v2 migration.
+- Personal, Work and Home are the three seeded spaces, with a v1 to v3 migration.
+- Tags and entry tags with a manager, editor chips and a global filter.
 - Per-occurrence completion for recurring entries, keyed by the occurrence date
   in the entry's stored timezone.
+- Today, Week and Calendar tabs: month/week modes, markers, shift bars, day
+  detail, navigation, jump to today and a stable selected date.
+- Shift-pattern editor with cycles, multiple slots, overnight slots, exceptions,
+  preview and overlap validation.
+- Multiple reminders per entry, Android channels/permissions/exact alarms, a
+  90-day queue rebuilt on start/resume/timezone change and notification taps.
+- Settings for theme, English/Spanish, week start, hiding Work, defaults,
+  backup, sync/MCP switches and About.
+- Versioned JSON backup with a validated, transactional import.
+- English/Spanish ARB coverage for shipped screens.
 - Linux debug build and Android debug APK both pass.
-- Tests: 12 app/database/widget tests, 64 core tests, including a real v1 data
-  migration test and DST/travel scenarios.
+- Tests: 33 app/database/widget tests, 64 core tests, including real v1 and v2
+  data migration tests, DST/travel scenarios, backup round-trip and rejection,
+  calendar navigation and the shift editor flow.
 - CI in `.github/workflows/build.yml`: analyze, both test suites and a debug
   APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
@@ -137,23 +149,19 @@ Treat this as the baseline. Verify it before changing anything.
 
 **Known gaps:**
 
-- No calendar view.
-- No local notifications or reminder scheduling UI.
-- No week navigation.
-- No shift-pattern editor.
-- No tags.
-- No settings screen.
-- No backup export/import.
+- Real-device notification delivery, reboot, battery optimization and
+  timezone-change behavior still need the user's Android device checklist.
+- No dedicated Android `TIMEZONE_CHANGED` receiver; the queue rebuilds on
+  resume and after the device zone is re-read.
+- Backup import accepts schema version 3 only.
 - No ICS import.
 - No interval-after-completion maintenance.
 - No sleep window.
 - No shift checklist.
 - No home inventory or shopping lists.
 - No LAN pairing, discovery, query endpoint or MCP server.
-- No search, widgets, accessibility pass or English/Spanish localization.
+- No search, widgets or full accessibility pass.
 - The UI is a first pass, not the final visual language.
-- The device timezone is read at app start; live refresh lands with v0.2
-  notifications.
 
 **Baseline check:**
 
@@ -505,65 +513,70 @@ See section 4. Keep the existing tests green.
 all-day dates alone; a 14-day shift cycle with per-day times and exceptions
 expands correctly; all tests and both builds pass.
 
-### v0.2 Daily use
+### v0.2 Daily use (done)
 
 **Calendar and navigation**
 
-- Month and week calendar views, modelled on Streak.
-- Previous/next month and week, jump to today, selected-day detail.
-- Week start setting.
-- Keep the selected date stable while editing.
+- [x] Month and week calendar views, modelled on Streak.
+- [x] Previous/next month and week, jump to today, selected-day detail.
+- [x] Week start setting.
+- [x] Keep the selected date stable while editing.
 
 **Notifications and reminders**
 
-- Local notifications with `flutter_local_notifications` and `timezone`, using
+- [x] Local notifications with `flutter_local_notifications` and `timezone`, using
   Streak's notification and reminder files as the reference.
-- Request the Android notification permission on 13+.
-- Handle exact alarms and Android 12+ permission behavior.
-- Reschedule pending reminders after reboot and timezone changes.
-- Multiple reminders per entry.
-- Reminder editor in the entry sheet.
+- [x] Request the Android notification permission on 13+.
+- [x] Handle exact alarms and Android 12+ permission behavior.
+- [x] Reschedule pending reminders after reboot and timezone changes.
+- [x] Multiple reminders per entry.
+- [x] Reminder editor in the entry sheet.
 
 **Shift-pattern editor**
 
-- Create, edit and delete patterns.
-- Cycle length, anchor date, timezone, one or more slots per day, overnight
+- [x] Create, edit and delete patterns.
+- [x] Cycle length, anchor date, timezone, one or more slots per day, overnight
   slots, date exceptions.
-- Preview the next N days.
-- Validate cycles and overlapping shifts.
+- [x] Preview the next N days.
+- [x] Validate cycles and overlapping shifts.
 
 **Tags**
 
-- `tags` and `entry_tags` tables, with migration and tests.
-- Create/edit/delete tags, assign them to entries, filter by tag.
-- Tags separate jobs inside Work and people/groups inside Personal.
+- [x] `tags` and `entry_tags` tables, with migration and tests.
+- [x] Create/edit/delete tags, assign them to entries, filter by tag.
+- [x] Tags separate jobs inside Work and people/groups inside Personal.
 
 **Settings**
 
-- Theme mode (system/light/dark).
-- Language (English/Spanish) and week start.
-- Work-hours visibility or work-space hiding.
-- Default reminder lead times.
-- Data/backup location and export entry point.
-- Sync and MCP switches, both off by default.
-- About screen with GPL-3.0 and upstream attribution.
+- [x] Theme mode (system/light/dark).
+- [x] Language (English/Spanish) and week start.
+- [x] Work-hours visibility or work-space hiding.
+- [x] Default reminder lead times.
+- [x] Data/backup location and export entry point.
+- [x] Sync and MCP switches, both off by default.
+- [x] About screen with GPL-3.0 and upstream attribution.
 
 **Backup**
 
-- Versioned JSON export of all user data.
-- Import with validation, schema-version checks and a transactional write.
-- Preserve UUIDs, timestamps, timezones and soft deletes.
-- Round-trip test: export, clear, import, compare.
+- [x] Versioned JSON export of all user data.
+- [x] Import with validation, schema-version checks and a transactional write.
+- [x] Preserve UUIDs, timestamps, timezones and soft deletes.
+- [x] Round-trip test: export, clear, import, compare.
 
 **Localization foundation**
 
-- Add the ARB layer following GymMane and Streak.
-- English source, Spanish translation.
-- No new user-facing literals in widgets.
+- [x] Add the ARB layer following GymMane and Streak.
+- [x] English source, Spanish translation.
+- [x] No new user-facing literals in widgets.
 
 **Exit criteria:** the app can be used daily without a terminal; calendar and
 reminders work; backup restores; all tests pass; Linux and Android debug builds
 pass; the user confirms real-device daily use before v0.3.
+
+**Real-device note:** the user still needs to confirm notification delivery,
+reboot, battery optimization and timezone-change behavior on the Android
+device. The manifest includes the plugin boot receiver; the queue is rebuilt on
+app resume, but a dedicated `TIMEZONE_CHANGED` receiver is not implemented.
 
 ### v0.3 Home and maintenance
 

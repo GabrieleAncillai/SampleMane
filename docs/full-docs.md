@@ -359,7 +359,10 @@ migrating existing data.
 - **Backup and import.**
 - **Search.**
 
-The current app has Today, Week and the entry editor. Everything else is later.
+The app now has Today, Week and Calendar tabs, the entry editor, the tags
+manager, the shift-pattern editor, settings, About, backup/import and the
+tag-filter sheet. Search, home inventory and the remaining v0.3 screens are
+later.
 
 ## 8. Platform, stack, architecture and references
 
@@ -474,64 +477,81 @@ Mane implements those rules in `mane_core` (`src/time.dart`, `src/entry.dart`,
 product's core domain. The references remain the source for the app shell,
 theme, settings, notifications and release work.
 
-### v0.2 Daily use
+### v0.2 Daily use (done)
 
 **Calendar and navigation**
 
-- [ ] Month and week calendar views, modelled on Streak.
-- [ ] Previous/next month and week, jump to today, selected-day detail.
-- [ ] Week start setting.
-- [ ] Keep the selected date stable while editing.
+- [x] Month and week calendar views, modelled on Streak.
+- [x] Previous/next month and week, jump to today, selected-day detail.
+- [x] Week start setting.
+- [x] Keep the selected date stable while editing.
 
 **Notifications and reminders**
 
-- [ ] Local notifications with `flutter_local_notifications` and `timezone`.
-- [ ] Android notification permission on 13+.
-- [ ] Exact alarms and Android 12+ permission behavior.
-- [ ] Reschedule pending reminders after reboot and timezone changes.
-- [ ] Multiple reminders per entry.
-- [ ] Reminder editor in the entry sheet.
+- [x] Local notifications with `flutter_local_notifications` and `timezone`.
+- [x] Android notification permission on 13+.
+- [x] Exact alarms and Android 12+ permission behavior.
+- [x] Reschedule pending reminders after reboot and timezone changes.
+- [x] Multiple reminders per entry.
+- [x] Reminder editor in the entry sheet.
 
 **Shift-pattern editor**
 
-- [ ] Create, edit and delete patterns.
-- [ ] Cycle length, anchor date, timezone, one or more slots per day, overnight
+- [x] Create, edit and delete patterns.
+- [x] Cycle length, anchor date, timezone, one or more slots per day, overnight
       slots, date exceptions.
-- [ ] Preview the next N days.
-- [ ] Validate cycles and overlapping shifts.
+- [x] Preview the next N days.
+- [x] Validate cycles and overlapping shifts.
 
 **Tags**
 
-- [ ] `tags` and `entry_tags` tables, with migration and tests.
-- [ ] Create/edit/delete tags, assign them to entries, filter by tag.
-- [ ] Tags separate jobs inside Work and people/groups inside Personal.
+- [x] `tags` and `entry_tags` tables, with migration and tests.
+- [x] Create/edit/delete tags, assign them to entries, filter by tag.
+- [x] Tags separate jobs inside Work and people/groups inside Personal.
 
 **Settings**
 
-- [ ] Theme mode (system/light/dark).
-- [ ] Language (English/Spanish) and week start.
-- [ ] Work-hours visibility or work-space hiding.
-- [ ] Default reminder lead times.
-- [ ] Data/backup location and export entry point.
-- [ ] Sync and MCP switches, both off by default.
-- [ ] About screen with GPL-3.0 and upstream attribution.
+- [x] Theme mode (system/light/dark).
+- [x] Language (English/Spanish) and week start.
+- [x] Work-hours visibility or work-space hiding.
+- [x] Default reminder lead times.
+- [x] Data/backup location and export entry point.
+- [x] Sync and MCP switches, both off by default.
+- [x] About screen with GPL-3.0 and upstream attribution.
 
 **Backup**
 
-- [ ] Versioned JSON export of all user data.
-- [ ] Import with validation, schema-version checks and a transactional write.
-- [ ] Preserve UUIDs, timestamps, timezones and soft deletes.
-- [ ] Round-trip test: export, clear, import, compare.
+- [x] Versioned JSON export of all user data.
+- [x] Import with validation, schema-version checks and a transactional write.
+- [x] Preserve UUIDs, timestamps, timezones and soft deletes.
+- [x] Round-trip test: export, clear, import, compare.
 
 **Localization foundation**
 
-- [ ] ARB layer following GymMane and Streak.
-- [ ] English source, Spanish translation.
-- [ ] No new user-facing literals in widgets.
+- [x] ARB layer following GymMane and Streak.
+- [x] English source, Spanish translation.
+- [x] No new user-facing literals in widgets.
 
 **Exit criteria:** the app can be used daily without a terminal; calendar and
 reminders work; backup restores; all tests pass; Linux and Android debug builds
 pass; the user confirms real-device daily use before v0.3.
+
+**Shipped in v0.2:** Today, Week and Calendar tabs; month/week calendar with
+per-space markers and shift bars; selected-day detail; week-start setting;
+tags with links, manager, chips and a global filter; shift-pattern editor with
+preview and overlap validation; multiple reminders per entry; Android channels,
+permissions, exact/inexact fallback, boot receiver and a 90-day queue rebuilt on
+start, resume and timezone change; theme, language, hiding Work, default
+reminders, backup, sync/MCP switches and the About screen; versioned JSON
+backup with a transactional import; English/Spanish ARB coverage. Tests cover
+calendar navigation, week start, tag links, reminder arithmetic and DST,
+backup round-trip and rejection, schema v1→v3 and v2→v3 migrations, and the
+shift editor flow.
+
+**Remaining v0.2 limitation:** real-device notification delivery, reboot,
+battery optimization and timezone-change behavior need the user's Android
+device checklist. The app rebuilds the queue on resume; a dedicated Android
+`TIMEZONE_CHANGED` receiver is not implemented.
 
 ### v0.3 Home and maintenance
 

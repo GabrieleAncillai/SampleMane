@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/services/app_database.dart';
+import 'package:mane/models/reminder.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:sqlite3/open.dart';
 
@@ -250,6 +251,91 @@ void main() {
 
     final fortnight = await database.watchShiftsBetween(monday, monday.addDays(13), 'Europe/Madrid').first;
     expect(fortnight, hasLength(4));
+  });
+
+  test('stores tags and removes them from entries when deleted', () async {
+    await database.seedDefaults();
+    final monday = LocalDate.parse('2026-11-09');
+    final now = DateTime.utc(2026, 11, 9, 8);
+
+    await database.saveTag(const Tag(id: 'job-a', spaceId: 'work', name: 'Job A', colorValue: 0xFF4A6FA5));
+    await database.saveEntry(
+      Entry(
+        id: 'shift-note',
+        spaceId: 'work',
+        title: 'Job A meeting',
+        date: monday,
+        allDay: true,
+        tagIds: const {'job-a'},
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    var entries = await database.watchEntriesBetween(monday, monday, 'Europe/Madrid').first;
+    expect(entries.single.entry.tagIds, {'job-a'});
+    expect((await database.watchTags().first).single.name, 'Job A');
+
+    await database.softDeleteTag('job-a');
+    entries = await database.watchEntriesBetween(monday, monday, 'Europe/Madrid').first;
+    expect(entries.single.entry.tagIds, isEmpty);
+    expect(await database.watchTags().first, isEmpty);
+  });
+
+  test('stores multiple reminders per entry and replaces them on save', () async {
+    await database.seedDefaults();
+    final monday = LocalDate.parse('2026-11-09');
+    final now = DateTime.utc(2026, 11, 9, 8);
+
+    await database.saveEntry(
+      Entry(
+        id: 'bins',
+        spaceId: 'home',
+        title: 'Bins',
+        date: monday,
+        allDay: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await database.saveRemindersForEntry('bins', const [
+      Reminder(id: 'bins:60', entryId: 'bins', offsetMinutes: 60),
+      Reminder(id: 'bins:10', entryId: 'bins', offsetMinutes: 10),
+    ]);
+
+    final reminders = await database.readRemindersForEntry('bins');
+    expect(reminders.map((reminder) => reminder.offsetMinutes), [10, 60]);
+    expect((await database.readAllReminders())['bins'], hasLength(2));
+
+    await database.saveRemindersForEntry('bins', const [
+      Reminder(id: 'bins:30', entryId: 'bins', offsetMinutes: 30),
+    ]);
+    expect((await database.readRemindersForEntry('bins')).single.offsetMinutes, 30);
+  });
+
+  test('lists patterns with their slots and exceptions for the editor', () async {
+    await database.seedDefaults();
+    final monday = LocalDate.parse('2026-11-09');
+    await database.saveShiftPattern(
+      ShiftPattern(
+        id: 'editor',
+        spaceId: 'work',
+        name: 'Editor',
+        timeZone: 'Europe/Madrid',
+        cycleDays: 14,
+        anchorDate: monday,
+        slots: const [
+          ShiftSlot(dayIndex: 0, label: 'Open', startMinute: 540, endMinute: 900),
+          ShiftSlot(dayIndex: 0, label: 'Close', startMinute: 960, endMinute: 1200),
+        ],
+        exceptions: [ShiftException(date: monday.addDays(7), type: ShiftExceptionType.free)],
+      ),
+    );
+
+    final patterns = await database.watchShiftPatterns().first;
+    expect(patterns, hasLength(1));
+    expect(patterns.single.slots, hasLength(2));
+    expect(patterns.single.exceptions.single.type, ShiftExceptionType.free);
   });
 
   test('soft-deleted entries disappear from the stream', () async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mane/core/i18n/l10n.dart';
 import 'package:mane/theme/app_theme.dart';
 import 'package:mane/widgets/entry_widgets.dart';
 import 'package:mane/state/providers.dart';
@@ -14,9 +15,12 @@ void main() {
   const spaces = <Space>[Space(id: 'work', name: 'Work', colorValue: 0xFF4A6FA5)];
 
   Widget host(Widget child, {String timeZone = 'Europe/Madrid'}) => ProviderScope(
-    overrides: [deviceTimeZoneProvider.overrideWithValue(timeZone)],
+    overrides: [deviceTimeZoneProvider.overrideWith(() => DeviceTimeZoneController(initial: timeZone))],
     child: MaterialApp(
       theme: ManeTheme.light,
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(body: child),
     ),
   );
