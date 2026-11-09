@@ -5,6 +5,7 @@ import 'package:mane_core/mane_core.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/i18n/l10n.dart';
+import '../../../models/shift_checklist.dart';
 import '../../../state/providers.dart';
 
 class ShiftPatternEditorPage extends ConsumerStatefulWidget {
@@ -25,6 +26,8 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
   late LocalDate _anchorDate;
   late List<_SlotDraft> _slots;
   late List<ShiftException> _exceptions;
+  List<_ChecklistDraft> _checklist = <_ChecklistDraft>[];
+  bool _checklistLoading = false;
   late String _deviceTimeZone;
   int _nextDraftId = 0;
   bool _saving = false;
@@ -50,6 +53,33 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
         ),
     ];
     _exceptions = [...?pattern?.exceptions];
+    if (pattern != null) _loadChecklist(pattern.id);
+  }
+
+  Future<void> _loadChecklist(String patternId) async {
+    setState(() => _checklistLoading = true);
+    try {
+      final items = await ref.read(repositoryProvider).readShiftChecklistItems(patternId);
+      if (!mounted) return;
+      setState(() {
+        _checklist = [for (final item in items) _ChecklistDraft(id: item.id, label: item.label)];
+        _checklistLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _checklistLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotSave('$error'))));
+    }
+  }
+
+  void _addChecklistItem() {
+    setState(() => _checklist.add(_ChecklistDraft(id: const Uuid().v4(), label: '')));
+  }
+
+  void _removeChecklistItem(int index) {
+    setState(() => _checklist.removeAt(index));
   }
 
   @override
@@ -173,6 +203,46 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
               )
             else
               for (final exception in _exceptions) _buildException(exception, locale),
+            const SizedBox(height: 20),
+            _SectionHeader(
+              title: l10n.shiftChecklist,
+              actionLabel: l10n.addChecklistItem,
+              onAction: _addChecklistItem,
+            ),
+            if (_checklistLoading)
+              const LinearProgressIndicator()
+            else if (_checklist.isEmpty)
+              Text(
+                l10n.noChecklistItems,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              )
+            else
+              for (var index = 0; index < _checklist.length; index++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          key: ValueKey('checklist-${_checklist[index].id}'),
+                          initialValue: _checklist[index].label,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            labelText: l10n.checklistItemLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: (value) => _checklist[index] = _checklist[index].copyWith(label: value),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => _removeChecklistItem(index),
+                        icon: const Icon(Icons.remove_circle_outline),
+                        tooltip: l10n.delete,
+                      ),
+                    ],
+                  ),
+                ),
             const SizedBox(height: 20),
             _SectionHeader(title: l10n.preview),
             if (preview != null && conflicts.isNotEmpty)
@@ -461,6 +531,11 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
     );
     try {
       await ref.read(repositoryProvider).saveShiftPattern(saved);
+      await ref.read(repositoryProvider).saveShiftChecklistItems(saved.id, [
+        for (final draft in _checklist)
+          if (draft.label.trim().isNotEmpty)
+            ShiftChecklistItem(id: draft.id, patternId: saved.id, label: draft.label.trim()),
+      ]);
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -497,6 +572,15 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
     await ref.read(repositoryProvider).deleteShiftPattern(pattern.id);
     if (mounted) Navigator.of(context).pop();
   }
+}
+
+class _ChecklistDraft {
+  const _ChecklistDraft({required this.id, required this.label});
+
+  final String id;
+  final String label;
+
+  _ChecklistDraft copyWith({String? label}) => _ChecklistDraft(id: id, label: label ?? this.label);
 }
 
 class _SlotDraft {

@@ -57,6 +57,28 @@ class SettingsController extends Notifier<AppSettings> {
     state = state.copyWith(mcpEnabled: value);
     await _repository.writeSetting(SettingsKeys.mcpEnabled, '$value');
   }
+
+  Future<void> setSleepEnabled(bool value) async {
+    state = state.copyWith(sleepEnabled: value);
+    await _repository.writeSetting(SettingsKeys.sleepEnabled, '$value');
+  }
+
+  Future<void> setSleepCommuteMinutes(int value) async {
+    state = state.copyWith(sleepCommuteMinutes: _cleanMinutes(value));
+    await _repository.writeSetting(SettingsKeys.sleepCommuteMinutes, '${_cleanMinutes(value)}');
+  }
+
+  Future<void> setSleepWindDownMinutes(int value) async {
+    state = state.copyWith(sleepWindDownMinutes: _cleanMinutes(value));
+    await _repository.writeSetting(SettingsKeys.sleepWindDownMinutes, '${_cleanMinutes(value)}');
+  }
+
+  Future<void> setSleepWakeBufferMinutes(int value) async {
+    state = state.copyWith(sleepWakeBufferMinutes: _cleanMinutes(value));
+    await _repository.writeSetting(SettingsKeys.sleepWakeBufferMinutes, '${_cleanMinutes(value)}');
+  }
+
+  int _cleanMinutes(int value) => value.clamp(0, 24 * 60);
 }
 
 final settingsProvider = NotifierProvider<SettingsController, AppSettings>(SettingsController.new);

@@ -242,6 +242,18 @@ abstract class AppLocalizations {
   /// **'(+1 day)'**
   String get overnightSuffix;
 
+  /// No description provided for @importedEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported calendar event'**
+  String get importedEvent;
+
+  /// No description provided for @readOnlyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This event comes from an imported calendar and is read-only.'**
+  String get readOnlyNotice;
+
   /// No description provided for @newEntry.
   ///
   /// In en, this message translates to:
@@ -331,6 +343,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Every year'**
   String get repeatYearly;
+
+  /// No description provided for @repeatAfterCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat after completion'**
+  String get repeatAfterCompletion;
+
+  /// No description provided for @repeatAfterCompletionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule the next one from the day you finish.'**
+  String get repeatAfterCompletionSubtitle;
+
+  /// No description provided for @daysRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a number of days greater than zero.'**
+  String get daysRequired;
+
+  /// No description provided for @daysValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days'**
+  String daysValue(int count);
+
+  /// No description provided for @repeatAfterDaysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Days between completions'**
+  String get repeatAfterDaysLabel;
+
+  /// No description provided for @couldNotComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete: {error}'**
+  String couldNotComplete(String error);
 
   /// No description provided for @notesOptional.
   ///
@@ -728,6 +776,42 @@ abstract class AppLocalizations {
   /// **'Replace your data with a validated backup file.'**
   String get importBackupSubtitle;
 
+  /// No description provided for @importCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a calendar'**
+  String get importCalendar;
+
+  /// No description provided for @importCalendarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read a local .ics file. Imported events are read-only.'**
+  String get importCalendarSubtitle;
+
+  /// No description provided for @importCalendarSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Import into'**
+  String get importCalendarSpace;
+
+  /// No description provided for @importCalendarDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {imported} events. Skipped {skipped} duplicates or unsupported events.'**
+  String importCalendarDone(int imported, int skipped);
+
+  /// No description provided for @importCalendarEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events were found in this file.'**
+  String get importCalendarEmpty;
+
+  /// No description provided for @importCalendarFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar import failed: {error}'**
+  String importCalendarFailed(String error);
+
   /// No description provided for @backupExported.
   ///
   /// In en, this message translates to:
@@ -907,6 +991,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tags'**
   String get tagsManager;
+
+  /// No description provided for @homeInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Home inventory'**
+  String get homeInventory;
+
+  /// No description provided for @homeInventorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantities, locations and reorder levels.'**
+  String get homeInventorySubtitle;
+
+  /// No description provided for @shoppingList.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping list'**
+  String get shoppingList;
+
+  /// No description provided for @shoppingListSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Groceries and household items to buy.'**
+  String get shoppingListSubtitle;
+
+  /// No description provided for @addHomeItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an item'**
+  String get addHomeItem;
+
+  /// No description provided for @editHomeItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit item'**
+  String get editHomeItem;
+
+  /// No description provided for @itemName.
+  ///
+  /// In en, this message translates to:
+  /// **'Item'**
+  String get itemName;
+
+  /// No description provided for @category.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get category;
+
+  /// No description provided for @location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get location;
+
+  /// No description provided for @quantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get quantity;
+
+  /// No description provided for @unit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get unit;
+
+  /// No description provided for @reorderLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder at'**
+  String get reorderLevel;
+
+  /// No description provided for @lowStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Low stock'**
+  String get lowStock;
+
+  /// No description provided for @inStock.
+  ///
+  /// In en, this message translates to:
+  /// **'In stock'**
+  String get inStock;
+
+  /// No description provided for @addToShoppingList.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to shopping list'**
+  String get addToShoppingList;
+
+  /// No description provided for @addLowStockItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Add low-stock items'**
+  String get addLowStockItems;
+
+  /// No description provided for @noLowStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is below its reorder level.'**
+  String get noLowStock;
+
+  /// No description provided for @homeInventoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No household items yet.'**
+  String get homeInventoryEmpty;
+
+  /// No description provided for @shoppingListEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'The shopping list is empty.'**
+  String get shoppingListEmpty;
+
+  /// No description provided for @addShoppingItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to the list'**
+  String get addShoppingItem;
+
+  /// No description provided for @editShoppingItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit list item'**
+  String get editShoppingItem;
+
+  /// No description provided for @linkedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked inventory item'**
+  String get linkedItem;
+
+  /// No description provided for @noLink.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get noLink;
+
+  /// No description provided for @note.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get note;
+
+  /// No description provided for @archiveItemQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive this item?'**
+  String get archiveItemQuestion;
+
+  /// No description provided for @archiveItemBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It disappears from the inventory but stays in backups.'**
+  String get archiveItemBody;
+
+  /// No description provided for @shoppingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} bought'**
+  String shoppingProgress(int done, int total);
+
+  /// No description provided for @sleepWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep window'**
+  String get sleepWindow;
+
+  /// No description provided for @sleepWindowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A soft block from the last commitment today to the first tomorrow.'**
+  String get sleepWindowSubtitle;
+
+  /// No description provided for @sleepBuffers.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep buffers'**
+  String get sleepBuffers;
+
+  /// No description provided for @sleepBuffersSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{commute} commute · {windDown} wind-down · {wake} wake'**
+  String sleepBuffersSummary(int commute, int windDown, int wake);
+
+  /// No description provided for @commute.
+  ///
+  /// In en, this message translates to:
+  /// **'Commute (minutes)'**
+  String get commute;
+
+  /// No description provided for @windDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Wind-down (minutes)'**
+  String get windDown;
+
+  /// No description provided for @wakeBuffer.
+  ///
+  /// In en, this message translates to:
+  /// **'Wake buffer (minutes)'**
+  String get wakeBuffer;
+
+  /// No description provided for @sleepBedtime.
+  ///
+  /// In en, this message translates to:
+  /// **'Bedtime around {time}'**
+  String sleepBedtime(String time);
+
+  /// No description provided for @sleepWake.
+  ///
+  /// In en, this message translates to:
+  /// **'Wake around {time}'**
+  String sleepWake(String time);
+
+  /// No description provided for @sleepWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This plan leaves little room to sleep.'**
+  String get sleepWarning;
+
+  /// No description provided for @sleepNoEarlyStart.
+  ///
+  /// In en, this message translates to:
+  /// **'No early start tomorrow.'**
+  String get sleepNoEarlyStart;
+
+  /// No description provided for @minutesValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String minutesValue(int count);
 
   /// No description provided for @tagsManagerSubtitle.
   ///
@@ -1189,6 +1507,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No exceptions.'**
   String get noExceptions;
+
+  /// No description provided for @shiftChecklist.
+  ///
+  /// In en, this message translates to:
+  /// **'Shift checklist'**
+  String get shiftChecklist;
+
+  /// No description provided for @shiftChecklistSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Items to tick off on each shift of this pattern.'**
+  String get shiftChecklistSubtitle;
+
+  /// No description provided for @addChecklistItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Add item'**
+  String get addChecklistItem;
+
+  /// No description provided for @checklistItemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Checklist item'**
+  String get checklistItemLabel;
+
+  /// No description provided for @noChecklistItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No checklist items yet.'**
+  String get noChecklistItems;
+
+  /// No description provided for @checklistDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} done'**
+  String checklistDone(int done, int total);
 
   /// No description provided for @backupRestoredReminders.
   ///

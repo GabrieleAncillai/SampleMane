@@ -4,6 +4,7 @@ import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/l10n.dart';
 import '../../../widgets/entry_widgets.dart';
+import '../../shifts/widgets/shift_checklist_view.dart';
 
 class CalendarDayDetail extends StatelessWidget {
   const CalendarDayDetail({
@@ -26,6 +27,10 @@ class CalendarDayDetail extends StatelessWidget {
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final title = DateFormat.yMMMMEEEEd(locale).format(date.toDateTime());
+    final checklistShifts = <String, ShiftOccurrence>{};
+    for (final shift in shifts) {
+      checklistShifts.putIfAbsent('${shift.pattern.id}:${shift.date.key}', () => shift);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,6 +48,8 @@ class CalendarDayDetail extends StatelessWidget {
         if (shifts.isNotEmpty) ...[
           const SizedBox(height: 8),
           for (final shift in shifts) ShiftTile(occurrence: shift),
+          for (final shift in checklistShifts.values)
+            ShiftChecklistSection(patternId: shift.pattern.id, date: shift.date),
         ],
         if (entries.isEmpty && shifts.isEmpty)
           Padding(

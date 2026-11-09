@@ -1,6 +1,6 @@
 # Mane: full docs
 
-Status: v0.1, foundations. Last updated 2026-11-08.
+Status: v0.3, home and maintenance. Last updated 2026-11-09.
 
 This is the long version. The short version is in [overview.md](overview.md).
 The file-by-file map of the reference projects is in
@@ -92,9 +92,10 @@ needs to separate them without creating a new app.
   No chat or issue-tracker integration in v1.
 
 **Current state.** Manual entries, today and week views, per-occurrence
-completion for recurring things. Fixed weekly shifts can be entered as recurring
-events. The shift-pattern engine is built and tested; its editor is a later
-screen.
+completion for recurring things. The shift-pattern engine and editor are built
+and tested, including cycles, multiple slots per day, overnight slots and date
+exceptions. A pattern can carry a checklist, and each shift date stores its own
+completions. Read-only ICS import is shipped with a documented RRULE subset.
 
 **Shift example.** A 14-day cycle or per-date exceptions must express:
 
@@ -105,9 +106,9 @@ Do not force the user into a fixed weekly template. Do not encode shifts as
 hundreds of one-off entries. The editor must preview the next N days and
 validate overlaps.
 
-**Open.** How to model a shift checklist without making the data model ugly.
-The working idea is checklist items attached to a shift pattern, with
-completions keyed by pattern, date and item.
+**Open.** None for v1. Checklist items live in `shift_checklist_item_records`,
+and completions are keyed by item and shift date in
+`shift_checklist_completion_records`.
 
 ### 4.2 Home: inventory, shopping and maintenance
 
@@ -130,9 +131,12 @@ usually tracked in a separate list or not at all.
      last service.
   3. One-off with a date: an inspection, a repair, a delivery.
 
-The current model handles 1 and 3. Shape 2 needs `lastCompletedAt` plus
-`repeatAfterCompletionDays` on the entry, or a separate maintenance task type.
-It should not be faked with a fixed date.
+The current model handles all three. `home_item_records` and
+`shopping_item_records` cover inventory and the shopping list; checking a
+linked line updates the household quantity and last-purchased time, and
+unchecking reverses it. `lastCompletedAt` plus `repeatAfterCompletionDays` on an
+entry covers interval maintenance, and completing the task advances its date
+from the day it was actually done.
 
 **Not this.** A full inventory-management or accounting system. A lightweight
 list that answers "what do we have, what is missing, what needs service" is the
@@ -156,8 +160,9 @@ evening, and all of that has to start earlier than the day itself.
 - An optional daily reminder to reach out, not a task to check off.
 - Personal todos and project blocks.
 
-**Current state.** Yearly dates with one reminder. Multiple reminders are
-already in the schema; the UI is later. Tags are later.
+**Current state.** Multiple reminders per entry, yearly dates, tags and a
+global tag filter are shipped. The Personal space carries admin and people
+dates.
 
 **Not this.** A shared account or a couples planning app. If another person
 needs visibility, a read-only calendar export is a better answer than shared
@@ -177,11 +182,11 @@ sleep is the first thing cut.
   Shown as a soft block, not a task.
 - A warning when a plan eats into the window, not a lecture.
 
-**Current state.** Manual gym entries. Companion-app integration is later and
-does not block anything.
-
-**Later.** Sleep windows need configurable commute and wind-down per job. Ship
-the simple planner first.
+**Current state.** The Today screen shows a soft sleep window computed from
+today's last timed end and tomorrow's first timed start, with configurable
+commute, wind-down and wake buffers. It warns when the plan leaves no gap. It is
+a background hint, never a task or a notification. Manual gym entries work;
+companion-app integration is still later and read-only.
 
 ### 4.5 Personal projects and startups
 
@@ -219,8 +224,8 @@ This supersedes the earlier wall-clock model and is implemented in v0.1.5.
 - The viewer timezone is passed into every expansion and display function. A
   list of occurrences carries both `date` (stored zone) and `displayDate`
   (viewer zone), so travel never loses per-occurrence completion.
-- Notifications schedule against absolute instants and reschedule when the
-  timezone changes. That lands with notifications in v0.2.
+- Notifications schedule against absolute instants and reschedule on app
+  start, resume and timezone change.
 - Do not call `DateTime.now()` deep inside domain logic. The app reads
   `nowProvider` and `deviceTimeZoneProvider`; pure functions take both.
 
@@ -228,9 +233,9 @@ The v0.1.5 migration reads the device IANA zone at open time, interprets legacy
 wall-clock rows and one-slot shift patterns in that zone, and backfills the
 instants. Migration tests use a fixed zone so they stay deterministic.
 
-Known limitation: the device timezone is read at app start. Changing it while
-the app is open takes effect on the next start until v0.2 adds resume-time
-refresh and notification rescheduling.
+Known limitation: the device timezone is re-read on resume, but a dedicated
+Android `TIMEZONE_CHANGED` receiver is not implemented. A zone change while the
+app is not running is picked up the next time it starts or resumes.
 
 ### 5.2 Offline by default
 
@@ -293,17 +298,18 @@ Mane must work without the companion app. Manual entry is always available.
 
 ## 6. Data model (target)
 
-The v0.1.5 migration brought the shipped schema to the shape below. Later
-milestones add tags, home items, reminders and sync metadata.
+The migration path is v1 → v2 → v3 → v4. The shipped schema has the shape
+below, including tags, home items, shopping items and shift checklists.
 
 - **spaces**: id, name, color, position, timestamps, soft delete. Seeded with
   Personal, Work and Home. Spaces are rows, not an enum.
 - **entries**: id, space, title, notes, kind (`task`, `event`, `obligation`,
   `deadline`), all-day `LocalDate` or timezone-aware start/end instants,
   timezone, status, recurrence JSON, source/external id, read-only flag,
-  timestamps, soft delete. The wall-clock `dateKey`, `startMinute` and
-  `endMinute` are the recurrence template; `start_at` and `end_at` are the
-  resolved UTC anchor instants.
+  `last_completed_at`, `repeat_after_completion_days`, timestamps, soft delete.
+  The wall-clock `dateKey`, `startMinute` and `endMinute` are the recurrence
+  template; `start_at` and `end_at` are the resolved UTC anchor instants.
+  An entry uses either a recurrence rule or a completion interval, never both.
 - **completions**: entry id plus occurrence date in the entry's stored
   timezone. This is what makes a recurring chore checkable per occurrence.
   Checking this week's bins does not check next week's, and travel does not
@@ -323,10 +329,16 @@ milestones add tags, home items, reminders and sync metadata.
 - **home_items**: id, name, category, location, quantity, unit, reorder level,
   notes, last purchased at, timestamps, soft delete.
 - **shopping_items**: id, name, quantity, unit, checked, note, optional
-  home_item link, timestamps, soft delete.
+  home_item link, timestamps, soft delete. Checking a linked item adds its
+  quantity to the inventory and stamps `lastPurchasedAt`; unchecking reverses
+  the change.
+- **shift_checklist_items**: id, pattern id, label, position. They belong to a
+  pattern, not to an entry.
+- **shift_checklist_completions**: checklist item id plus the shift date in the
+  pattern's timezone. Each shift occurrence keeps its own ticks.
 - **maintenance**: reuse entries with `lastCompletedAt` and
-  `repeatAfterCompletionDays`, or a dedicated table if it keeps the model
-  simpler.
+  `repeatAfterCompletionDays`. Completing one records a completion row and
+  advances the date from the day it was actually completed.
 - **settings**: key and value.
 
 Recurrence rules support daily with an interval, weekly by ISO weekday with an
@@ -360,8 +372,8 @@ migrating existing data.
 - **Search.**
 
 The app now has Today, Week and Calendar tabs, the entry editor, the tags
-manager, the shift-pattern editor, settings, About, backup/import and the
-tag-filter sheet. Search, home inventory and the remaining v0.3 screens are
+manager, the shift-pattern editor with checklists, settings, About,
+backup/import, ICS import, home inventory and the shopping list. Search is
 later.
 
 ## 8. Platform, stack, architecture and references
@@ -553,17 +565,44 @@ battery optimization and timezone-change behavior need the user's Android
 device checklist. The app rebuilds the queue on resume; a dedicated Android
 `TIMEZONE_CHANGED` receiver is not implemented.
 
-### v0.3 Home and maintenance
+### v0.3 Home and maintenance (done)
 
-- [ ] `home_items` and `shopping_items` with migration and tests.
-- [ ] Add, edit and archive items; quantity, unit, location, reorder level.
-- [ ] Shopping/grocery list with check-off.
-- [ ] Low-stock and "to buy" views.
-- [ ] Read-only ICS import.
-- [ ] Interval-after-completion maintenance tasks.
-- [ ] Sleep window calculation.
-- [ ] Shift checklist.
-- [ ] Calendar provider OAuth, only if ICS is not enough.
+- [x] `home_items` and `shopping_items` with migration and tests.
+- [x] Add, edit and archive items; quantity, unit, location, reorder level.
+- [x] Shopping/grocery list with check-off.
+- [x] Low-stock and "to buy" views.
+- [x] Read-only ICS import.
+- [x] Interval-after-completion maintenance tasks.
+- [x] Sleep window calculation.
+- [x] Shift checklist.
+- [x] Calendar provider OAuth: not built, because the documented ICS subset
+      covers the v0.3 need. Revisit only if real files prove insufficient.
+
+**Shipped in v0.3:** schema v4 with `home_item_records`,
+`shopping_item_records`, `shift_checklist_item_records` and
+`shift_checklist_completion_records`, plus `source`, `external_id`,
+`read_only`, `last_completed_at` and `repeat_after_completion_days` on entries;
+a v3→v4 migration tested against real rows; home inventory, shopping list and
+low-stock-to-shopping flow; interval maintenance that advances from the actual
+completion date; a configurable sleep window on Today; per-date shift
+checklists in the pattern editor and day detail; and a local-only ICS importer
+for multiple `VEVENT`s with `UID`, `SUMMARY`, `DESCRIPTION`, `DTSTART`,
+`DTEND`, `DURATION`, `TZID`, UTC/floating times, all-day dates and an RRULE
+subset (daily, weekly, monthly, yearly with `INTERVAL`, `COUNT`, `UNTIL` and
+weekly `BYDAY`). Unsupported events are reported, not guessed.
+
+**ICS limitations:** `EXDATE`, `RECURRENCE-ID`, ordinal `BYDAY` (for example
+`1MO`), `BYSETPOS`, `BYHOUR`, `BYMINUTE`, events longer than 24 hours and
+non-IANA `TZID`s are not supported; such events are counted as skipped. A
+re-import deduplicates by UID, or by date/time/summary when UID is missing, but
+does not update an event that changed in the source file.
+
+**Deviation from the references:** neither GymMane nor Streak has home
+inventory, ICS import, interval maintenance, a sleep window or shift checklists.
+These are planner-specific domains and are implemented in `mane_core`
+(`src/sleep.dart`), the repository and the `home_inventory`, `import` and
+`shifts` feature folders. The app shell, settings rows and localization still
+follow the reference patterns.
 
 ### v0.4 Sync and MCP
 

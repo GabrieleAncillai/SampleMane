@@ -103,45 +103,53 @@ replacement, chatbot inside the app.
 
 Treat this as the baseline. Verify it before changing anything.
 
-**Done (v0.1 through v0.2):**
+**Done (v0.1 through v0.3):**
 
 - Pure Dart domain package in `packages/mane_core` with:
   - `LocalDate` (date-only values for all-day items)
-  - `Entry` and entry kinds/status
+  - `Entry` and entry kinds/status, source, read-only and maintenance fields
   - `RecurrenceRule` for daily, weekly, monthly and yearly rules, with
     `until` and `count`
   - `ShiftPattern` with cycle days, anchor date and overnight slots
-  - `Space`
-- Drift schema in `lib/services/app_database.dart`: `spaces`, `entries`,
-  `reminders`, `shift_patterns`, `completions`, `settings`. UUIDs, `updatedAt`,
-  soft deletes.
+  - `computeSleepWindow` for the soft sleep hint
+  - `Space` and `Tag`
+- Drift schema v4 in `lib/services/app_database.dart`: `spaces`, `entries`,
+  `reminders`, `shift_patterns`, `shift_slots`, `shift_exceptions`,
+  `shift_checklist_items`, `shift_checklist_completions`, `home_items`,
+  `shopping_items`, `completions`, `settings`. UUIDs, `updatedAt`, soft deletes.
 - `PlannerRepository` as the single read/write seam.
 - Riverpod providers in `lib/state/providers.dart`.
 - Today screen, Week screen and entry editor.
 - Per-occurrence completion for recurring entries.
-- Shift patterns now use `shift_slots` and `shift_exceptions`, with arbitrary
-  cycle lengths, multiple slots per day and overnight slots.
+- Shift patterns use `shift_slots` and `shift_exceptions`, with arbitrary cycle
+  lengths, multiple slots per day and overnight slots.
 - Timed entries and shifts are timezone-aware: wall-clock template fields in an
   IANA timezone plus resolved UTC anchor instants, expanded in the stored zone
   and displayed in the device zone.
-- Personal, Work and Home are the three seeded spaces, with a v1 to v3 migration.
+- Personal, Work and Home are the three seeded spaces, with migrations v1→v4
+  tested against real rows.
 - Tags and entry tags with a manager, editor chips and a global filter.
-- Per-occurrence completion for recurring entries, keyed by the occurrence date
-  in the entry's stored timezone.
+- Per-occurrence completion, keyed by the occurrence date in the entry's stored
+  timezone.
 - Today, Week and Calendar tabs: month/week modes, markers, shift bars, day
   detail, navigation, jump to today and a stable selected date.
 - Shift-pattern editor with cycles, multiple slots, overnight slots, exceptions,
-  preview and overlap validation.
+  preview, overlap validation and per-date checklists.
 - Multiple reminders per entry, Android channels/permissions/exact alarms, a
   90-day queue rebuilt on start/resume/timezone change and notification taps.
-- Settings for theme, English/Spanish, week start, hiding Work, defaults,
-  backup, sync/MCP switches and About.
-- Versioned JSON backup with a validated, transactional import.
+- Settings for theme, English/Spanish, week start, hiding Work, defaults, sleep
+  buffers, backup, sync/MCP switches and About.
+- Versioned JSON backup with a validated, transactional import (schema v4).
+- Home inventory, shopping list, low-stock flow and interval maintenance.
+- Soft sleep window on Today with configurable commute, wind-down and wake
+  buffers.
+- Local-only ICS import with a documented RRULE subset and re-import dedupe.
 - English/Spanish ARB coverage for shipped screens.
 - Linux debug build and Android debug APK both pass.
-- Tests: 33 app/database/widget tests, 64 core tests, including real v1 and v2
-  data migration tests, DST/travel scenarios, backup round-trip and rejection,
-  calendar navigation and the shift editor flow.
+- Tests: 50 app/database/widget tests, 68 core tests, including real v1, v2 and
+  v3 data migration tests, DST/travel scenarios, backup round-trip and
+  rejection, calendar navigation, shift checklists, ICS parsing and importing,
+  and the shift editor flow.
 - CI in `.github/workflows/build.yml`: analyze, both test suites and a debug
   APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
@@ -153,12 +161,11 @@ Treat this as the baseline. Verify it before changing anything.
   timezone-change behavior still need the user's Android device checklist.
 - No dedicated Android `TIMEZONE_CHANGED` receiver; the queue rebuilds on
   resume and after the device zone is re-read.
-- Backup import accepts schema version 3 only.
-- No ICS import.
-- No interval-after-completion maintenance.
-- No sleep window.
-- No shift checklist.
-- No home inventory or shopping lists.
+- Backup import accepts schema version 4 only.
+- ICS import does not support `EXDATE`, `RECURRENCE-ID`, ordinal `BYDAY`,
+  `BYSETPOS`, multi-day timed events or non-IANA timezones; those events are
+  reported as skipped. Re-import deduplicates but does not update changed
+  events.
 - No LAN pairing, discovery, query endpoint or MCP server.
 - No search, widgets or full accessibility pass.
 - The UI is a first pass, not the final visual language.
@@ -578,52 +585,51 @@ reboot, battery optimization and timezone-change behavior on the Android
 device. The manifest includes the plugin boot receiver; the queue is rebuilt on
 app resume, but a dedicated `TIMEZONE_CHANGED` receiver is not implemented.
 
-### v0.3 Home and maintenance
+### v0.3 Home and maintenance (done)
 
 **Home inventory and shopping**
 
-- `home_items` and `shopping_items` with migration and tests.
-- Add, edit, archive items; quantity, unit, location, reorder level.
-- Shopping/grocery list with check-off.
-- Low-stock and "to buy" views that stay lightweight.
+- [x] `home_items` and `shopping_items` with migration and tests.
+- [x] Add, edit, archive items; quantity, unit, location, reorder level.
+- [x] Shopping/grocery list with check-off.
+- [x] Low-stock and "to buy" views that stay lightweight.
 
 **ICS import**
 
-- Pick a local `.ics` file. No network.
-- Parse at least `VEVENT`, `DTSTART`, `DTEND`/`DURATION`, `SUMMARY`,
+- [x] Pick a local `.ics` file. No network.
+- [x] Parse at least `VEVENT`, `DTSTART`, `DTEND`/`DURATION`, `SUMMARY`,
   `DESCRIPTION`, all-day events and a documented RRULE subset.
-- Use `TZID` when present; convert to absolute instants and keep the source
+- [x] Use `TZID` when present; convert to absolute instants and keep the source
   timezone.
-- Store imported events as read-only entries with a source/external id.
-- Deduplicate on re-import.
-- Test with fixture files. Document unsupported features (EXDATE,
+- [x] Store imported events as read-only entries with a source/external id.
+- [x] Deduplicate on re-import.
+- [x] Test with fixture files. Document unsupported features (EXDATE,
   RECURRENCE-ID, complex time zones) instead of pretending they work.
-- Do not build Google/Microsoft OAuth unless ICS proves insufficient.
+- [x] Do not build Google/Microsoft OAuth: ICS covers the v0.3 need.
 
 **Interval after completion**
 
-- Add `lastCompletedAt` and `repeatAfterCompletionDays` (or a dedicated
-  maintenance model) with a migration.
-- Compute the next due date in `mane_core`, with tests.
-- Completing the task updates `lastCompletedAt` and schedules the next one.
-- Show overdue/soon states without turning the app into a notification storm.
+- [x] Add `lastCompletedAt` and `repeatAfterCompletionDays` with a migration.
+- [x] Compute the next due date in `mane_core`, with tests.
+- [x] Completing the task updates `lastCompletedAt` and schedules the next one.
+- [x] Show overdue/soon states without turning the app into a notification storm.
 
 **Sleep window**
 
-- Configurable commute, wind-down and wake buffer.
-- Compute a soft sleep window from tomorrow's first commitment and today's last
-  commitment.
-- Show it as a background block, not a task.
-- Warn when a plan eats into it.
-- Pure calculation in `mane_core` with tests.
+- [x] Configurable commute, wind-down and wake buffer.
+- [x] Compute a soft sleep window from tomorrow's first commitment and today's
+  last commitment.
+- [x] Show it as a background block, not a task.
+- [x] Warn when a plan eats into it.
+- [x] Pure calculation in `mane_core` with tests.
 
 **Shift checklist**
 
-- Checklist items attached to a shift pattern.
-- Completions keyed by pattern + date + item, so each shift occurrence is
+- [x] Checklist items attached to a shift pattern.
+- [x] Completions keyed by pattern + date + item, so each shift occurrence is
   independent.
-- Editor and per-shift checklist UI.
-- Tests for independence across occurrences.
+- [x] Editor and per-shift checklist UI.
+- [x] Tests for independence across occurrences.
 
 ### v0.4 Sync and MCP
 

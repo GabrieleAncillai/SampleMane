@@ -3,6 +3,8 @@ import 'package:mane_core/mane_core.dart';
 
 import '../features/backup/backup_service.dart';
 import '../models/date_range.dart';
+import '../models/home_item.dart';
+import '../models/shopping_item.dart';
 import '../services/app_database.dart';
 import '../services/notification_service.dart';
 import '../services/planner_repository.dart';
@@ -59,6 +61,14 @@ final repositoryProvider = Provider<PlannerRepository>(
 final spacesProvider = StreamProvider<List<Space>>((ref) => ref.watch(repositoryProvider).watchSpaces());
 
 final tagsProvider = StreamProvider<List<Tag>>((ref) => ref.watch(repositoryProvider).watchTags());
+
+final homeItemsProvider = StreamProvider<List<HomeItem>>(
+  (ref) => ref.watch(repositoryProvider).watchHomeItems(),
+);
+
+final shoppingItemsProvider = StreamProvider<List<ShoppingItem>>(
+  (ref) => ref.watch(repositoryProvider).watchShoppingItems(),
+);
 
 final backupServiceProvider = Provider<BackupService>((ref) => BackupService(ref.watch(databaseProvider)));
 

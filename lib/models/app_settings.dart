@@ -10,6 +10,10 @@ abstract final class SettingsKeys {
   static const defaultReminderOffsets = 'defaultReminderOffsets';
   static const syncEnabled = 'syncEnabled';
   static const mcpEnabled = 'mcpEnabled';
+  static const sleepEnabled = 'sleepEnabled';
+  static const sleepCommuteMinutes = 'sleepCommuteMinutes';
+  static const sleepWindDownMinutes = 'sleepWindDownMinutes';
+  static const sleepWakeBufferMinutes = 'sleepWakeBufferMinutes';
 }
 
 /// App-wide preferences. Persisted in the `setting_records` table.
@@ -22,6 +26,10 @@ class AppSettings {
     this.defaultReminderOffsets = const <int>[10, 60],
     this.syncEnabled = false,
     this.mcpEnabled = false,
+    this.sleepEnabled = true,
+    this.sleepCommuteMinutes = 30,
+    this.sleepWindDownMinutes = 60,
+    this.sleepWakeBufferMinutes = 30,
   });
 
   final ThemeMode themeMode;
@@ -39,6 +47,15 @@ class AppSettings {
 
   final bool syncEnabled;
   final bool mcpEnabled;
+
+  final bool sleepEnabled;
+  final int sleepCommuteMinutes;
+  final int sleepWindDownMinutes;
+  final int sleepWakeBufferMinutes;
+
+  Duration get commute => Duration(minutes: sleepCommuteMinutes);
+  Duration get windDown => Duration(minutes: sleepWindDownMinutes);
+  Duration get wakeBuffer => Duration(minutes: sleepWakeBufferMinutes);
 
   factory AppSettings.fromMap(Map<String, String> values) {
     final localeValue = values[SettingsKeys.locale];
@@ -67,7 +84,16 @@ class AppSettings {
       defaultReminderOffsets: rawOffsets == null ? const <int>[10, 60] : offsets,
       syncEnabled: values[SettingsKeys.syncEnabled] == 'true',
       mcpEnabled: values[SettingsKeys.mcpEnabled] == 'true',
+      sleepEnabled: values[SettingsKeys.sleepEnabled] != 'false',
+      sleepCommuteMinutes: _minutes(values[SettingsKeys.sleepCommuteMinutes], 30),
+      sleepWindDownMinutes: _minutes(values[SettingsKeys.sleepWindDownMinutes], 60),
+      sleepWakeBufferMinutes: _minutes(values[SettingsKeys.sleepWakeBufferMinutes], 30),
     );
+  }
+
+  static int _minutes(String? value, int fallback) {
+    final parsed = int.tryParse(value ?? '');
+    return parsed == null || parsed < 0 ? fallback : parsed;
   }
 
   AppSettings copyWith({
@@ -79,6 +105,10 @@ class AppSettings {
     List<int>? defaultReminderOffsets,
     bool? syncEnabled,
     bool? mcpEnabled,
+    bool? sleepEnabled,
+    int? sleepCommuteMinutes,
+    int? sleepWindDownMinutes,
+    int? sleepWakeBufferMinutes,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     locale: clearLocale ? null : (locale ?? this.locale),
@@ -87,5 +117,9 @@ class AppSettings {
     defaultReminderOffsets: defaultReminderOffsets ?? this.defaultReminderOffsets,
     syncEnabled: syncEnabled ?? this.syncEnabled,
     mcpEnabled: mcpEnabled ?? this.mcpEnabled,
+    sleepEnabled: sleepEnabled ?? this.sleepEnabled,
+    sleepCommuteMinutes: sleepCommuteMinutes ?? this.sleepCommuteMinutes,
+    sleepWindDownMinutes: sleepWindDownMinutes ?? this.sleepWindDownMinutes,
+    sleepWakeBufferMinutes: sleepWakeBufferMinutes ?? this.sleepWakeBufferMinutes,
   );
 }

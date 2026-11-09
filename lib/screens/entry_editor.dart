@@ -57,6 +57,8 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   late int _startMinute;
   late int _endMinute;
   late _Repeat _repeat;
+  late bool _repeatAfterCompletion;
+  late final TextEditingController _repeatDaysController;
   late String _deviceTimeZone;
   late Set<String> _tagIds;
   late Set<int> _reminderOffsets;
@@ -85,6 +87,8 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     _startMinute = entry?.startMinute ?? 9 * 60;
     _endMinute = entry?.endMinute ?? 10 * 60;
     _repeat = _repeatFrom(entry?.recurrence);
+    _repeatAfterCompletion = entry?.repeatAfterCompletionDays != null;
+    _repeatDaysController = TextEditingController(text: '${entry?.repeatAfterCompletionDays ?? 30}');
     _tagIds = {...?entry?.tagIds};
     if (entry == null) {
       _reminderOffsets = {...ref.read(settingsProvider).defaultReminderOffsets};
@@ -119,6 +123,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _repeatDaysController.dispose();
     super.dispose();
   }
 
@@ -281,21 +286,45 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                   ),
                 ),
               const SizedBox(height: 12),
-              _LabeledDropdown<_Repeat>(
-                label: l10n.repeat,
-                value: _repeat,
-                items: _Repeat.values
-                    .map(
-                      (repeat) => DropdownMenuItem<_Repeat>(
-                        value: repeat,
-                        child: Text(_repeatLabel(context, repeat)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _repeat = value);
-                },
+              if (!_repeatAfterCompletion)
+                _LabeledDropdown<_Repeat>(
+                  label: l10n.repeat,
+                  value: _repeat,
+                  items: _Repeat.values
+                      .map(
+                        (repeat) => DropdownMenuItem<_Repeat>(
+                          value: repeat,
+                          child: Text(_repeatLabel(context, repeat)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _repeat = value);
+                  },
+                ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.repeatAfterCompletion),
+                subtitle: Text(l10n.repeatAfterCompletionSubtitle),
+                value: _repeatAfterCompletion,
+                onChanged: (value) => setState(() {
+                  _repeatAfterCompletion = value;
+                  if (value) _repeat = _Repeat.never;
+                }),
               ),
+              if (_repeatAfterCompletion)
+                TextFormField(
+                  controller: _repeatDaysController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.repeatAfterDaysLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final days = int.tryParse(value?.trim() ?? '');
+                    return days == null || days <= 0 ? l10n.daysRequired : null;
+                  },
+                ),
               const SizedBox(height: 12),
               if (availableTags.isNotEmpty) ...[
                 Text(l10n.tags, style: theme.textTheme.labelLarge),
@@ -453,7 +482,10 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
       tagIds: _tagIds,
       allDay: _allDay,
       status: widget.entry?.status ?? EntryStatus.open,
-      recurrence: _buildRecurrence(),
+      recurrence: _repeatAfterCompletion ? null : _buildRecurrence(),
+      repeatAfterCompletionDays: _repeatAfterCompletion
+          ? int.tryParse(_repeatDaysController.text.trim()) ?? 30
+          : null,
       createdAt: widget.entry?.createdAt ?? now,
       updatedAt: now,
     );

@@ -27,6 +27,9 @@ git clone https://github.com/InlitX/streak.git ../Streak
 | Empty and error states | `lib/widgets/ui_kit.dart` | `lib/core/widgets/app_empty_state.dart`, `lib/core/widgets/startup_failure.dart` | Calm, useful, never an error-looking dead end. |
 | Accessibility | `lib/screens/settings_screen.dart` | `lib/core/widgets/*`, `lib/core/shortcuts/*` | Semantics, text scaling, keyboard shortcuts on desktop. |
 | Home widgets | `lib/services/home_widget_bridge.dart`, `lib/services/nutrition_widgets.dart` | `lib/services/home_widget_service.dart`, `lib/services/todos_widget_service.dart`, `lib/services/widget_action_service.dart` | Follow the working Android widget pattern. |
+| Home inventory, shopping and maintenance | none | none | New planner domain. The settings rows and sheets follow GymMane/Streak patterns; the model and rules live in Mane. |
+| ICS import | `lib/services/workout_import.dart` for local file-picking patterns | `lib/services/import_service.dart` for validation and dedupe patterns | No reference implements iCalendar. The parser is Mane-specific and deliberately narrow. |
+| Sleep window and shift checklists | none | none | New planner domain; pure calculation in `mane_core`, UI in `features/sleep` and `features/shifts`. |
 | Device / desktop behavior | `lib/services/device_kind.dart` | `lib/services/desktop_window.dart`, `lib/core/utils/responsive.dart` | Phone-first, desktop-aware. |
 | Build and release | `.github/workflows/build-apk.yml` | `.github/workflows/build-apk.yml`, `.github/workflows/linux.yml`, `fdroid/com.streak.app.yml`, `fastlane/` | Split APKs, GitHub Releases, F-Droid metadata, signing docs. |
 | Tests | `test/` | `test/` | Copy the test style and coverage areas. |
@@ -43,6 +46,12 @@ git clone https://github.com/InlitX/streak.git ../Streak
   `ChangeNotifier`/`provider`. Mane keeps Drift and Riverpod for date-range
   queries, completion joins and transactional backup import. The audit is in
   `docs/full-docs.md`.
+- **Home inventory, ICS import, interval maintenance, sleep window and shift
+  checklists.** Neither reference has these planner-specific domains. They are
+  implemented and tested in `mane_core`, the repository and the
+  `home_inventory`, `import`, `shifts` and `sleep` feature folders. The visual
+  language and settings rows still come from the references. See the v0.3
+  deviation note in `docs/full-docs.md`.
 
 ## How to use this map
 

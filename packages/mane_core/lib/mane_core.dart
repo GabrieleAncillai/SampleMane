@@ -9,6 +9,7 @@ export 'src/entry_expander.dart';
 export 'src/local_date.dart';
 export 'src/recurrence.dart';
 export 'src/shift_pattern.dart';
+export 'src/sleep.dart';
 export 'src/space.dart';
 export 'src/tag.dart';
 export 'src/time.dart';

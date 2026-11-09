@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/services/app_database.dart';
+import 'package:mane/models/home_item.dart';
+import 'package:mane/models/shopping_item.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:sqlite3/open.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -132,7 +134,7 @@ void main() {
     expect(columns.map((row) => row.data['name']), contains('time_zone'));
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 3);
+    expect(version.data.values.single, 4);
   });
 
   test('migrates real v2 data and keeps tags usable', () async {
@@ -194,6 +196,60 @@ void main() {
     expect((await database.watchTags().first).single.name, 'Tax');
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 3);
+    expect(version.data.values.single, 4);
+  });
+
+  test('migrates real v3 data and exposes the v0.3 tables', () async {
+    final directory = await Directory.systemTemp.createTemp('mane-migration-v3');
+    final path = '${directory.path}/mane.sqlite';
+    final createdAt = DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000;
+
+    final raw = sqlite3.open(path);
+    raw.execute(File('test/fixtures/schema_v3.sql').readAsStringSync());
+    raw.execute(
+      'INSERT INTO space_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['home', 'Home', 0xFF5B7F6B, 0, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO entry_records '
+      '(id, space_id, title, kind, date_key, all_day, status, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['bins', 'home', 'Bins', 'task', 20261109, 1, 'open', createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO tag_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['house', 'House', 0xFF5B7F6B, 0, createdAt, createdAt],
+    );
+    raw.execute('INSERT INTO entry_tag_records (entry_id, tag_id) VALUES (?, ?)', ['bins', 'house']);
+    raw.dispose();
+
+    final database = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(() async {
+      await database.close();
+      await directory.delete(recursive: true);
+    });
+
+    final entries = await database
+        .watchEntriesBetween(LocalDate.parse('2026-11-09'), LocalDate.parse('2026-11-09'), 'Europe/Madrid')
+        .first;
+    expect(entries.single.entry.tagIds, {'house'});
+    expect(entries.single.entry.source, isNull);
+    expect(entries.single.entry.readOnly, isFalse);
+    expect(entries.single.entry.repeatAfterCompletionDays, isNull);
+
+    await database.saveHomeItem(const HomeItem(id: 'rice', name: 'Rice', quantity: 1, reorderLevel: 2));
+    await database.saveShoppingItem(
+      const ShoppingItem(id: 'buy-rice', name: 'Rice', quantity: 3, homeItemId: 'rice'),
+    );
+    await database.setShoppingChecked('buy-rice', true);
+    final home = await database.watchHomeItems().first;
+    expect(home.single.quantity, 4);
+    expect((await database.watchShoppingItems().first).single.checked, isTrue);
+
+    await database.saveShiftChecklistItems('missing-pattern', const []);
+    final version = await database.customSelect('PRAGMA user_version').getSingle();
+    expect(version.data.values.single, 4);
   });
 }

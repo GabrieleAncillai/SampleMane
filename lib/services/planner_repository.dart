@@ -1,6 +1,9 @@
 import 'package:mane_core/mane_core.dart';
 
+import '../models/home_item.dart';
 import '../models/reminder.dart';
+import '../models/shift_checklist.dart';
+import '../models/shopping_item.dart';
 import 'app_database.dart';
 
 /// The single read/write seam for the planner.
@@ -20,6 +23,38 @@ class PlannerRepository {
   Future<void> saveTag(Tag tag) => _database.saveTag(tag);
 
   Future<void> deleteTag(String id) => _database.softDeleteTag(id);
+
+  Stream<List<HomeItem>> watchHomeItems() => _database.watchHomeItems();
+
+  Future<void> saveHomeItem(HomeItem item) => _database.saveHomeItem(item);
+
+  Future<void> archiveHomeItem(String id) => _database.archiveHomeItem(id);
+
+  Stream<List<ShoppingItem>> watchShoppingItems() => _database.watchShoppingItems();
+
+  Future<void> saveShoppingItem(ShoppingItem item) => _database.saveShoppingItem(item);
+
+  Future<void> deleteShoppingItem(String id) => _database.deleteShoppingItem(id);
+
+  Future<void> setShoppingChecked(String id, bool checked) => _database.setShoppingChecked(id, checked);
+
+  Future<List<ShiftChecklistItem>> readShiftChecklistItems(String patternId) =>
+      _database.readShiftChecklistItems(patternId);
+
+  Future<void> saveShiftChecklistItems(String patternId, List<ShiftChecklistItem> items) =>
+      _database.saveShiftChecklistItems(patternId, items);
+
+  Future<Set<String>> readShiftChecklistCompletions(String patternId, LocalDate date) =>
+      _database.readShiftChecklistCompletions(patternId, date);
+
+  Future<void> setShiftChecklistCompleted(String itemId, LocalDate date, bool completed) =>
+      _database.setShiftChecklistCompleted(itemId, date, completed: completed);
+
+  Future<bool> hasImportedEntry(String source, String externalId) =>
+      _database.hasImportedEntry(source, externalId);
+
+  Future<LocalDate?> completeMaintenanceEntry(String id, LocalDate completionDate) =>
+      _database.completeMaintenanceEntry(id, completionDate);
 
   Future<Map<String, String>> readSettings() => _database.readSettings();
 

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../core/i18n/l10n.dart';
+import '../features/sleep/sleep_window_card.dart';
 import '../state/providers.dart';
 import '../state/settings_controller.dart';
 import '../widgets/entry_widgets.dart';
@@ -37,7 +38,9 @@ class TodayScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 28, 20, 100),
         children: [
           _TodayHeader(date: today),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          const SleepWindowCard(),
+          const SizedBox(height: 4),
           if (shifts.isNotEmpty) ...[
             _SectionLabel(l10n.shiftsSection),
             const SizedBox(height: 8),

@@ -74,6 +74,39 @@ void main() {
     expect(find.textContaining('All day'), findsOneWidget);
   });
 
+  testWidgets('an imported entry is read-only and explains why', (tester) async {
+    final entry = Entry(
+      id: 'imported',
+      spaceId: 'work',
+      title: 'Standup',
+      date: monday,
+      startMinute: 9 * 60,
+      endMinute: 10 * 60,
+      timeZone: 'Europe/Madrid',
+      source: 'ics',
+      externalId: 'uid:standup@example.com',
+      readOnly: true,
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+    final occurrence = EntryOccurrence(
+      date: monday,
+      displayDate: monday,
+      entry: entry,
+      startAt: entry.startAt,
+      endAt: entry.endAt,
+    );
+
+    await tester.pumpWidget(host(EntryTile(occurrence: occurrence, spaces: spaces)));
+    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    expect(find.byType(Checkbox), findsNothing);
+
+    await tester.tap(find.text('Standup'));
+    await tester.pumpAndSettle();
+    expect(find.text('Imported calendar event'), findsOneWidget);
+    expect(find.text('This event comes from an imported calendar and is read-only.'), findsOneWidget);
+  });
+
   testWidgets('a shift renders in the viewer timezone', (tester) async {
     final pattern = ShiftPattern(
       id: 'night',

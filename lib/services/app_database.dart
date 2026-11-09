@@ -7,7 +7,10 @@ import 'package:mane_core/mane_core.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../models/home_item.dart';
 import '../models/reminder.dart';
+import '../models/shift_checklist.dart';
+import '../models/shopping_item.dart';
 
 part 'app_database.g.dart';
 
@@ -49,6 +52,65 @@ class EntryTagRecords extends Table {
   Set<Column<Object>> get primaryKey => {entryId, tagId};
 }
 
+@DataClassName('ShiftChecklistItemRow')
+class ShiftChecklistItemRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get patternId => text().references(ShiftPatternRecords, #id)();
+  TextColumn get label => text()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('ShiftChecklistCompletionRow')
+class ShiftChecklistCompletionRecords extends Table {
+  TextColumn get itemId => text().references(ShiftChecklistItemRecords, #id)();
+  IntColumn get dateKey => integer()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {itemId, dateKey};
+}
+
+@DataClassName('HomeItemRow')
+class HomeItemRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get category => text().withDefault(const Constant(''))();
+  TextColumn get location => text().withDefault(const Constant(''))();
+  RealColumn get quantity => real().withDefault(const Constant(0))();
+
+  /// Threshold at or below which the item is low stock. Null means no alert.
+  RealColumn get reorderLevel => real().nullable()();
+  TextColumn get unit => text().withDefault(const Constant(''))();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+  DateTimeColumn get lastPurchasedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('ShoppingItemRow')
+class ShoppingItemRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  RealColumn get quantity => real().withDefault(const Constant(1))();
+  TextColumn get unit => text().withDefault(const Constant(''))();
+  BoolColumn get checked => boolean().withDefault(const Constant(false))();
+  TextColumn get note => text().withDefault(const Constant(''))();
+  TextColumn get homeItemId => text().nullable().references(HomeItemRecords, #id)();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 @DataClassName('EntryRow')
 class EntryRecords extends Table {
   TextColumn get id => text()();
@@ -84,6 +146,14 @@ class EntryRecords extends Table {
 
   /// Serialized [RecurrenceRule], null for one-off entries.
   TextColumn get recurrenceJson => text().nullable()();
+
+  /// Import source such as `ics`, null for user entries.
+  TextColumn get source => text().nullable()();
+  TextColumn get externalId => text().nullable()();
+  BoolColumn get readOnly => boolean().withDefault(const Constant(false))();
+
+  DateTimeColumn get lastCompletedAt => dateTime().nullable()();
+  IntColumn get repeatAfterCompletionDays => integer().nullable()();
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -177,6 +247,10 @@ class SettingRecords extends Table {
     ShiftPatternRecords,
     ShiftSlotRecords,
     ShiftExceptionRecords,
+    ShiftChecklistItemRecords,
+    ShiftChecklistCompletionRecords,
+    HomeItemRecords,
+    ShoppingItemRecords,
     SettingRecords,
   ],
 )
@@ -189,14 +263,18 @@ class AppDatabase extends _$AppDatabase {
   final String defaultTimeZone;
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
+      // Add the v4 entry columns first so the v1/v2 backfill can read rows with
+      // the current generated entry mapper.
+      if (from < 4) await _addV4EntryColumns(m);
       if (from < 2) await _migrateToV2(m);
       if (from < 3) await _migrateToV3(m);
+      if (from < 4) await _migrateToV4(m);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -401,6 +479,237 @@ class AppDatabase extends _$AppDatabase {
         TagRecordsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
       );
     });
+  }
+
+  Stream<List<HomeItem>> watchHomeItems() {
+    final query = select(homeItemRecords)..where((row) => row.deletedAt.isNull());
+    return query.watch().map((rows) {
+      final items = rows.map(_homeItemFromRow).toList()
+        ..sort((a, b) {
+          final byCategory = a.category.toLowerCase().compareTo(b.category.toLowerCase());
+          if (byCategory != 0) return byCategory;
+          final byLocation = a.location.toLowerCase().compareTo(b.location.toLowerCase());
+          if (byLocation != 0) return byLocation;
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+      return items;
+    });
+  }
+
+  Future<void> saveHomeItem(HomeItem item) async {
+    final now = DateTime.now();
+    final existing = await (select(
+      homeItemRecords,
+    )..where((row) => row.id.equals(item.id))).getSingleOrNull();
+    await into(homeItemRecords).insertOnConflictUpdate(
+      HomeItemRecordsCompanion(
+        id: Value(item.id),
+        name: Value(item.name),
+        category: Value(item.category),
+        location: Value(item.location),
+        quantity: Value(item.quantity),
+        reorderLevel: Value(item.reorderLevel),
+        unit: Value(item.unit),
+        notes: Value(item.notes),
+        lastPurchasedAt: Value(item.lastPurchasedAt),
+        createdAt: Value(existing?.createdAt ?? now),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  Future<void> archiveHomeItem(String id) async {
+    final now = DateTime.now();
+    await (update(homeItemRecords)..where((row) => row.id.equals(id))).write(
+      HomeItemRecordsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+    );
+  }
+
+  Stream<List<ShoppingItem>> watchShoppingItems() {
+    final query = select(shoppingItemRecords)..where((row) => row.deletedAt.isNull());
+    return query.watch().map((rows) {
+      final items = rows.map(_shoppingItemFromRow).toList()
+        ..sort((a, b) {
+          if (a.checked != b.checked) return a.checked ? 1 : -1;
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+      return items;
+    });
+  }
+
+  Future<void> saveShoppingItem(ShoppingItem item) async {
+    final now = DateTime.now();
+    final existing = await (select(
+      shoppingItemRecords,
+    )..where((row) => row.id.equals(item.id))).getSingleOrNull();
+    await into(shoppingItemRecords).insertOnConflictUpdate(
+      ShoppingItemRecordsCompanion(
+        id: Value(item.id),
+        name: Value(item.name),
+        quantity: Value(item.quantity),
+        unit: Value(item.unit),
+        checked: Value(item.checked),
+        note: Value(item.note),
+        homeItemId: Value(item.homeItemId),
+        createdAt: Value(existing?.createdAt ?? now),
+        updatedAt: Value(now),
+      ),
+    );
+  }
+
+  Future<void> deleteShoppingItem(String id) async {
+    final now = DateTime.now();
+    await (update(shoppingItemRecords)..where((row) => row.id.equals(id))).write(
+      ShoppingItemRecordsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+    );
+  }
+
+  /// Checking a linked shopping item updates the household quantity and the
+  /// last-purchased time. Unchecking reverses the quantity change.
+  Future<void> setShoppingChecked(String id, bool checked) {
+    return transaction(() async {
+      final now = DateTime.now();
+      final row = await (select(shoppingItemRecords)..where((item) => item.id.equals(id))).getSingleOrNull();
+      if (row == null || row.checked == checked) return;
+
+      final homeId = row.homeItemId;
+      if (homeId != null) {
+        final home = await (select(
+          homeItemRecords,
+        )..where((item) => item.id.equals(homeId))).getSingleOrNull();
+        if (home != null) {
+          final delta = checked ? row.quantity : -row.quantity;
+          final quantity = (home.quantity + delta).clamp(0.0, double.infinity).toDouble();
+          await (update(homeItemRecords)..where((item) => item.id.equals(homeId))).write(
+            HomeItemRecordsCompanion(
+              quantity: Value(quantity),
+              lastPurchasedAt: Value(checked ? now : home.lastPurchasedAt),
+              updatedAt: Value(now),
+            ),
+          );
+        }
+      }
+
+      await (update(shoppingItemRecords)..where((item) => item.id.equals(id))).write(
+        ShoppingItemRecordsCompanion(checked: Value(checked), updatedAt: Value(now)),
+      );
+    });
+  }
+
+  Future<List<ShiftChecklistItem>> readShiftChecklistItems(String patternId) async {
+    final rows = await (select(
+      shiftChecklistItemRecords,
+    )..where((row) => row.patternId.equals(patternId))).get();
+    final items = rows.map(_checklistItemFromRow).toList()..sort((a, b) => a.position.compareTo(b.position));
+    return items;
+  }
+
+  Future<void> saveShiftChecklistItems(String patternId, List<ShiftChecklistItem> items) {
+    return transaction(() async {
+      final existing = await (select(
+        shiftChecklistItemRecords,
+      )..where((row) => row.patternId.equals(patternId))).get();
+      final keepIds = items.map((item) => item.id).toSet();
+      final removedIds = [
+        for (final row in existing)
+          if (!keepIds.contains(row.id)) row.id,
+      ];
+      if (removedIds.isNotEmpty) {
+        await (delete(shiftChecklistCompletionRecords)..where((row) => row.itemId.isIn(removedIds))).go();
+        await (delete(shiftChecklistItemRecords)..where((row) => row.id.isIn(removedIds))).go();
+      }
+      for (var index = 0; index < items.length; index++) {
+        final item = items[index];
+        final exists = existing.any((row) => row.id == item.id);
+        if (exists) {
+          await (update(shiftChecklistItemRecords)..where((row) => row.id.equals(item.id))).write(
+            ShiftChecklistItemRecordsCompanion(label: Value(item.label), position: Value(index)),
+          );
+          continue;
+        }
+        await into(shiftChecklistItemRecords).insert(
+          ShiftChecklistItemRecordsCompanion(
+            id: Value(item.id),
+            patternId: Value(patternId),
+            label: Value(item.label),
+            position: Value(index),
+          ),
+        );
+      }
+    });
+  }
+
+  Future<Set<String>> readShiftChecklistCompletions(String patternId, LocalDate date) async {
+    final itemRows = await (select(
+      shiftChecklistItemRecords,
+    )..where((row) => row.patternId.equals(patternId))).get();
+    final itemIds = itemRows.map((row) => row.id).toList();
+    if (itemIds.isEmpty) return <String>{};
+    final rows = await (select(
+      shiftChecklistCompletionRecords,
+    )..where((row) => row.dateKey.equals(date.key) & row.itemId.isIn(itemIds))).get();
+    return {for (final row in rows) row.itemId};
+  }
+
+  Future<void> setShiftChecklistCompleted(String itemId, LocalDate date, {required bool completed}) async {
+    if (completed) {
+      await into(shiftChecklistCompletionRecords).insertOnConflictUpdate(
+        ShiftChecklistCompletionRecordsCompanion.insert(
+          itemId: itemId,
+          dateKey: date.key,
+          createdAt: DateTime.now(),
+        ),
+      );
+      return;
+    }
+    await (delete(
+      shiftChecklistCompletionRecords,
+    )..where((row) => row.itemId.equals(itemId) & row.dateKey.equals(date.key))).go();
+  }
+
+  Future<bool> hasImportedEntry(String source, String externalId) async {
+    final row = await (select(
+      entryRecords,
+    )..where((row) => row.source.equals(source) & row.externalId.equals(externalId))).getSingleOrNull();
+    return row != null;
+  }
+
+  /// Completes a maintenance task and moves its date forward from the day it
+  /// was actually completed. Records the completion as history.
+  Future<LocalDate?> completeMaintenanceEntry(String id, LocalDate completionDate) async {
+    final row = await (select(entryRecords)..where((entry) => entry.id.equals(id))).getSingleOrNull();
+    final interval = row?.repeatAfterCompletionDays;
+    if (row == null || row.readOnly || interval == null || interval <= 0) return null;
+    final currentDate = row.dateKey == null ? null : LocalDate.fromKey(row.dateKey!);
+    if (currentDate == null) return null;
+
+    final now = DateTime.now();
+    final nextDate = completionDate.addDays(interval);
+    final endShift = row.endDateKey == null ? null : row.endDateKey! - row.dateKey!;
+    DateTime? startAt;
+    DateTime? endAt;
+    if (!row.allDay && row.timeZone != null && row.startMinute != null && row.endMinute != null) {
+      startAt = instantAt(nextDate, row.startMinute!, row.timeZone!);
+      endAt = instantAt(nextDate, row.endMinute!, row.timeZone!);
+    }
+
+    await transaction(() async {
+      await into(completionRecords).insertOnConflictUpdate(
+        CompletionRecordsCompanion.insert(entryId: id, dateKey: completionDate.key, createdAt: now),
+      );
+      await (update(entryRecords)..where((entry) => entry.id.equals(id))).write(
+        EntryRecordsCompanion(
+          dateKey: Value(nextDate.key),
+          endDateKey: Value(endShift == null ? null : nextDate.addDays(endShift).key),
+          startAt: Value(startAt),
+          endAt: Value(endAt),
+          lastCompletedAt: Value(now),
+          status: Value(EntryStatus.open.name),
+          updatedAt: Value(now),
+        ),
+      );
+    });
+    return nextDate;
   }
 
   Future<void> setEntryStatus(String id, EntryStatus status) async {
@@ -668,6 +977,21 @@ class AppDatabase extends _$AppDatabase {
     await m.createTable(tagRecords);
     await m.createTable(entryTagRecords);
   }
+
+  Future<void> _migrateToV4(Migrator m) async {
+    await m.createTable(shiftChecklistItemRecords);
+    await m.createTable(shiftChecklistCompletionRecords);
+    await m.createTable(homeItemRecords);
+    await m.createTable(shoppingItemRecords);
+  }
+
+  Future<void> _addV4EntryColumns(Migrator m) async {
+    await m.addColumn(entryRecords, entryRecords.source);
+    await m.addColumn(entryRecords, entryRecords.externalId);
+    await m.addColumn(entryRecords, entryRecords.readOnly);
+    await m.addColumn(entryRecords, entryRecords.lastCompletedAt);
+    await m.addColumn(entryRecords, entryRecords.repeatAfterCompletionDays);
+  }
 }
 
 const _defaultSpaces = <Space>[
@@ -693,6 +1017,31 @@ Tag _tagFromRow(TagRow row) =>
 Reminder _reminderFromRow(ReminderRow row) =>
     Reminder(id: row.id, entryId: row.entryId, offsetMinutes: row.offsetMinutes, enabled: row.enabled);
 
+HomeItem _homeItemFromRow(HomeItemRow row) => HomeItem(
+  id: row.id,
+  name: row.name,
+  category: row.category,
+  location: row.location,
+  quantity: row.quantity,
+  unit: row.unit,
+  reorderLevel: row.reorderLevel,
+  notes: row.notes,
+  lastPurchasedAt: row.lastPurchasedAt,
+);
+
+ShoppingItem _shoppingItemFromRow(ShoppingItemRow row) => ShoppingItem(
+  id: row.id,
+  name: row.name,
+  quantity: row.quantity,
+  unit: row.unit,
+  checked: row.checked,
+  note: row.note,
+  homeItemId: row.homeItemId,
+);
+
+ShiftChecklistItem _checklistItemFromRow(ShiftChecklistItemRow row) =>
+    ShiftChecklistItem(id: row.id, patternId: row.patternId, label: row.label, position: row.position);
+
 Entry _entryFromRow(EntryRow row, {Set<String> tagIds = const <String>{}}) => Entry(
   id: row.id,
   spaceId: row.spaceId,
@@ -710,6 +1059,11 @@ Entry _entryFromRow(EntryRow row, {Set<String> tagIds = const <String>{}}) => En
   recurrence: row.recurrenceJson == null
       ? null
       : RecurrenceRule.fromJson(Map<String, Object?>.from(jsonDecode(row.recurrenceJson!) as Map)),
+  source: row.source,
+  externalId: row.externalId,
+  readOnly: row.readOnly,
+  lastCompletedAt: row.lastCompletedAt?.toUtc(),
+  repeatAfterCompletionDays: row.repeatAfterCompletionDays,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
   deletedAt: row.deletedAt,
@@ -733,6 +1087,11 @@ EntryRecordsCompanion _entryCompanion(Entry entry) => EntryRecordsCompanion(
   allDay: Value(entry.allDay),
   status: Value(entry.status.name),
   recurrenceJson: Value(entry.recurrence == null ? null : jsonEncode(entry.recurrence!.toJson())),
+  source: Value(entry.source),
+  externalId: Value(entry.externalId),
+  readOnly: Value(entry.readOnly),
+  lastCompletedAt: Value(entry.lastCompletedAt),
+  repeatAfterCompletionDays: Value(entry.repeatAfterCompletionDays),
   createdAt: Value(entry.createdAt),
   updatedAt: Value(entry.updatedAt),
   deletedAt: Value(entry.deletedAt),

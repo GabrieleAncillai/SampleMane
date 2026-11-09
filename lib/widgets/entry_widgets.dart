@@ -51,8 +51,8 @@ class EntryTile extends ConsumerWidget {
       (value) => value.id == entry.spaceId,
       orElse: () => Space(id: entry.spaceId, name: entry.spaceId, colorValue: 0xFF888888),
     );
-    final canComplete = entry.kind != EntryKind.event;
-    final isCompleted = occurrence.completed;
+    final canComplete = entry.kind != EntryKind.event && !entry.readOnly;
+    final isCompleted = entry.isMaintenance ? false : occurrence.completed;
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     final viewerTimeZone = ref.watch(deviceTimeZoneProvider);
@@ -72,14 +72,25 @@ class EntryTile extends ConsumerWidget {
           ? Checkbox(
               value: isCompleted,
               onChanged: (value) async {
-                if (entry.recurrence == null) {
-                  await ref
-                      .read(repositoryProvider)
-                      .setEntryStatus(entry.id, value == true ? EntryStatus.done : EntryStatus.open);
-                } else {
-                  await ref
-                      .read(repositoryProvider)
-                      .setOccurrenceCompleted(entry.id, occurrence.date, value == true);
+                try {
+                  if (entry.isMaintenance) {
+                    final today = localDateAt(ref.read(nowProvider), ref.read(deviceTimeZoneProvider));
+                    await ref.read(repositoryProvider).completeMaintenanceEntry(entry.id, today);
+                    await ref.read(reminderCoordinatorProvider).reschedule();
+                  } else if (entry.recurrence == null) {
+                    await ref
+                        .read(repositoryProvider)
+                        .setEntryStatus(entry.id, value == true ? EntryStatus.done : EntryStatus.open);
+                  } else {
+                    await ref
+                        .read(repositoryProvider)
+                        .setOccurrenceCompleted(entry.id, occurrence.date, value == true);
+                  }
+                } catch (error) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(context.l10n.couldNotComplete('$error'))));
                 }
               },
               semanticLabel: context.l10n.markAsDone(entry.title),
@@ -100,8 +111,18 @@ class EntryTile extends ConsumerWidget {
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall?.copyWith(color: muted),
       ),
-      trailing: entry.recurrence == null ? null : Icon(Icons.repeat, size: 18, color: muted),
-      onTap: () => showEntryEditor(context, entry: entry, initialDate: occurrence.date, spaces: spaces),
+      trailing: entry.readOnly
+          ? Icon(Icons.lock_outline, size: 18, color: muted)
+          : entry.recurrence == null
+          ? null
+          : Icon(Icons.repeat, size: 18, color: muted),
+      onTap: () {
+        if (entry.readOnly) {
+          _showReadOnly(context, entry);
+          return;
+        }
+        showEntryEditor(context, entry: entry, initialDate: occurrence.date, spaces: spaces);
+      },
     );
   }
 }
@@ -184,4 +205,32 @@ class ShiftChip extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _showReadOnly(BuildContext context, Entry entry) {
+  final l10n = context.l10n;
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(entry.title, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 6),
+          Text(
+            l10n.importedEvent,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
+          ),
+          const SizedBox(height: 10),
+          Text(l10n.readOnlyNotice),
+          if (entry.notes.isNotEmpty) ...[const SizedBox(height: 12), Text(entry.notes)],
+        ],
+      ),
+    ),
+  );
 }

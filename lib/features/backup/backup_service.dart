@@ -31,7 +31,7 @@ class BackupService {
   BackupService(this._database);
 
   static const appTag = 'mane';
-  static const currentSchemaVersion = 3;
+  static const currentSchemaVersion = 4;
 
   final AppDatabase _database;
 
@@ -45,6 +45,10 @@ class BackupService {
     final patterns = await _database.select(_database.shiftPatternRecords).get();
     final slots = await _database.select(_database.shiftSlotRecords).get();
     final exceptions = await _database.select(_database.shiftExceptionRecords).get();
+    final checklistItems = await _database.select(_database.shiftChecklistItemRecords).get();
+    final checklistCompletions = await _database.select(_database.shiftChecklistCompletionRecords).get();
+    final homeItems = await _database.select(_database.homeItemRecords).get();
+    final shoppingItems = await _database.select(_database.shoppingItemRecords).get();
     final settings = await _database.select(_database.settingRecords).get();
 
     spaces.sort((a, b) {
@@ -65,6 +69,16 @@ class BackupService {
     patterns.sort((a, b) => a.id.compareTo(b.id));
     slots.sort((a, b) => a.id.compareTo(b.id));
     exceptions.sort((a, b) => a.id.compareTo(b.id));
+    checklistItems.sort((a, b) {
+      final byPattern = a.patternId.compareTo(b.patternId);
+      return byPattern != 0 ? byPattern : a.position.compareTo(b.position);
+    });
+    checklistCompletions.sort((a, b) {
+      final byItem = a.itemId.compareTo(b.itemId);
+      return byItem != 0 ? byItem : a.dateKey.compareTo(b.dateKey);
+    });
+    homeItems.sort((a, b) => a.id.compareTo(b.id));
+    shoppingItems.sort((a, b) => a.id.compareTo(b.id));
     settings.sort((a, b) => a.key.compareTo(b.key));
 
     final payload = <String, Object?>{
@@ -114,6 +128,11 @@ class BackupService {
             'allDay': row.allDay,
             'status': row.status,
             'recurrenceJson': row.recurrenceJson,
+            'source': row.source,
+            'externalId': row.externalId,
+            'readOnly': row.readOnly,
+            'lastCompletedAt': _nullableDate(row.lastCompletedAt),
+            'repeatAfterCompletionDays': row.repeatAfterCompletionDays,
             'createdAt': _date(row.createdAt),
             'updatedAt': _date(row.updatedAt),
             'deletedAt': _nullableDate(row.deletedAt),
@@ -168,6 +187,46 @@ class BackupService {
             'note': row.note,
           },
       ],
+      'shiftChecklistItems': [
+        for (final row in checklistItems)
+          {'id': row.id, 'patternId': row.patternId, 'label': row.label, 'position': row.position},
+      ],
+      'shiftChecklistCompletions': [
+        for (final row in checklistCompletions)
+          {'itemId': row.itemId, 'dateKey': row.dateKey, 'createdAt': _date(row.createdAt)},
+      ],
+      'homeItems': [
+        for (final row in homeItems)
+          {
+            'id': row.id,
+            'name': row.name,
+            'category': row.category,
+            'location': row.location,
+            'quantity': row.quantity,
+            'reorderLevel': row.reorderLevel,
+            'unit': row.unit,
+            'notes': row.notes,
+            'lastPurchasedAt': _nullableDate(row.lastPurchasedAt),
+            'createdAt': _date(row.createdAt),
+            'updatedAt': _date(row.updatedAt),
+            'deletedAt': _nullableDate(row.deletedAt),
+          },
+      ],
+      'shoppingItems': [
+        for (final row in shoppingItems)
+          {
+            'id': row.id,
+            'name': row.name,
+            'quantity': row.quantity,
+            'unit': row.unit,
+            'checked': row.checked,
+            'note': row.note,
+            'homeItemId': row.homeItemId,
+            'createdAt': _date(row.createdAt),
+            'updatedAt': _date(row.updatedAt),
+            'deletedAt': _nullableDate(row.deletedAt),
+          },
+      ],
       'settings': {for (final row in settings) row.key: row.value},
     };
 
@@ -201,9 +260,17 @@ class BackupService {
     final patterns = _maps(payload, 'shiftPatterns');
     final slots = _maps(payload, 'shiftSlots');
     final exceptions = _maps(payload, 'shiftExceptions');
+    final checklistItems = _maps(payload, 'shiftChecklistItems');
+    final checklistCompletions = _maps(payload, 'shiftChecklistCompletions');
+    final homeItems = _maps(payload, 'homeItems');
+    final shoppingItems = _maps(payload, 'shoppingItems');
     final settings = _map(payload, 'settings');
 
     await _database.transaction(() async {
+      await _database.delete(_database.shiftChecklistCompletionRecords).go();
+      await _database.delete(_database.shiftChecklistItemRecords).go();
+      await _database.delete(_database.shoppingItemRecords).go();
+      await _database.delete(_database.homeItemRecords).go();
       await _database.delete(_database.entryTagRecords).go();
       await _database.delete(_database.completionRecords).go();
       await _database.delete(_database.reminderRecords).go();
@@ -248,6 +315,46 @@ class BackupService {
             );
       }
 
+      for (final row in homeItems) {
+        await _database
+            .into(_database.homeItemRecords)
+            .insert(
+              HomeItemRecordsCompanion(
+                id: Value(_string(row, 'id')),
+                name: Value(_string(row, 'name')),
+                category: Value(_string(row, 'category')),
+                location: Value(_string(row, 'location')),
+                quantity: Value(_number(row, 'quantity')),
+                reorderLevel: Value(_optionalNumber(row, 'reorderLevel')),
+                unit: Value(_string(row, 'unit')),
+                notes: Value(_string(row, 'notes')),
+                lastPurchasedAt: Value(_optionalDateTime(row, 'lastPurchasedAt')),
+                createdAt: Value(_dateTime(row, 'createdAt')),
+                updatedAt: Value(_dateTime(row, 'updatedAt')),
+                deletedAt: Value(_optionalDateTime(row, 'deletedAt')),
+              ),
+            );
+      }
+
+      for (final row in shoppingItems) {
+        await _database
+            .into(_database.shoppingItemRecords)
+            .insert(
+              ShoppingItemRecordsCompanion(
+                id: Value(_string(row, 'id')),
+                name: Value(_string(row, 'name')),
+                quantity: Value(_number(row, 'quantity')),
+                unit: Value(_string(row, 'unit')),
+                checked: Value(_boolean(row, 'checked')),
+                note: Value(_string(row, 'note')),
+                homeItemId: Value(_optionalString(row, 'homeItemId')),
+                createdAt: Value(_dateTime(row, 'createdAt')),
+                updatedAt: Value(_dateTime(row, 'updatedAt')),
+                deletedAt: Value(_optionalDateTime(row, 'deletedAt')),
+              ),
+            );
+      }
+
       for (final row in entries) {
         await _database
             .into(_database.entryRecords)
@@ -268,6 +375,11 @@ class BackupService {
                 allDay: Value(_boolean(row, 'allDay')),
                 status: Value(_string(row, 'status')),
                 recurrenceJson: Value(_optionalString(row, 'recurrenceJson')),
+                source: Value(_optionalString(row, 'source')),
+                externalId: Value(_optionalString(row, 'externalId')),
+                readOnly: Value(_boolean(row, 'readOnly')),
+                lastCompletedAt: Value(_optionalDateTime(row, 'lastCompletedAt')),
+                repeatAfterCompletionDays: Value(_optionalInteger(row, 'repeatAfterCompletionDays')),
                 createdAt: Value(_dateTime(row, 'createdAt')),
                 updatedAt: Value(_dateTime(row, 'updatedAt')),
                 deletedAt: Value(_optionalDateTime(row, 'deletedAt')),
@@ -359,6 +471,31 @@ class BackupService {
             );
       }
 
+      for (final row in checklistItems) {
+        await _database
+            .into(_database.shiftChecklistItemRecords)
+            .insert(
+              ShiftChecklistItemRecordsCompanion(
+                id: Value(_string(row, 'id')),
+                patternId: Value(_string(row, 'patternId')),
+                label: Value(_string(row, 'label')),
+                position: Value(_integer(row, 'position')),
+              ),
+            );
+      }
+
+      for (final row in checklistCompletions) {
+        await _database
+            .into(_database.shiftChecklistCompletionRecords)
+            .insert(
+              ShiftChecklistCompletionRecordsCompanion.insert(
+                itemId: _string(row, 'itemId'),
+                dateKey: _integer(row, 'dateKey'),
+                createdAt: _dateTime(row, 'createdAt'),
+              ),
+            );
+      }
+
       for (final entry in settings.entries) {
         await _database
             .into(_database.settingRecords)
@@ -412,6 +549,17 @@ class BackupService {
   static int? _optionalInteger(Map<String, Object?> row, String key) {
     if (row[key] == null) return null;
     return _integer(row, key);
+  }
+
+  static double _number(Map<String, Object?> row, String key) {
+    final value = row[key];
+    if (value is num) return value.toDouble();
+    throw BackupFormatException('$key is not a number');
+  }
+
+  static double? _optionalNumber(Map<String, Object?> row, String key) {
+    if (row[key] == null) return null;
+    return _number(row, key);
   }
 
   static bool _boolean(Map<String, Object?> row, String key) {

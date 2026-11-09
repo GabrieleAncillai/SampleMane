@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/l10n.dart';
 import '../../../core/i18n/reminder_label.dart';
+import '../../../models/app_settings.dart';
 import '../../../state/providers.dart';
 import '../../../state/settings_controller.dart';
 import '../../tags/pages/tags_page.dart';
 import '../../backup/backup_files.dart';
 import '../../backup/backup_service.dart';
+import '../../home_inventory/pages/home_inventory_page.dart';
+import '../../home_inventory/pages/shopping_list_page.dart';
+import '../../import/ics_files.dart';
+import '../../import/ics_import_service.dart';
 import '../../shifts/pages/shift_patterns_page.dart';
 import '../widgets/settings_rows.dart';
 import 'about_page.dart';
@@ -98,6 +103,28 @@ class SettingsPage extends ConsumerWidget {
             ],
           ),
           SettingsSection(
+            title: l10n.sleepWindow,
+            children: [
+              SettingsSwitchRow(
+                icon: Icons.bedtime_outlined,
+                title: l10n.sleepWindow,
+                subtitle: l10n.sleepWindowSubtitle,
+                value: settings.sleepEnabled,
+                onChanged: controller.setSleepEnabled,
+              ),
+              SettingsNavRow(
+                icon: Icons.timer_outlined,
+                title: l10n.sleepBuffers,
+                subtitle: l10n.sleepBuffersSummary(
+                  settings.sleepCommuteMinutes,
+                  settings.sleepWindDownMinutes,
+                  settings.sleepWakeBufferMinutes,
+                ),
+                onTap: () => _showSleepBuffers(context, ref),
+              ),
+            ],
+          ),
+          SettingsSection(
             title: l10n.librarySection,
             children: [
               SettingsNavRow(
@@ -115,6 +142,22 @@ class SettingsPage extends ConsumerWidget {
                   context,
                 ).push(MaterialPageRoute<void>(builder: (_) => const ShiftPatternsPage())),
               ),
+              SettingsNavRow(
+                icon: Icons.inventory_2_outlined,
+                title: l10n.homeInventory,
+                subtitle: l10n.homeInventorySubtitle,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => const HomeInventoryPage())),
+              ),
+              SettingsNavRow(
+                icon: Icons.shopping_cart_outlined,
+                title: l10n.shoppingList,
+                subtitle: l10n.shoppingListSubtitle,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => const ShoppingListPage())),
+              ),
             ],
           ),
           SettingsSection(
@@ -131,6 +174,12 @@ class SettingsPage extends ConsumerWidget {
                 title: l10n.importBackup,
                 subtitle: l10n.importBackupSubtitle,
                 onTap: () => _importBackup(context, ref),
+              ),
+              SettingsNavRow(
+                icon: Icons.event_available_outlined,
+                title: l10n.importCalendar,
+                subtitle: l10n.importCalendarSubtitle,
+                onTap: () => _importCalendar(context, ref),
               ),
             ],
           ),
@@ -235,6 +284,79 @@ class SettingsPage extends ConsumerWidget {
     }
   }
 
+  Future<void> _importCalendar(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final String? source;
+    try {
+      source = await pickIcsText();
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.importCalendarFailed('$error'))));
+      return;
+    }
+    if (source == null || !context.mounted) return;
+
+    final spaces = ref.read(spacesProvider).value ?? fallbackSpaces;
+    var selectedSpace = spaces.first.id;
+    final spaceId = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(l10n.importCalendarSpace),
+          content: DropdownButtonFormField<String>(
+            initialValue: selectedSpace,
+            items: [for (final space in spaces) DropdownMenuItem(value: space.id, child: Text(space.name))],
+            onChanged: (value) {
+              if (value != null) setDialogState(() => selectedSpace = value);
+            },
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: Text(l10n.cancel)),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(selectedSpace),
+              child: Text(l10n.importCalendar),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (spaceId == null) return;
+
+    try {
+      final report = await IcsImportService(ref.read(repositoryProvider)).importText(
+        source,
+        spaceId: spaceId,
+        defaultTimeZone: ref.read(deviceTimeZoneProvider),
+        fallbackTitle: l10n.importedEvent,
+      );
+      final skipped = report.duplicates + report.skipped.length;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            report.imported == 0 && skipped == 0
+                ? l10n.importCalendarEmpty
+                : l10n.importCalendarDone(report.imported, skipped),
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.importCalendarFailed('$error'))));
+    }
+  }
+
+  Future<void> _showSleepBuffers(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: _SleepBuffersSheet(initial: ref.read(settingsProvider)),
+      ),
+    );
+  }
+
   Future<void> _showDefaultReminders(BuildContext context, WidgetRef ref) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -244,6 +366,100 @@ class SettingsPage extends ConsumerWidget {
         initial: ref.read(settingsProvider).defaultReminderOffsets,
         offsets: _reminderOffsets,
       ),
+    );
+  }
+}
+
+class _SleepBuffersSheet extends ConsumerStatefulWidget {
+  const _SleepBuffersSheet({required this.initial});
+
+  final AppSettings initial;
+
+  @override
+  ConsumerState<_SleepBuffersSheet> createState() => _SleepBuffersSheetState();
+}
+
+class _SleepBuffersSheetState extends ConsumerState<_SleepBuffersSheet> {
+  late final TextEditingController _commute;
+  late final TextEditingController _windDown;
+  late final TextEditingController _wake;
+
+  @override
+  void initState() {
+    super.initState();
+    _commute = TextEditingController(text: '${widget.initial.sleepCommuteMinutes}');
+    _windDown = TextEditingController(text: '${widget.initial.sleepWindDownMinutes}');
+    _wake = TextEditingController(text: '${widget.initial.sleepWakeBufferMinutes}');
+  }
+
+  @override
+  void dispose() {
+    _commute.dispose();
+    _windDown.dispose();
+    _wake.dispose();
+    super.dispose();
+  }
+
+  int _value(TextEditingController controller, int fallback) {
+    final parsed = int.tryParse(controller.text.trim());
+    return parsed == null || parsed < 0 ? fallback : parsed.clamp(0, 24 * 60);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Row(
+            children: [
+              Expanded(child: Text(l10n.sleepBuffers, style: Theme.of(context).textTheme.titleLarge)),
+              TextButton(
+                onPressed: () async {
+                  final controller = ref.read(settingsProvider.notifier);
+                  await controller.setSleepCommuteMinutes(
+                    _value(_commute, widget.initial.sleepCommuteMinutes),
+                  );
+                  await controller.setSleepWindDownMinutes(
+                    _value(_windDown, widget.initial.sleepWindDownMinutes),
+                  );
+                  await controller.setSleepWakeBufferMinutes(
+                    _value(_wake, widget.initial.sleepWakeBufferMinutes),
+                  );
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: Text(l10n.save),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Column(
+            children: [
+              TextField(
+                controller: _commute,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: l10n.commute, border: const OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _windDown,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: l10n.windDown, border: const OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _wake,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: l10n.wakeBuffer, border: const OutlineInputBorder()),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

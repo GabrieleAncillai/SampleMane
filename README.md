@@ -12,10 +12,12 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.2 daily use. Today, Week and Calendar tabs, tags, the shift-pattern
-editor, reminders, settings and versioned backup/restore are in place, with
-English and Spanish localization. Timed entries and shifts remain timezone-aware;
-all-day items stay date-only. Home inventory and ICS import are next.
+**Status:** v0.3 home and maintenance. Today, Week and Calendar tabs, tags, the
+shift-pattern editor with per-shift checklists, reminders, settings, versioned
+backup/restore, home inventory, shopping lists, interval maintenance, a soft
+sleep window and read-only ICS import are in place, with English and Spanish
+localization. Timed entries and shifts remain timezone-aware; all-day items stay
+date-only. LAN sync and MCP are next.
 
 ## Docs
 
@@ -49,22 +51,29 @@ all-day items stay date-only. Home inventory and ICS import are next.
   handling, a 90-day queue rebuilt on start/resume/timezone change, and taps
   that open the entry.
 - Settings for theme, English/Spanish, week start, hiding Work, default
-  reminders, data backup, sync/MCP switches and About.
+  reminders, sleep buffers, data backup, sync/MCP switches and About.
 - Versioned JSON backup and a validated, transactional restore.
-- A schema v1/v2 to v3 migration tested against real prior rows.
-- A pure Dart domain package with the timezone, recurrence and shift rules.
+- Home inventory with quantity, unit, location and reorder levels; a shopping
+  list whose checked lines update linked inventory.
+- Interval-after-completion maintenance that advances from the actual
+  completion date.
+- A soft sleep window on Today, with configurable commute, wind-down and wake
+  buffers.
+- Shift checklists whose completions stay independent for each shift date.
+- Read-only ICS import for local files, with TZID, all-day events, a documented
+  RRULE subset and re-import deduplication.
+- A schema v1/v2/v3 to v4 migration tested against real prior rows.
+- A pure Dart domain package with the timezone, recurrence, shift and sleep
+  rules.
 - Android debug APK and Linux debug build.
 
 ## Planned
 
-- Home inventory, shopping and grocery lists.
-- Interval-after-completion maintenance and a sleep window.
-- Read-only ICS import.
-- Shift checklists.
 - Optional LAN sync between the user's own devices, automatic on the same
   network.
 - Optional local MCP endpoint for a desktop agent, off by default.
 - Search, home-screen widgets and a full accessibility pass.
+- Release packaging and signing workflow.
 
 ## Stack
 

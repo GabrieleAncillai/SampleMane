@@ -88,6 +88,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overnightSuffix => '(+1 day)';
 
   @override
+  String get importedEvent => 'Imported calendar event';
+
+  @override
+  String get readOnlyNotice => 'This event comes from an imported calendar and is read-only.';
+
+  @override
   String get newEntry => 'New entry';
 
   @override
@@ -131,6 +137,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get repeatYearly => 'Every year';
+
+  @override
+  String get repeatAfterCompletion => 'Repeat after completion';
+
+  @override
+  String get repeatAfterCompletionSubtitle => 'Schedule the next one from the day you finish.';
+
+  @override
+  String get daysRequired => 'Use a number of days greater than zero.';
+
+  @override
+  String daysValue(int count) {
+    return '$count days';
+  }
+
+  @override
+  String get repeatAfterDaysLabel => 'Days between completions';
+
+  @override
+  String couldNotComplete(String error) {
+    return 'Could not complete: $error';
+  }
 
   @override
   String get notesOptional => 'Notes (optional)';
@@ -366,6 +394,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importBackupSubtitle => 'Replace your data with a validated backup file.';
 
   @override
+  String get importCalendar => 'Import a calendar';
+
+  @override
+  String get importCalendarSubtitle => 'Read a local .ics file. Imported events are read-only.';
+
+  @override
+  String get importCalendarSpace => 'Import into';
+
+  @override
+  String importCalendarDone(int imported, int skipped) {
+    return 'Imported $imported events. Skipped $skipped duplicates or unsupported events.';
+  }
+
+  @override
+  String get importCalendarEmpty => 'No events were found in this file.';
+
+  @override
+  String importCalendarFailed(String error) {
+    return 'Calendar import failed: $error';
+  }
+
+  @override
   String backupExported(String path) {
     return 'Backup written to $path';
   }
@@ -466,6 +516,133 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tagsManager => 'Tags';
+
+  @override
+  String get homeInventory => 'Home inventory';
+
+  @override
+  String get homeInventorySubtitle => 'Quantities, locations and reorder levels.';
+
+  @override
+  String get shoppingList => 'Shopping list';
+
+  @override
+  String get shoppingListSubtitle => 'Groceries and household items to buy.';
+
+  @override
+  String get addHomeItem => 'Add an item';
+
+  @override
+  String get editHomeItem => 'Edit item';
+
+  @override
+  String get itemName => 'Item';
+
+  @override
+  String get category => 'Category';
+
+  @override
+  String get location => 'Location';
+
+  @override
+  String get quantity => 'Quantity';
+
+  @override
+  String get unit => 'Unit';
+
+  @override
+  String get reorderLevel => 'Reorder at';
+
+  @override
+  String get lowStock => 'Low stock';
+
+  @override
+  String get inStock => 'In stock';
+
+  @override
+  String get addToShoppingList => 'Add to shopping list';
+
+  @override
+  String get addLowStockItems => 'Add low-stock items';
+
+  @override
+  String get noLowStock => 'Nothing is below its reorder level.';
+
+  @override
+  String get homeInventoryEmpty => 'No household items yet.';
+
+  @override
+  String get shoppingListEmpty => 'The shopping list is empty.';
+
+  @override
+  String get addShoppingItem => 'Add to the list';
+
+  @override
+  String get editShoppingItem => 'Edit list item';
+
+  @override
+  String get linkedItem => 'Linked inventory item';
+
+  @override
+  String get noLink => 'None';
+
+  @override
+  String get note => 'Note';
+
+  @override
+  String get archiveItemQuestion => 'Archive this item?';
+
+  @override
+  String get archiveItemBody => 'It disappears from the inventory but stays in backups.';
+
+  @override
+  String shoppingProgress(int done, int total) {
+    return '$done of $total bought';
+  }
+
+  @override
+  String get sleepWindow => 'Sleep window';
+
+  @override
+  String get sleepWindowSubtitle => 'A soft block from the last commitment today to the first tomorrow.';
+
+  @override
+  String get sleepBuffers => 'Sleep buffers';
+
+  @override
+  String sleepBuffersSummary(int commute, int windDown, int wake) {
+    return '$commute commute · $windDown wind-down · $wake wake';
+  }
+
+  @override
+  String get commute => 'Commute (minutes)';
+
+  @override
+  String get windDown => 'Wind-down (minutes)';
+
+  @override
+  String get wakeBuffer => 'Wake buffer (minutes)';
+
+  @override
+  String sleepBedtime(String time) {
+    return 'Bedtime around $time';
+  }
+
+  @override
+  String sleepWake(String time) {
+    return 'Wake around $time';
+  }
+
+  @override
+  String get sleepWarning => 'This plan leaves little room to sleep.';
+
+  @override
+  String get sleepNoEarlyStart => 'No early start tomorrow.';
+
+  @override
+  String minutesValue(int count) {
+    return '$count min';
+  }
 
   @override
   String get tagsManagerSubtitle => 'Separate jobs in Work and people or groups in Personal.';
@@ -611,6 +788,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noExceptions => 'No exceptions.';
+
+  @override
+  String get shiftChecklist => 'Shift checklist';
+
+  @override
+  String get shiftChecklistSubtitle => 'Items to tick off on each shift of this pattern.';
+
+  @override
+  String get addChecklistItem => 'Add item';
+
+  @override
+  String get checklistItemLabel => 'Checklist item';
+
+  @override
+  String get noChecklistItems => 'No checklist items yet.';
+
+  @override
+  String checklistDone(int done, int total) {
+    return '$done of $total done';
+  }
 
   @override
   String get backupRestoredReminders => 'Reminders have been rescheduled.';

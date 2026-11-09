@@ -2,10 +2,14 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/services/app_database.dart';
+import 'package:mane/models/home_item.dart';
 import 'package:mane/models/reminder.dart';
+import 'package:mane/models/shift_checklist.dart';
+import 'package:mane/models/shopping_item.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:sqlite3/open.dart';
 
@@ -336,6 +340,131 @@ void main() {
     expect(patterns, hasLength(1));
     expect(patterns.single.slots, hasLength(2));
     expect(patterns.single.exceptions.single.type, ShiftExceptionType.free);
+  });
+
+  test('maintenance completion advances from the actual completion date', () async {
+    await database.seedDefaults();
+    final now = DateTime.utc(2026, 11, 1, 8);
+
+    await database.saveEntry(
+      Entry(
+        id: 'filter',
+        spaceId: 'home',
+        title: 'Change the filter',
+        date: LocalDate.parse('2026-11-09'),
+        allDay: true,
+        repeatAfterCompletionDays: 7,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final late = await database.completeMaintenanceEntry('filter', LocalDate.parse('2026-11-10'));
+    expect(late, LocalDate.parse('2026-11-17'));
+
+    final next = await database
+        .watchEntriesBetween(LocalDate.parse('2026-11-17'), LocalDate.parse('2026-11-17'), 'Europe/Madrid')
+        .first;
+    expect(next.single.entry.id, 'filter');
+    expect(next.single.entry.status, EntryStatus.open);
+    expect(next.single.entry.lastCompletedAt, isNotNull);
+
+    final early = await database.completeMaintenanceEntry('filter', LocalDate.parse('2026-11-15'));
+    expect(early, LocalDate.parse('2026-11-22'));
+
+    final history = await database
+        .customSelect(
+          'SELECT date_key FROM completion_records WHERE entry_id = ? ORDER BY date_key',
+          variables: [Variable.withString('filter')],
+        )
+        .get();
+    expect(history.map((row) => row.data['date_key']), [20261110, 20261115]);
+  });
+
+  test('a timed maintenance entry keeps its wall time after completion', () async {
+    await database.seedDefaults();
+    final now = DateTime.utc(2026, 11, 1, 8);
+    await database.saveEntry(
+      Entry(
+        id: 'boiler',
+        spaceId: 'home',
+        title: 'Boiler service',
+        date: LocalDate.parse('2026-11-09'),
+        startMinute: 9 * 60,
+        endMinute: 10 * 60,
+        timeZone: 'Europe/Madrid',
+        repeatAfterCompletionDays: 365,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final next = await database.completeMaintenanceEntry('boiler', LocalDate.parse('2026-11-10'));
+    expect(next, LocalDate.parse('2027-11-10'));
+    final loaded = await database
+        .watchEntriesBetween(LocalDate.parse('2027-11-10'), LocalDate.parse('2027-11-10'), 'Europe/Madrid')
+        .first;
+    expect(loaded.single.entry.startAt, DateTime.utc(2027, 11, 10, 8));
+  });
+
+  test('shift checklist completions stay independent for each shift date', () async {
+    await database.seedDefaults();
+    final monday = LocalDate.parse('2026-11-09');
+    await database.saveShiftPattern(
+      ShiftPattern(
+        id: 'bar',
+        spaceId: 'work',
+        name: 'Bar shift',
+        timeZone: 'Europe/Madrid',
+        cycleDays: 7,
+        anchorDate: monday,
+        slots: const [ShiftSlot(dayIndex: 0, startMinute: 960, endMinute: 1320)],
+      ),
+    );
+    await database.saveShiftChecklistItems('bar', const [
+      ShiftChecklistItem(id: 'count', patternId: 'bar', label: 'Count the drawer'),
+      ShiftChecklistItem(id: 'clean', patternId: 'bar', label: 'Clean the bar'),
+    ]);
+
+    await database.setShiftChecklistCompleted('count', monday, completed: true);
+    expect(await database.readShiftChecklistCompletions('bar', monday), {'count'});
+    expect(await database.readShiftChecklistCompletions('bar', monday.addDays(1)), isEmpty);
+
+    // Renaming an item keeps its id, so the tick survives an edit.
+    await database.saveShiftChecklistItems('bar', const [
+      ShiftChecklistItem(id: 'count', patternId: 'bar', label: 'Count the till'),
+      ShiftChecklistItem(id: 'clean', patternId: 'bar', label: 'Clean the bar'),
+    ]);
+    expect(await database.readShiftChecklistCompletions('bar', monday), {'count'});
+    expect((await database.readShiftChecklistItems('bar')).first.label, 'Count the till');
+
+    await database.setShiftChecklistCompleted('count', monday, completed: false);
+    expect(await database.readShiftChecklistCompletions('bar', monday), isEmpty);
+  });
+
+  test('checking a linked shopping item updates and reverses the inventory quantity', () async {
+    await database.seedDefaults();
+    await database.saveHomeItem(
+      const HomeItem(id: 'coffee', name: 'Coffee', quantity: 100, unit: 'g', reorderLevel: 100),
+    );
+    await database.saveShoppingItem(
+      const ShoppingItem(id: 'buy-coffee', name: 'Coffee', quantity: 250, unit: 'g', homeItemId: 'coffee'),
+    );
+
+    final low = (await database.watchHomeItems().first).single;
+    expect(low.isLowStock, isTrue);
+    expect(low.suggestedPurchase, 100);
+
+    await database.setShoppingChecked('buy-coffee', true);
+    final stocked = (await database.watchHomeItems().first).single;
+    expect(stocked.quantity, 350);
+    expect(stocked.isLowStock, isFalse);
+    expect(stocked.lastPurchasedAt, isNotNull);
+    expect((await database.watchShoppingItems().first).single.checked, isTrue);
+
+    await database.setShoppingChecked('buy-coffee', false);
+    expect((await database.watchHomeItems().first).single.quantity, 100);
+    expect((await database.watchShoppingItems().first).single.checked, isFalse);
   });
 
   test('soft-deleted entries disappear from the stream', () async {

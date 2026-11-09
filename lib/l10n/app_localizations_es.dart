@@ -88,6 +88,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get overnightSuffix => '(+1 día)';
 
   @override
+  String get importedEvent => 'Evento de calendario importado';
+
+  @override
+  String get readOnlyNotice => 'Este evento viene de un calendario importado y es de solo lectura.';
+
+  @override
   String get newEntry => 'Nueva entrada';
 
   @override
@@ -131,6 +137,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get repeatYearly => 'Cada año';
+
+  @override
+  String get repeatAfterCompletion => 'Repetir al completar';
+
+  @override
+  String get repeatAfterCompletionSubtitle => 'Programa la siguiente desde el día que termines.';
+
+  @override
+  String get daysRequired => 'Usa un número de días mayor que cero.';
+
+  @override
+  String daysValue(int count) {
+    return '$count días';
+  }
+
+  @override
+  String get repeatAfterDaysLabel => 'Días entre tareas';
+
+  @override
+  String couldNotComplete(String error) {
+    return 'No se pudo completar: $error';
+  }
 
   @override
   String get notesOptional => 'Notas (opcional)';
@@ -363,7 +391,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get importBackup => 'Importar una copia';
 
   @override
-  String get importBackupSubtitle => 'Sustituye tus datos por una copia validada.';
+  String get importBackupSubtitle => 'Sustituye tus datos con una copia validada.';
+
+  @override
+  String get importCalendar => 'Importar un calendario';
+
+  @override
+  String get importCalendarSubtitle =>
+      'Lee un archivo .ics local. Los eventos importados son de solo lectura.';
+
+  @override
+  String get importCalendarSpace => 'Importar en';
+
+  @override
+  String importCalendarDone(int imported, int skipped) {
+    return '$imported eventos importados. $skipped duplicados o no compatibles omitidos.';
+  }
+
+  @override
+  String get importCalendarEmpty => 'No se han encontrado eventos en este archivo.';
+
+  @override
+  String importCalendarFailed(String error) {
+    return 'La importación del calendario ha fallado: $error';
+  }
 
   @override
   String backupExported(String path) {
@@ -469,6 +520,134 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get tagsManager => 'Etiquetas';
+
+  @override
+  String get homeInventory => 'Inventario del hogar';
+
+  @override
+  String get homeInventorySubtitle => 'Cantidades, lugares y niveles de reposición.';
+
+  @override
+  String get shoppingList => 'Lista de la compra';
+
+  @override
+  String get shoppingListSubtitle => 'Comida y productos para la casa.';
+
+  @override
+  String get addHomeItem => 'Añadir un artículo';
+
+  @override
+  String get editHomeItem => 'Editar artículo';
+
+  @override
+  String get itemName => 'Artículo';
+
+  @override
+  String get category => 'Categoría';
+
+  @override
+  String get location => 'Lugar';
+
+  @override
+  String get quantity => 'Cantidad';
+
+  @override
+  String get unit => 'Unidad';
+
+  @override
+  String get reorderLevel => 'Reponer en';
+
+  @override
+  String get lowStock => 'Queda poco';
+
+  @override
+  String get inStock => 'Hay existencias';
+
+  @override
+  String get addToShoppingList => 'Añadir a la compra';
+
+  @override
+  String get addLowStockItems => 'Añadir artículos bajos';
+
+  @override
+  String get noLowStock => 'Nada está por debajo de su nivel de reposición.';
+
+  @override
+  String get homeInventoryEmpty => 'Todavía no hay artículos en casa.';
+
+  @override
+  String get shoppingListEmpty => 'La lista de la compra está vacía.';
+
+  @override
+  String get addShoppingItem => 'Añadir a la lista';
+
+  @override
+  String get editShoppingItem => 'Editar artículo de la lista';
+
+  @override
+  String get linkedItem => 'Artículo del inventario';
+
+  @override
+  String get noLink => 'Ninguno';
+
+  @override
+  String get note => 'Nota';
+
+  @override
+  String get archiveItemQuestion => '¿Archivar este artículo?';
+
+  @override
+  String get archiveItemBody => 'Desaparece del inventario pero se conserva en las copias.';
+
+  @override
+  String shoppingProgress(int done, int total) {
+    return '$done de $total comprados';
+  }
+
+  @override
+  String get sleepWindow => 'Ventana de sueño';
+
+  @override
+  String get sleepWindowSubtitle =>
+      'Un bloque suave desde el último compromiso de hoy hasta el primero de mañana.';
+
+  @override
+  String get sleepBuffers => 'Márgenes de sueño';
+
+  @override
+  String sleepBuffersSummary(int commute, int windDown, int wake) {
+    return '$commute desplazamiento · $windDown relax · $wake despertar';
+  }
+
+  @override
+  String get commute => 'Desplazamiento (minutos)';
+
+  @override
+  String get windDown => 'Relax (minutos)';
+
+  @override
+  String get wakeBuffer => 'Margen al despertar (minutos)';
+
+  @override
+  String sleepBedtime(String time) {
+    return 'Acostarse sobre las $time';
+  }
+
+  @override
+  String sleepWake(String time) {
+    return 'Despertar sobre las $time';
+  }
+
+  @override
+  String get sleepWarning => 'Este plan deja poco margen para dormir.';
+
+  @override
+  String get sleepNoEarlyStart => 'Mañana no hay un inicio temprano.';
+
+  @override
+  String minutesValue(int count) {
+    return '$count min';
+  }
 
   @override
   String get tagsManagerSubtitle => 'Separa trabajos en Trabajo y personas o grupos en Personal.';
@@ -614,6 +793,26 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noExceptions => 'Sin excepciones.';
+
+  @override
+  String get shiftChecklist => 'Lista del turno';
+
+  @override
+  String get shiftChecklistSubtitle => 'Tareas para marcar en cada turno de este patrón.';
+
+  @override
+  String get addChecklistItem => 'Añadir tarea';
+
+  @override
+  String get checklistItemLabel => 'Tarea de la lista';
+
+  @override
+  String get noChecklistItems => 'Todavía no hay tareas.';
+
+  @override
+  String checklistDone(int done, int total) {
+    return '$done de $total hechas';
+  }
 
   @override
   String get backupRestoredReminders => 'Los recordatorios se han vuelto a programar.';

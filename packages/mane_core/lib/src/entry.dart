@@ -30,6 +30,11 @@ class Entry {
     this.timeZone,
     this.tagIds = const <String>{},
     this.allDay = false,
+    this.source,
+    this.externalId,
+    this.readOnly = false,
+    this.lastCompletedAt,
+    this.repeatAfterCompletionDays,
     this.status = EntryStatus.open,
     this.recurrence,
     required this.createdAt,
@@ -67,6 +72,22 @@ class Entry {
   /// Tags attached to this entry. The join rows live in `entry_tags`.
   final Set<String> tagIds;
 
+  /// Where the entry came from, for example `ics`. Null for user entries.
+  final String? source;
+
+  /// Identifier in [source], used to deduplicate a re-import.
+  final String? externalId;
+
+  /// Imported entries are shown read-only.
+  final bool readOnly;
+
+  /// Last time a maintenance task was completed.
+  final DateTime? lastCompletedAt;
+
+  /// Maintenance interval in days. When set, completing the task moves its
+  /// date forward instead of using a fixed recurrence rule.
+  final int? repeatAfterCompletionDays;
+
   /// Resolved anchor instants in UTC. Null for all-day or unscheduled entries.
   final DateTime? startAt;
   final DateTime? endAt;
@@ -84,6 +105,8 @@ class Entry {
   bool get isDone => status == EntryStatus.done;
 
   bool get isTimed => !allDay && date != null && startMinute != null;
+
+  bool get isMaintenance => repeatAfterCompletionDays != null;
 
   /// The date this entry appears on when viewed in [viewerTimeZone].
   ///
@@ -124,6 +147,11 @@ class Entry {
     Object? timeZone = _unset,
     Set<String>? tagIds,
     bool? allDay,
+    Object? source = _unset,
+    Object? externalId = _unset,
+    bool? readOnly,
+    Object? lastCompletedAt = _unset,
+    Object? repeatAfterCompletionDays = _unset,
     EntryStatus? status,
     Object? recurrence = _unset,
     DateTime? updatedAt,
@@ -141,6 +169,13 @@ class Entry {
     timeZone: identical(timeZone, _unset) ? this.timeZone : timeZone as String?,
     tagIds: tagIds ?? this.tagIds,
     allDay: allDay ?? this.allDay,
+    source: identical(source, _unset) ? this.source : source as String?,
+    externalId: identical(externalId, _unset) ? this.externalId : externalId as String?,
+    readOnly: readOnly ?? this.readOnly,
+    lastCompletedAt: identical(lastCompletedAt, _unset) ? this.lastCompletedAt : lastCompletedAt as DateTime?,
+    repeatAfterCompletionDays: identical(repeatAfterCompletionDays, _unset)
+        ? this.repeatAfterCompletionDays
+        : repeatAfterCompletionDays as int?,
     status: status ?? this.status,
     recurrence: identical(recurrence, _unset) ? this.recurrence : recurrence as RecurrenceRule?,
     createdAt: createdAt,
@@ -156,6 +191,14 @@ class Entry {
   }
 
   void _check() {
+    if (repeatAfterCompletionDays != null) {
+      if (repeatAfterCompletionDays! <= 0) {
+        throw ArgumentError.value(repeatAfterCompletionDays, 'repeatAfterCompletionDays', 'must be positive');
+      }
+      if (recurrence != null) {
+        throw ArgumentError('Use either a recurrence rule or a completion interval, not both');
+      }
+    }
     final anchor = date;
     if (allDay) {
       if (timeZone != null || startMinute != null || endMinute != null) {

@@ -130,6 +130,23 @@ void main() {
     });
   });
 
+  test('a leaked recurrence and completion interval are rejected together', () {
+    expect(
+      () => Entry(
+        id: 'bad',
+        spaceId: 'home',
+        title: 'Bad',
+        date: monday,
+        allDay: true,
+        recurrence: const RecurrenceRule(frequency: RecurrenceFrequency.weekly),
+        repeatAfterCompletionDays: 30,
+        createdAt: now,
+        updatedAt: now,
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('cancelled and deleted entries never appear', () {
     expect(allDay(status: EntryStatus.cancelled).occursOn(monday), isFalse);
     expect(allDay(deletedAt: now).occursOn(monday), isFalse);
