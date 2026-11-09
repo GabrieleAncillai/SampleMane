@@ -31,7 +31,21 @@ class BackupService {
   BackupService(this._database);
 
   static const appTag = 'mane';
-  static const currentSchemaVersion = 6;
+  static const currentSchemaVersion = 7;
+
+  /// The oldest payload this build still upgrades. v1 and v2 are excluded on
+  /// purpose: they predate timezone-aware entries and cannot be mapped safely.
+  static const minimumSchemaVersion = 3;
+
+  /// Secrets belong to this device. A backup must never carry an app-lock hash
+  /// or pairing material to another install.
+  static const deviceLocalSettingKeys = {
+    'appLockEnabled',
+    'appLockPinSalt',
+    'appLockPinHash',
+    'appLockMisses',
+    'appLockBlockedUntil',
+  };
 
   final AppDatabase _database;
 
@@ -50,6 +64,7 @@ class BackupService {
     final checklistCompletions = await _database.select(_database.shiftChecklistCompletionRecords).get();
     final homeItems = await _database.select(_database.homeItemRecords).get();
     final shoppingItems = await _database.select(_database.shoppingItemRecords).get();
+    final homePurchases = await _database.select(_database.homePurchaseRecords).get();
     final settings = await _database.select(_database.settingRecords).get();
 
     spaces.sort((a, b) {
@@ -84,6 +99,7 @@ class BackupService {
     });
     homeItems.sort((a, b) => a.id.compareTo(b.id));
     shoppingItems.sort((a, b) => a.id.compareTo(b.id));
+    homePurchases.sort((a, b) => a.id.compareTo(b.id));
     settings.sort((a, b) => a.key.compareTo(b.key));
 
     final payload = <String, Object?>{
@@ -237,12 +253,27 @@ class BackupService {
             'checked': row.checked,
             'note': row.note,
             'homeItemId': row.homeItemId,
+            'position': row.position,
             'createdAt': _date(row.createdAt),
             'updatedAt': _date(row.updatedAt),
             'deletedAt': _nullableDate(row.deletedAt),
           },
       ],
-      'settings': {for (final row in settings) row.key: row.value},
+      'homePurchases': [
+        for (final row in homePurchases)
+          {
+            'id': row.id,
+            'homeItemId': row.homeItemId,
+            'shoppingItemId': row.shoppingItemId,
+            'quantity': row.quantity,
+            'note': row.note,
+            'purchasedAt': _date(row.purchasedAt),
+          },
+      ],
+      'settings': {
+        for (final row in settings)
+          if (!deviceLocalSettingKeys.contains(row.key)) row.key: row.value,
+      },
     };
 
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -262,13 +293,13 @@ class BackupService {
     final version = payload['schemaVersion'];
     if (version is! int) throw const BackupFormatException('Missing schema version');
     if (version > currentSchemaVersion) throw BackupVersionException(version);
-    if (version != currentSchemaVersion) {
+    if (version < minimumSchemaVersion) {
       throw BackupFormatException('Unsupported schema version $version');
     }
 
-    final spaces = _maps(payload, 'spaces');
+    final spaces = _requiredMaps(payload, 'spaces');
     final tags = _maps(payload, 'tags');
-    final entries = _maps(payload, 'entries');
+    final entries = _requiredMaps(payload, 'entries');
     final entryTags = _maps(payload, 'entryTags');
     final completions = _maps(payload, 'completions');
     final reminders = _maps(payload, 'reminders');
@@ -280,11 +311,13 @@ class BackupService {
     final checklistCompletions = _maps(payload, 'shiftChecklistCompletions');
     final homeItems = _maps(payload, 'homeItems');
     final shoppingItems = _maps(payload, 'shoppingItems');
+    final homePurchases = _maps(payload, 'homePurchases');
     final settings = _map(payload, 'settings');
 
     await _database.transaction(() async {
       await _database.delete(_database.shiftChecklistCompletionRecords).go();
       await _database.delete(_database.shiftChecklistItemRecords).go();
+      await _database.delete(_database.homePurchaseRecords).go();
       await _database.delete(_database.shoppingItemRecords).go();
       await _database.delete(_database.homeItemRecords).go();
       await _database.delete(_database.entryTagRecords).go();
@@ -365,9 +398,25 @@ class BackupService {
                 checked: Value(_boolean(row, 'checked')),
                 note: Value(_string(row, 'note')),
                 homeItemId: Value(_optionalString(row, 'homeItemId')),
+                position: Value(_optionalInteger(row, 'position') ?? 0),
                 createdAt: Value(_dateTime(row, 'createdAt')),
                 updatedAt: Value(_dateTime(row, 'updatedAt')),
                 deletedAt: Value(_optionalDateTime(row, 'deletedAt')),
+              ),
+            );
+      }
+
+      for (final row in homePurchases) {
+        await _database
+            .into(_database.homePurchaseRecords)
+            .insert(
+              HomePurchaseRecordsCompanion.insert(
+                id: _string(row, 'id'),
+                homeItemId: _string(row, 'homeItemId'),
+                shoppingItemId: Value(_optionalString(row, 'shoppingItemId')),
+                quantity: _number(row, 'quantity'),
+                note: Value(_optionalString(row, 'note') ?? ''),
+                purchasedAt: _dateTime(row, 'purchasedAt'),
               ),
             );
       }
@@ -394,7 +443,7 @@ class BackupService {
                 recurrenceJson: Value(_optionalString(row, 'recurrenceJson')),
                 source: Value(_optionalString(row, 'source')),
                 externalId: Value(_optionalString(row, 'externalId')),
-                readOnly: Value(_boolean(row, 'readOnly')),
+                readOnly: Value(_optionalBoolean(row, 'readOnly') ?? false),
                 lastCompletedAt: Value(_optionalDateTime(row, 'lastCompletedAt')),
                 repeatAfterCompletionDays: Value(_optionalInteger(row, 'repeatAfterCompletionDays')),
                 createdAt: Value(_dateTime(row, 'createdAt')),
@@ -529,6 +578,8 @@ class BackupService {
       }
 
       for (final entry in settings.entries) {
+        // A crafted or stale backup must not be able to install a lock hash.
+        if (deviceLocalSettingKeys.contains(entry.key)) continue;
         await _database
             .into(_database.settingRecords)
             .insert(SettingRecordsCompanion.insert(key: entry.key, value: '${entry.value}'));
@@ -540,8 +591,14 @@ class BackupService {
 
   static String? _nullableDate(DateTime? value) => value?.toUtc().toIso8601String();
 
+  static List<Map<String, Object?>> _requiredMaps(Map<String, Object?> payload, String key) {
+    if (!payload.containsKey(key)) throw BackupFormatException('$key is missing');
+    return _maps(payload, key);
+  }
+
   static List<Map<String, Object?>> _maps(Map<String, Object?> payload, String key) {
     final value = payload[key];
+    if (value == null) return const [];
     if (value is! List) throw BackupFormatException('$key is not a list');
     return [
       for (final row in value)
@@ -554,6 +611,7 @@ class BackupService {
 
   static Map<String, Object?> _map(Map<String, Object?> payload, String key) {
     final value = payload[key];
+    if (value == null) return const {};
     if (value is! Map) throw BackupFormatException('$key is not an object');
     return Map<String, Object?>.from(value);
   }
@@ -598,6 +656,11 @@ class BackupService {
     final value = row[key];
     if (value is bool) return value;
     throw BackupFormatException('$key is not a boolean');
+  }
+
+  static bool? _optionalBoolean(Map<String, Object?> row, String key) {
+    if (row[key] == null) return null;
+    return _boolean(row, key);
   }
 
   static DateTime _dateTime(Map<String, Object?> row, String key) {

@@ -136,7 +136,7 @@ void main() {
     expect(columns.map((row) => row.data['name']), contains('time_zone'));
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 6);
+    expect(version.data.values.single, 7);
   });
 
   test('migrates real v2 data and keeps tags usable', () async {
@@ -198,7 +198,7 @@ void main() {
     expect((await database.watchTags().first).single.name, 'Tax');
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 6);
+    expect(version.data.values.single, 7);
   });
 
   test('migrates real v3 data and exposes the v0.3 tables', () async {
@@ -252,7 +252,7 @@ void main() {
 
     await database.saveShiftChecklistItems('missing-pattern', const []);
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 6);
+    expect(version.data.values.single, 7);
   });
 
   test('migrates real v4 data and creates the pairing tables', () async {
@@ -406,7 +406,7 @@ void main() {
     expect(paired.port, 8766);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 6);
+    expect(version.data.values.single, 7);
   });
 
   test('migrates real v5 checklist rows to per-slot keys', () async {
@@ -476,6 +476,63 @@ void main() {
     expect(saved.windDownMinutes, 20);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 6);
+    expect(version.data.values.single, 7);
+  });
+
+  test('migrates real v6 rows to shopping order and purchase history', () async {
+    final directory = await Directory.systemTemp.createTemp('mane-migration-v6');
+    final path = '${directory.path}/mane.sqlite';
+    final createdAt = DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000;
+
+    final raw = sqlite3.open(path);
+    raw.execute(File('test/fixtures/schema_v6.sql').readAsStringSync());
+    raw.execute(
+      'INSERT INTO space_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['home', 'Home', 0xFF5B7F6B, 0, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO home_item_records '
+      '(id, name, category, location, quantity, unit, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ['rice', 'Rice', 'Pantry', 'Kitchen', 2.0, 'kg', createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shopping_item_records '
+      '(id, name, quantity, unit, checked, note, home_item_id, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['rice-buy', 'Rice', 3.0, 'kg', 0, '', 'rice', createdAt, createdAt],
+    );
+    raw.dispose();
+
+    final database = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(() async {
+      await database.close();
+      await directory.delete(recursive: true);
+    });
+
+    final shopping = (await database.watchShoppingItems().first).single;
+    expect(shopping.name, 'Rice');
+    expect(shopping.position, 0);
+
+    await database.setShoppingChecked('rice-buy', true);
+    var items = await database.watchHomeItems().first;
+    expect(items.single.quantity, 5.0);
+    expect(await database.readPurchaseHistory('rice'), hasLength(1));
+
+    await database.setShoppingChecked('rice-buy', false);
+    items = await database.watchHomeItems().first;
+    expect(items.single.quantity, 2.0);
+    expect(await database.readPurchaseHistory('rice'), isEmpty);
+
+    await database.adjustHomeQuantity('rice', 1.5, note: 'Shop run');
+    items = await database.watchHomeItems().first;
+    expect(items.single.quantity, 3.5);
+    final history = await database.readPurchaseHistory('rice');
+    expect(history.single.quantity, 1.5);
+    expect(history.single.note, 'Shop run');
+
+    final version = await database.customSelect('PRAGMA user_version').getSingle();
+    expect(version.data.values.single, 7);
   });
 }

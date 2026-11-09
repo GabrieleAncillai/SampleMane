@@ -9,6 +9,7 @@ class ShoppingItem {
     this.checked = false,
     this.note = '',
     this.homeItemId,
+    this.position = 0,
   });
 
   final String id;
@@ -19,6 +20,9 @@ class ShoppingItem {
   final String note;
   final String? homeItemId;
 
+  /// Manual order inside the shopping list. Lower values come first.
+  final int position;
+
   ShoppingItem copyWith({
     String? name,
     double? quantity,
@@ -27,6 +31,7 @@ class ShoppingItem {
     String? note,
     String? homeItemId,
     bool clearHomeItem = false,
+    int? position,
   }) => ShoppingItem(
     id: id,
     name: name ?? this.name,
@@ -35,5 +40,6 @@ class ShoppingItem {
     checked: checked ?? this.checked,
     note: note ?? this.note,
     homeItemId: clearHomeItem ? null : (homeItemId ?? this.homeItemId),
+    position: position ?? this.position,
   );
 }

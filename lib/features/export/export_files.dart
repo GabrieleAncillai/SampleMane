@@ -3,6 +3,21 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 
+/// Writes a comma-separated file through the platform save dialog.
+Future<String?> saveCsvFile(String content, {required String dialogTitle, required String fileName}) async {
+  try {
+    return await FilePicker.platform.saveFile(
+      dialogTitle: dialogTitle,
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      bytes: Uint8List.fromList(utf8.encode(content)),
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Writes an iCalendar file through the platform save dialog.
 Future<String?> saveIcsFile(String content, {required String dialogTitle}) async {
   final now = DateTime.now().toUtc();

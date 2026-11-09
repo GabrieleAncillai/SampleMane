@@ -2089,6 +2089,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Single day'**
   String get singleDay;
+
+  /// No description provided for @automaticBackups.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic local backups'**
+  String get automaticBackups;
+
+  /// No description provided for @automaticBackupsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A daily JSON copy in the app folder. Older copies rotate out.'**
+  String get automaticBackupsSubtitle;
+
+  /// No description provided for @keepBackups.
+  ///
+  /// In en, this message translates to:
+  /// **'Copies to keep'**
+  String get keepBackups;
+
+  /// No description provided for @exportCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Export CSV'**
+  String get exportCsv;
+
+  /// No description provided for @exportCsvSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries, shopping or inventory.'**
+  String get exportCsvSubtitle;
+
+  /// No description provided for @importCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Import CSV'**
+  String get importCsv;
+
+  /// No description provided for @importCsvSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries, shopping or inventory.'**
+  String get importCsvSubtitle;
+
+  /// No description provided for @csvEntries.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries'**
+  String get csvEntries;
+
+  /// No description provided for @csvShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping'**
+  String get csvShopping;
+
+  /// No description provided for @csvInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory'**
+  String get csvInventory;
+
+  /// No description provided for @csvExported.
+  ///
+  /// In en, this message translates to:
+  /// **'CSV exported to {path}'**
+  String csvExported(String path);
+
+  /// No description provided for @csvExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export the CSV: {error}'**
+  String csvExportFailed(String error);
+
+  /// No description provided for @csvImportDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{imported} imported, {duplicates} duplicates, {skipped} skipped'**
+  String csvImportDone(int imported, int duplicates, int skipped);
+
+  /// No description provided for @csvImportEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No rows to import.'**
+  String get csvImportEmpty;
+
+  /// No description provided for @gymmaneImport.
+  ///
+  /// In en, this message translates to:
+  /// **'GymMane schedule'**
+  String get gymmaneImport;
+
+  /// No description provided for @gymmaneImportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only weekly gym blocks from a GymMane JSON backup.'**
+  String get gymmaneImportSubtitle;
+
+  /// No description provided for @gymmaneImportDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{imported} blocks imported ({timed} timed, {allDay} all-day), {skipped} skipped.'**
+  String gymmaneImportDone(int imported, int timed, int allDay, int skipped);
+
+  /// No description provided for @gymmaneImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import GymMane: {error}'**
+  String gymmaneImportFailed(String error);
+
+  /// No description provided for @gymmaneImportEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'The backup has no weekly plan.'**
+  String get gymmaneImportEmpty;
+
+  /// No description provided for @appLock.
+  ///
+  /// In en, this message translates to:
+  /// **'App lock'**
+  String get appLock;
+
+  /// No description provided for @appLockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask for a PIN when the app opens.'**
+  String get appLockSubtitle;
+
+  /// No description provided for @appLockPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a PIN'**
+  String get appLockPinTitle;
+
+  /// No description provided for @appLockPinRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat the PIN'**
+  String get appLockPinRepeat;
+
+  /// No description provided for @appLockPinMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The PINs do not match.'**
+  String get appLockPinMismatch;
+
+  /// No description provided for @appLockUnlockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your PIN'**
+  String get appLockUnlockTitle;
+
+  /// No description provided for @appLockUnlockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Mane'**
+  String get appLockUnlockSubtitle;
+
+  /// No description provided for @appLockWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong PIN. Try again.'**
+  String get appLockWrong;
+
+  /// No description provided for @appLockLockedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Wait {seconds}s.'**
+  String appLockLockedOut(int seconds);
+
+  /// No description provided for @appLockEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'App lock is on.'**
+  String get appLockEnabled;
+
+  /// No description provided for @appLockDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'App lock is off.'**
+  String get appLockDisabled;
+
+  /// No description provided for @appLockPinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Use four to eight digits.'**
+  String get appLockPinLength;
+
+  /// No description provided for @purchaseHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase history'**
+  String get purchaseHistory;
+
+  /// No description provided for @purchaseHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No purchases recorded yet.'**
+  String get purchaseHistoryEmpty;
+
+  /// No description provided for @increaseQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase quantity'**
+  String get increaseQuantity;
+
+  /// No description provided for @decreaseQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease quantity'**
+  String get decreaseQuantity;
+
+  /// No description provided for @lowStockCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items below their reorder level'**
+  String lowStockCount(int count);
+
+  /// No description provided for @maintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get maintenance;
+
+  /// No description provided for @maintenanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks due after their last service.'**
+  String get maintenanceSubtitle;
+
+  /// No description provided for @maintenanceDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due now'**
+  String get maintenanceDue;
+
+  /// No description provided for @maintenanceUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get maintenanceUpcoming;
+
+  /// No description provided for @maintenanceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No maintenance tasks yet.'**
+  String get maintenanceNone;
+
+  /// No description provided for @maintenanceDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done. Next due {date}.'**
+  String maintenanceDone(String date);
+
+  /// No description provided for @clearChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear bought'**
+  String get clearChecked;
+
+  /// No description provided for @clearCheckedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove every bought line? This cannot be undone.'**
+  String get clearCheckedBody;
+
+  /// No description provided for @shoppingToBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'To buy'**
+  String get shoppingToBuy;
+
+  /// No description provided for @shoppingBought.
+  ///
+  /// In en, this message translates to:
+  /// **'Bought'**
+  String get shoppingBought;
+
+  /// No description provided for @shoppingOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get shoppingOther;
+
+  /// No description provided for @moveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get moveUp;
+
+  /// No description provided for @moveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get moveDown;
+
+  /// No description provided for @complete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get complete;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

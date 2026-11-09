@@ -131,6 +131,7 @@ class _ShoppingItemSheetState extends ConsumerState<ShoppingItemSheet> {
       checked: existing?.checked ?? false,
       note: _note.text.trim(),
       homeItemId: _homeItemId,
+      position: existing?.position ?? 0,
     );
     try {
       await ref.read(repositoryProvider).saveShoppingItem(item);

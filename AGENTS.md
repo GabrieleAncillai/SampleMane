@@ -103,7 +103,7 @@ replacement, chatbot inside the app.
 
 Treat this as the baseline. Verify it before changing anything.
 
-**Done (v0.1 through v0.5):**
+**Done (v0.1 through v0.8):**
 
 - Pure Dart domain package in `packages/mane_core` with:
   - `LocalDate` (date-only values for all-day items)
@@ -113,12 +113,12 @@ Treat this as the baseline. Verify it before changing anything.
   - `ShiftPattern` with cycle days, anchor date and overnight slots
   - `computeSleepWindow` for the soft sleep hint
   - `Space` and `Tag`
-- Drift schema v5 in `lib/services/app_database.dart`: `spaces`, `entries`,
+- Drift schema v7 in `lib/services/app_database.dart`: `spaces`, `entries`,
   `reminders`, `shift_patterns`, `shift_slots`, `shift_exceptions`,
   `shift_checklist_items`, `shift_checklist_completions`, `home_items`,
-  `shopping_items`, `completions`, `settings`, `identity_records` and
-  `paired_device_records`. UUIDs, `updatedAt`, soft deletes. Pairing secrets are
-  excluded from backups.
+  `shopping_items`, `home_purchases`, `completions`, `settings`,
+  `identity_records` and `paired_device_records`. UUIDs, `updatedAt`, soft
+  deletes. Pairing and app-lock secrets are excluded from backups.
 - `PlannerRepository` as the single read/write seam.
 - Riverpod providers in `lib/state/providers.dart`.
 - Today screen, Week screen and entry editor.
@@ -128,24 +128,37 @@ Treat this as the baseline. Verify it before changing anything.
 - Timed entries and shifts are timezone-aware: wall-clock template fields in an
   IANA timezone plus resolved UTC anchor instants, expanded in the stored zone
   and displayed in the device zone.
-- Personal, Work and Home are the three seeded spaces, with migrations v1→v5
+- Personal, Work and Home are the three seeded spaces, with migrations v1→v7
   tested against real rows.
 - Tags and entry tags with a manager, editor chips and a global filter.
 - Per-occurrence completion, keyed by the occurrence date in the entry's stored
   timezone.
-- Today, Week and Calendar tabs: month/week modes, markers, shift bars, day
-  detail, navigation, jump to today and a stable selected date.
+- Today, Week and Calendar tabs: month/week/day modes, markers, shift bars, a
+  24-hour day timeline, day detail, navigation, jump to today and a stable
+  selected date.
+- Multi-day all-day and timed entries, recurrence skip dates, moved or
+  time-changed occurrences, ordinal weekdays, negative month days and
+  `BYSETPOS`.
 - Shift-pattern editor with cycles, multiple slots, overnight slots, exceptions,
-  preview, overlap validation and per-date checklists.
+  preview, overlap validation, job tags, per-date checklists and per-pattern
+  sleep buffers.
 - Multiple reminders per entry, Android channels/permissions/exact alarms, a
   90-day queue rebuilt on start/resume/timezone change and notification taps.
 - Settings for theme, English/Spanish, week start, hiding Work, defaults, sleep
   buffers, backup, sync/MCP switches and About.
-- Versioned JSON backup with a validated, transactional import (schema v4).
-- Home inventory, shopping list, low-stock flow and interval maintenance.
+- Versioned JSON backup with a validated, transactional import (schema v7),
+  schema 3–7 upgrades, and automatic daily local copies with rotation.
+- Home inventory, shopping list, low-stock flow, quick quantity adjustments,
+  purchase history and interval maintenance with a dedicated due view.
+- CSV export/import for entries, shopping and inventory.
+- Read-only GymMane weekly schedule import with dedupe and an all-day fallback.
+- Optional local PIN app lock over the existing PBKDF2 primitive, with a PIN pad
+  adapted from Streak.
 - Soft sleep window on Today with configurable commute, wind-down and wake
   buffers.
-- Local-only ICS import with a documented RRULE subset and re-import dedupe.
+- Local-only ICS import with a documented RRULE subset, `EXDATE`,
+  `RECURRENCE-ID`, TZID aliases, multi-day timed events and update-on-reimport;
+  read-only ICS export.
 - Local pairing identity with a PBKDF2 PIN hash, self-signed pinned TLS and a
   six-digit, five-minute pairing session. Shared keys and certificates are
   never included in backups.
@@ -166,33 +179,36 @@ Treat this as the baseline. Verify it before changing anything.
 - A tagged release workflow for signed split-per-ABI APKs, a Linux bundle and
   checksums, with the keystore documented as a user-provided step.
 - Linux debug build and Android debug APK both pass.
-- Tests: 85 app/database/widget tests, 71 core tests, including real v1, v2, v3
-  and v4 data migration tests, DST/travel scenarios, backup round-trip and
-  rejection, calendar navigation and semantics, shift checklists, ICS parsing
-  and importing, companion import, pairing crypto, TLS pinning, replay
-  rejection, MCP auth and tools, sync orchestration, search, widget data and
-  the shift editor flow.
+- Tests: 121 app/database/widget tests, 82 core tests, including real v1–v6
+  data migration tests, DST/travel scenarios, backup round-trip, older-schema
+  upgrade and rejection, calendar navigation and semantics, shift checklists,
+  ICS parsing/import/export, GymMane import, CSV, home tracking, app lock,
+  pairing crypto, TLS pinning, replay rejection, MCP auth and tools, sync
+  orchestration, search, widget data and the shift editor flow.
 - CI in `.github/workflows/build.yml`: format check, analyze, both test suites,
   a Linux debug build and a debug APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
   device deploy.
 
-**Known gaps:** the v0.5 baseline is functionally green but is not the full
-completion scope. The product/visual layer, real-file ICS coverage, GymMane
-schedule import, full MCP tool set, persisted LAN snapshots, work-hours rules,
-multi-day entries and per-slot checklists are tracked in
-`docs/completion-plan.md`; the constraint audit is in
+**Known gaps:** the v0.8 baseline is functionally green but is not the full
+completion scope. Full MCP tool coverage and sessions, persisted read-only LAN
+snapshots, work-hours/quiet-hours rules, custom reminder times and notification
+actions are tracked in `docs/completion-plan.md`; the constraint audit is in
 `docs/compliance-audit.md`. Do not claim v1.0 from this list alone.
 
 - Real-device notification delivery, reboot, battery optimization and
   timezone-change behavior still need the user's Android device checklist.
 - No dedicated Android `TIMEZONE_CHANGED` receiver; the queue rebuilds on
   resume and after the device zone is re-read.
-- Backup import accepts schema version 5 only.
-- ICS import does not support `EXDATE`, `RECURRENCE-ID`, ordinal `BYDAY`,
-  `BYSETPOS`, multi-day timed events or non-IANA timezones; those events are
-  reported as skipped. Re-import deduplicates but does not update changed
-  events.
+- Backup import accepts schemas 3 through 7; versions 1–2 are rejected. Import
+  replaces the local plan rather than merging.
+- ICS import still does not support `BYHOUR`/`BYMINUTE`, multiple
+  `BYMONTHDAY` values, `EXRULE`, or non-IANA zones outside the Windows alias
+  table; unsupported events are reported as skipped.
+- GymMane import reads the JSON payload (`gymmane.json`), ignores `planMoves`
+  and uses a one-hour block because GymMane stores no duration.
+- The app lock has no recovery code; clearing app data is the only reset. Its
+  salt and hash never enter a backup.
 - The MCP endpoint is loopback-only and implements the core tools JSON-RPC
   methods, not SSE/streamable sessions.
 - mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
@@ -736,36 +752,36 @@ and week error banners; semantics and text scaling; ARB parity and literal
 scanners; an O(1) count-rule ordinal; `.github/workflows/release.yml` and
 `docs/release.md`. The v0.5 surface is complete, but v1.0 has a wider scope.
 
-### v0.6 Visual foundation and truth pass
+### v0.6 Visual foundation and truth pass (done)
 
-- [ ] Bundle the reference font family and a real type scale.
-- [ ] Apply `ManeColors` through `context.mc` and add component themes.
-- [ ] Port the shared UI kit (cards, sheets, section labels, pressables, glass,
+- [x] Bundle the reference font family and a real type scale.
+- [x] Apply `ManeColors` through `context.mc` and add component themes.
+- [x] Port the shared UI kit (cards, sheets, section labels, pressables, glass,
   empty state, page motion).
-- [ ] Replace the stock app bar/nav bar/FAB shell with the reference-style shell.
-- [ ] Sweep every shipped screen to use the kit.
-- [ ] Add shell/component golden or widget smoke tests.
-- [ ] Correct the reference map and screenshots to match reality.
+- [x] Replace the stock app bar/nav bar/FAB shell with the reference-style shell.
+- [x] Sweep every shipped screen to use the kit.
+- [x] Add shell/component golden or widget smoke tests.
+- [x] Correct the reference map and screenshots to match reality.
 
-### v0.7 Calendar, recurrence and shift completeness
+### v0.7 Calendar, recurrence and shift completeness (done)
 
-- [ ] Day timeline with shift background blocks.
-- [ ] Multi-day all-day and timed entries.
-- [ ] Recurrence skip dates, modified occurrences and ordinal rules.
-- [ ] Tagged shift patterns and shift-aware tag filtering.
-- [ ] Per-slot shift checklist keys (schema migration + test).
-- [ ] Read-only ICS export.
-- [ ] Per-pattern commute/wind-down overrides for the sleep window.
-- [ ] ICS hardening: `EXDATE`, `RECURRENCE-ID`, Windows `TZID` aliases,
+- [x] Day timeline with shift background blocks.
+- [x] Multi-day all-day and timed entries.
+- [x] Recurrence skip dates, modified occurrences and ordinal rules.
+- [x] Tagged shift patterns and shift-aware tag filtering.
+- [x] Per-slot shift checklist keys (schema migration + test).
+- [x] Read-only ICS export.
+- [x] Per-pattern commute/wind-down overrides for the sleep window.
+- [x] ICS hardening: `EXDATE`, `RECURRENCE-ID`, Windows `TZID` aliases,
   multi-day timed events and update-on-reimport.
 
-### v0.8 Data interchange, home tracking and privacy
+### v0.8 Data interchange, home tracking and privacy (done)
 
-- [ ] Read-only GymMane schedule import (`weeklyPlan`, `routines`, `trainAt`).
-- [ ] Automatic local backups with rotation and older-schema upgrade.
-- [ ] CSV export/import for entries, shopping and inventory.
-- [ ] Inventory adjustments/dashboard, shopping grouping and a maintenance view.
-- [ ] Optional local PIN app lock.
+- [x] Read-only GymMane schedule import (`weeklyPlan`, `routines`, `trainAt`).
+- [x] Automatic local backups with rotation and older-schema upgrade.
+- [x] CSV export/import for entries, shopping and inventory.
+- [x] Inventory adjustments/dashboard, shopping grouping and a maintenance view.
+- [x] Optional local PIN app lock.
 
 ### v0.9 MCP, LAN sync and notification reliability
 

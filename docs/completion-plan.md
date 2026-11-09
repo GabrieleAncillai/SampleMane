@@ -135,22 +135,30 @@ legacy rows to the first slot.
 
 ### v0.8 Data interchange, home tracking and privacy
 
-- [ ] Add a read-only GymMane schedule import using GymMane's JSON backup
+- [x] Add a read-only GymMane schedule import using GymMane's JSON backup
       (`weeklyPlan`, `routines`, `trainAt`), with dedupe and a documented
       fallback when no time is present.
-- [ ] Add automatic local backups with rotation while keeping manual export as
+- [x] Add automatic local backups with rotation while keeping manual export as
       the canonical path.
-- [ ] Accept older backup schema versions through an explicit upgrade path.
-- [ ] Add CSV export/import for entries, shopping and inventory.
-- [ ] Shopping: group by category/location, clear checked lines, reorder.
-- [ ] Inventory: quick quantity adjustment, low-stock dashboard and purchase
+- [x] Accept older backup schema versions through an explicit upgrade path.
+- [x] Add CSV export/import for entries, shopping and inventory.
+- [x] Shopping: group by category/location, clear checked lines, reorder.
+- [x] Inventory: quick quantity adjustment, low-stock dashboard and purchase
       history that stays lightweight.
-- [ ] Maintenance: a dedicated due/overdue view and one-tap completion.
-- [ ] Optional app lock using the existing local PIN hash, with a PIN pad
+- [x] Maintenance: a dedicated due/overdue view and one-tap completion.
+- [x] Optional app lock using the existing local PIN hash, with a PIN pad
       adapted from Streak.
 
 Acceptance: a fresh install can import a GymMane schedule and a real ICS file,
 export a backup and an ICS, restore the backup, and unlock with the local PIN.
+
+**Shipped in v0.8:** schema v7 (`shopping_items.position` and
+`home_purchases`); `features/import/gymmane_import.dart`; rotating daily
+backups in `features/backup/auto_backup_service.dart`; backup schema 3–7 import;
+`features/export/csv_interchange.dart`; grouped shopping with clear/reorder;
+inventory quick adjustments and purchase history; the maintenance due view; and
+the optional PIN lock over PBKDF2 in `features/app_lock`. Tests: 121 app tests
+and 82 core tests, plus the v6→v7 real-row migration.
 
 ### v0.9 MCP, LAN sync and notification reliability
 

@@ -83,6 +83,17 @@ class SettingsController extends Notifier<AppSettings> {
     await _repository.writeSetting(SettingsKeys.sleepWakeBufferMinutes, '${_cleanMinutes(value)}');
   }
 
+  Future<void> setAutoBackupEnabled(bool value) async {
+    state = state.copyWith(autoBackupEnabled: value);
+    await _repository.writeSetting(SettingsKeys.autoBackupEnabled, '$value');
+  }
+
+  Future<void> setAutoBackupKeep(int value) async {
+    final keep = value.clamp(1, 20);
+    state = state.copyWith(autoBackupKeep: keep);
+    await _repository.writeSetting(SettingsKeys.autoBackupKeep, '$keep');
+  }
+
   int _cleanMinutes(int value) => value.clamp(0, 24 * 60);
 }
 

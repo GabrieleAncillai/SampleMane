@@ -12,17 +12,17 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.7 shipped. The active v0.8 → v1.0 completion program is in
+**Status:** v0.8 shipped. The active v0.9 → v1.0 completion program is in
 [docs/completion-plan.md](docs/completion-plan.md). Today, Week and Calendar
 tabs (with a day timeline), tags, flexible shifts, reminders, settings,
-backup/restore, home inventory, shopping, maintenance, sleep, ICS import/export,
-companion import, optional LAN pairing, a local MCP endpoint, global search, an
-Android home-screen widget, the reference-style shell and UI kit, multi-day
-entries, per-slot shift checklists, and English/Spanish coverage are in place.
-The remaining work is GymMane import, backup automation, CSV, home-tracking
-views, app lock, fuller MCP/sync, work-hours rules, notification actions and the
-real-device checklist. See [docs/compliance-audit.md](docs/compliance-audit.md)
-for the verified gaps.
+backup/restore and rotation, home inventory, shopping, maintenance, sleep, ICS
+import/export, GymMane schedule import, CSV interchange, companion import,
+optional LAN pairing, a local MCP endpoint, global search, an Android
+home-screen widget, the reference-style shell and UI kit, multi-day entries,
+per-slot shift checklists, an optional PIN app lock, and English/Spanish
+coverage are in place. The remaining work is fuller MCP/sync, work-hours rules,
+notification actions and the real-device checklist. See
+[docs/compliance-audit.md](docs/compliance-audit.md) for the verified gaps.
 
 ## Docs
 
@@ -64,12 +64,19 @@ for the verified gaps.
   handling, a 90-day queue rebuilt on start/resume/timezone change, and taps
   that open the entry.
 - Settings for theme, English/Spanish, week start, hiding Work, default
-  reminders, sleep buffers, data backup, sync/MCP switches and About.
-- Versioned JSON backup and a validated, transactional restore.
-- Home inventory with quantity, unit, location and reorder levels; a shopping
-  list whose checked lines update linked inventory.
+  reminders, sleep buffers, data backup, automatic backup rotation, app lock,
+  sync/MCP switches and About.
+- Versioned JSON backup and a validated, transactional restore, plus older
+  schema upgrades (3–7) and daily local copies with rotation.
+- Home inventory with quantity, unit, location, reorder levels, quick ±1
+  adjustments and purchase history; a shopping list grouped by category and
+  location, with clear-bought and reorder.
 - Interval-after-completion maintenance that advances from the actual
-  completion date.
+  completion date, with a dedicated due/upcoming page.
+- A read-only GymMane schedule import for weekly gym blocks, and CSV
+  export/import for entries, shopping and inventory.
+- An optional local PIN app lock adapted from Streak, with a resume grace and
+  no secret in backups.
 - A soft sleep window on Today, with configurable commute, wind-down and wake
   buffers.
 - Shift checklists whose completions stay independent for each shift date.
@@ -93,7 +100,7 @@ for the verified gaps.
   themes, a shared UI kit, a floating shell and a dotted paper background.
 - Accessibility basics: semantics on calendar days and shifts, text scaling in
   the calendar, keyboard shortcuts for search and tab switching.
-- A schema v1/v2/v3/v4 to v5 migration tested against real prior rows.
+- A schema v1/v2/v3/v4/v5/v6 to v7 migration tested against real prior rows.
 - A pure Dart domain package with the timezone, recurrence, shift and sleep
   rules.
 - Android debug APK, Linux debug build and a tagged release workflow for split
@@ -104,8 +111,9 @@ for the verified gaps.
 - v0.6: reference visual foundation, UI kit and shell. Done.
 - v0.7: day timeline, multi-day entries, recurrence exceptions, tagged shifts,
   per-slot checklists, ICS export and real-file ICS hardening. Done.
-- v0.8: GymMane schedule import, automatic local backups, CSV, home-tracking
-  views and optional app lock.
+- v0.8: GymMane schedule import, automatic local backups with rotation, older
+  backup schemas, CSV interchange, home-tracking views and optional app lock.
+  Done.
 - v0.9: full MCP tool set and sessions, persistent LAN snapshots, work-hours and
   quiet-hours rules, custom reminder times and actions.
 - v1.0: device verification, accessibility/contrast audit, final docs and a

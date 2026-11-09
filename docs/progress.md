@@ -4,10 +4,10 @@ Keep this file current. A fresh context window should be able to resume from it.
 
 ## Current milestone
 
-v0.7 is complete. The active program is v0.8 → v1.0, tracked in
-`docs/completion-plan.md`. The next slice is v0.8: GymMane schedule import,
-automatic local backups with rotation, older backup schemas, CSV interchange,
-home tracking views and the optional app lock. The constraint audit is in
+v0.8 is complete. The active program is v0.9 → v1.0, tracked in
+`docs/completion-plan.md`. The next slice is v0.9: the full MCP tool set and
+sessions, persistent read-only LAN snapshots, work-hours/quiet-hours rules,
+custom reminder times and notification actions. The constraint audit is in
 `docs/compliance-audit.md`.
 
 ## Reference notes
@@ -245,6 +245,44 @@ home tracking views and the optional app lock. The constraint audit is in
 - Validation: format clean, analyze clean, both suites pass, Linux debug and
   Android debug APK build.
 
+### v0.8
+
+- Schema v7 adds `shopping_item_records.position` and `home_purchase_records`,
+  with a real v6 fixture (`test/fixtures/schema_v6.sql`) migrated to the current
+  schema. Purchase history is written by linked shopping check-offs and manual
+  stock increases; unchecking reverses the quantity and removes that history
+  row.
+- GymMane import in `features/import/gymmane_import.dart`: reads `weeklyPlan`,
+  `routines` and `trainAt`, writes read-only weekly Personal blocks, skips
+  archived and unknown routines, deduplicates by routine/weekday, and falls back
+  to all-day blocks when `trainAt` is missing. The documented input is the JSON
+  payload (`gymmane.json`).
+- Automatic backups in `features/backup/auto_backup_service.dart`: one JSON copy
+  per local day under the app support `backups` folder, rotation to the
+  configured count, and manual export unchanged as the canonical path. Wired to
+  app start and resume.
+- Backup import accepts schema versions 3–7. Missing tables and fields in older
+  payloads become empty defaults. App-lock settings (salt, hash, misses,
+  blocked-until) are excluded from export, so a restored install starts
+  unlocked.
+- CSV in `features/export/csv_interchange.dart`: entry export/import with space,
+  kind, all-day or timed values, end date, timezone, status, recurrence JSON,
+  tags and notes; shopping and inventory export/import with dedupe. Shopping
+  groups by the linked home item's category/location, clears bought lines and
+  supports move up/down.
+- Home tracking: inventory quick ±1 adjustment and a purchase-history sheet;
+  a dedicated maintenance page with due/upcoming groups and one-tap completion;
+  the low-stock card now states the count as well as the names.
+- App lock in `features/app_lock`: PBKDF2 salt/hash in device settings, a PIN pad
+  adapted from Streak's `pin_pad.dart`, a two-step setup page, a 30-second
+  resume grace and a 30-second lockout after five misses. The About/data
+  section documents that the lock is optional and has no recovery code.
+- Screenshots: `docs/screenshots/v0.8-shopping-light.png`,
+  `v0.8-maintenance-light.png` and `v0.8-pin-setup-light.png`.
+- Tests: 121 app/database/widget tests and 82 core tests.
+- Validation: format check clean, analyze clean, both suites pass, Linux debug
+  and Android debug APK build.
+
 ## Known limitations
 
 - Real-device notification delivery, reboot rescheduling, battery optimization
@@ -257,8 +295,14 @@ home tracking views and the optional app lock. The constraint audit is in
   resume and after the device zone is re-read.
 - The notification channel name is English at the OS level; in-app strings are
   localized.
-- Backup import accepts schema version 6 only. v0.8 adds the older-schema
-  upgrade path and automatic backups.
+- Backup import accepts schema versions 3 through 7. Versions 1–2 are rejected
+  because they predate timezone-aware entries. Import still replaces the local
+  plan rather than merging it.
+- Automatic backups run on app start/resume, once per local day. A long-running
+  foreground session without a resume does not trigger a new copy.
+- GymMane import reads the JSON payload, not the zip container; `planMoves`
+  per-date overrides are ignored, and a timed block is one hour because GymMane
+  stores no duration.
 - Linux file export depends on zenity/kdialog through `file_picker`.
 - ICS import still does not support `BYHOUR`/`BYMINUTE`, multiple
   `BYMONTHDAY` values, `EXRULE`, floating time without a TZID default that the
@@ -271,13 +315,14 @@ home tracking views and the optional app lock. The constraint audit is in
   pre-v6 ticks are assigned to the first slot of that date.
 - The visual layer follows the references: Nunito, tokens, component themes,
   the shared kit and the floating shell.
-- ICS export is shipped. GymMane schedule import is still v0.8 work.
+- ICS export is shipped. GymMane schedule import is shipped as a read-only
+  JSON adapter in v0.8.
 - MCP is loopback-only and implements the core tools JSON-RPC surface, not
   SSE/streamable sessions. v0.9 expands the tools and session handling.
 - LAN snapshots are in memory and are not persisted or merged. v0.9 persists
   read-only snapshots. A companion app's ContentProvider is not integrated
   because no app and authority were specified; the documented JSON export is
-  the v0.4 path and GymMane backup import is v0.8 work.
+  the v0.4 path and the GymMane JSON import is the v0.8 path.
 - mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
   needs the user's real-device check. Pairing sessions live in memory and are
   cancelled by an app restart.
@@ -285,18 +330,17 @@ home tracking views and the optional app lock. The constraint audit is in
   is Android-only and has no configuration screen.
 - Accessibility is a first pass, not a certified screen-reader or contrast
   audit.
+- The app lock has no recovery code; clearing app data is the only reset. The
+  lock hash is deliberately absent from backups.
 - Release signing is a user-provided keystore step; local release builds fall
   back to the debug key and are not production releases.
 
 ## Next three steps
 
-1. Deliver v0.8: GymMane schedule import, automatic local backups with rotation
-   and older-schema upgrades, CSV interchange, home-tracking views and the
-   optional app lock.
-2. Deliver v0.9: full MCP tools and sessions, persistent LAN snapshots,
+1. Deliver v0.9: full MCP tools and sessions, persistent LAN snapshots,
    work-hours/quiet-hours rules, custom reminder times and notification actions.
-3. Run the full real-device checklist and tag v1.0 only when every scenario in
-   `docs/completion-plan.md` passes.
+2. Run the full real-device checklist, including the v0.7–v0.9 flows.
+3. Tag v1.0 only when every scenario in `docs/completion-plan.md` passes.
 
 ## Commands and results
 
@@ -304,14 +348,16 @@ home tracking views and the optional app lock. The constraint audit is in
 - `dart run build_runner build --force-jit` — ok.
 - `flutter gen-l10n` — ok.
 - `dart format --line-length 110 --output=none --set-exit-if-changed` — clean
-  (108 hand-written Dart files).
+  (143 hand-written Dart files; generated `.g.dart` and ARB outputs excluded,
+  matching CI).
 - `flutter analyze --no-fatal-infos` — no issues.
-- `flutter test` — 85 passed (database, migrations v1→v5, timezone, calendar,
+- `flutter test` — 120 passed (database, migrations v1→v7, timezone, calendar,
   tags, reminders, backup and pairing-secret exclusion, shift editor and
-  checklists, home inventory, ICS, companion import, pairing crypto,
-  certificates, TLS pinning, replay rejection, MCP, sync orchestration, search,
-  widget data, l10n enforcement and widget flows).
-- `(cd packages/mane_core && dart test)` — 71 passed (recurrence including
+  checklists, home inventory and purchase history, shopping grouping, app lock,
+  ICS, CSV, GymMane import, companion import, pairing crypto, certificates, TLS
+  pinning, replay rejection, MCP, sync orchestration, search, widget data, l10n
+  enforcement and widget flows).
+- `(cd packages/mane_core && dart test)` — 82 passed (recurrence including
   constant-time ordinals, expansion, shifts, timezones, sleep).
 - `flutter build linux --debug` — ok, including the Bonsoir plugin.
 - `flutter build linux --release` — ok.

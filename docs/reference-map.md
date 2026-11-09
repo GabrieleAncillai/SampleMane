@@ -19,10 +19,10 @@ git clone https://github.com/InlitX/streak.git ../Streak
 | State and app architecture | `lib/state/fit_state.dart` and its `part` files | `lib/features/*/state/*_controller.dart` | GymMane is one `ChangeNotifier`; Streak is feature-first with `provider`. |
 | Local storage | `lib/services/local_store.dart` | `lib/core/database/local_store.dart`, `lib/core/database/data_location.dart` | Compare with Mane's Drift layer before adding more schema. |
 | Entry / habit editing | `lib/screens/exercise_detail_screen.dart`, `lib/screens/routine_edit_screen.dart`, `lib/screens/settings_screen.dart` | `lib/features/habits/pages/habit_details_page.dart`, `lib/features/habits/widgets/habit_form_schedule.dart`, `lib/features/habits/widgets/habit_form_kind.dart` | Sheets, validation, segmented controls, date/time picking. |
-| App lock and PIN pad | none | `lib/app/app_lock.dart`, `lib/app/app_lock_pin.dart`, `lib/app/pin_pad.dart`, `lib/app/pin_setup_page.dart` | Optional local lock over the existing PIN hash. v0.8. |
-| GymMane schedule import | `lib/state/fit_state.dart` (`weeklyPlan`, `routines`, `trainAt`), `lib/services/local_store.dart`, `lib/services/backup_zip.dart` | none | Read-only import of the weekly plan; never workout logs. v0.8. |
-| Automatic local backup | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/auto_sync.dart` | Rotation and older-schema upgrade without cloud. v0.8. |
-| CSV and calendar export | `lib/services/local_store.dart` (`exportCsv`), `lib/services/fit_export.dart`, `lib/services/plan_share.dart` | `lib/services/import_service.dart`, `lib/services/backup_service.dart` | File-export and share patterns. v0.7/v0.8. |
+| App lock and PIN pad | none | `lib/app/app_lock.dart`, `lib/app/app_lock_pin.dart`, `lib/app/pin_pad.dart`, `lib/app/pin_setup_page.dart` | Shipped in `features/app_lock` over the existing PBKDF2 primitive. Mane keeps the PIN pad and gate, not Streak's biometrics or recovery code. |
+| GymMane schedule import | `lib/state/fit_state.dart` (`weeklyPlan`, `routines`, `trainAt`), `lib/services/local_store.dart`, `lib/services/backup_zip.dart` | none | Shipped in `features/import/gymmane_import.dart`: read-only weekly blocks, dedupe, all-day fallback. Never workout logs. |
+| Automatic local backup | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/auto_sync.dart` | Shipped in `features/backup/auto_backup_service.dart`: daily JSON copies with rotation and a schema 3–7 import upgrade. No cloud. |
+| CSV and calendar export | `lib/services/local_store.dart` (`exportCsv`), `lib/services/fit_export.dart`, `lib/services/plan_share.dart` | `lib/services/import_service.dart`, `lib/services/backup_service.dart` | Shipped: `features/export/csv_interchange.dart` for entries, shopping and inventory, plus read-only ICS export. |
 | Calendar / month / week | `lib/screens/history_screen.dart`, `lib/screens/timeline_screen.dart` | `lib/features/habits/widgets/activity_calendar.dart`, `lib/core/express/express_month.dart`, `lib/features/habits/pages/day_timeline_page.dart`, `lib/features/habits/widgets/grid_habit_cards.dart` | Streak is the primary calendar reference. |
 | Notifications and reminders | `lib/services/alarm_store.dart`, `lib/services/rest_alarm.dart`, `lib/services/train_reminder.dart`, `lib/services/supplement_reminder.dart` | `lib/services/notification_service.dart`, `lib/services/reminder_schedule.dart`, `lib/services/reminder_sounds.dart` | Streak is the primary reminder reference. |
 | Backup and import | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart`, `lib/services/fitnotes_backup.dart`, `lib/services/workout_import.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/import_service.dart`, `lib/services/auto_sync.dart` | Versioned files, validation, test coverage. |
@@ -56,9 +56,15 @@ git clone https://github.com/InlitX/streak.git ../Streak
   checklists.** Neither reference has these planner-specific domains. They are
   implemented and tested in `mane_core`, the repository and the
   `home_inventory`, `import`, `shifts` and `sleep` feature folders. The settings
-  rows follow the GymMane/Streak patterns; the visual layer is still stock
-  Material and is a v0.6 deliverable. See the v0.3 deviation note in
-  `docs/full-docs.md`.
+  rows follow the GymMane/Streak patterns; the visual layer uses the shared kit.
+  See the v0.3 deviation note in `docs/full-docs.md`.
+- **CSV interchange and the GymMane weekly-plan adapter.** GymMane exports its
+  own backup and exercise CSV shapes; it has no consumer for another planner's
+  weekly plan. Mane's CSV columns and the read-only `weeklyPlan`/`routines`
+  adapter are planner-specific and documented in `docs/full-docs.md`.
+- **App lock details.** Streak offers biometrics and a recovery code. Mane ships
+  only the local PIN because the planner must stay account-free and portable;
+  the lock hash is excluded from backups and there is no recovery code.
 - **LAN pairing, query and MCP.** Streak has a shared-folder backup exchange,
   not LAN discovery. Mane implements pinned TLS, a short-code pairing
   handshake, signed read-only queries and a loopback MCP adapter. These stay in

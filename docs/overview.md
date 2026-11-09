@@ -47,16 +47,16 @@ should follow with little extra work.
 
 ## Status
 
-v0.7 shipped. The active v0.8 → v1.0 completion program is in
+v0.8 shipped. The active v0.9 → v1.0 completion program is in
 [completion-plan.md](completion-plan.md). Today, Week and Calendar tabs (with a
 24-hour day timeline), tags, flexible shifts with per-slot checklists,
-reminders, settings, backup/restore, home inventory, shopping lists, interval
-maintenance, a soft sleep window, ICS import/export, companion import, optional
-LAN pairing, a local MCP endpoint and global search exist. An Android
-home-screen widget shows today's plan, and the app uses the adapted
-GymMane/Streak visual language. Multi-day entries and tagged shifts are in.
-English and Spanish are covered. Remaining work includes GymMane import, backup
-automation, CSV, home-tracking views, app lock, fuller MCP/sync, work-hours
+reminders, settings, backup/restore and rotation, home inventory, shopping
+lists, interval maintenance, a soft sleep window, ICS import/export, GymMane
+schedule import, CSV interchange, companion import, optional LAN pairing, a
+local MCP endpoint and global search exist. An Android home-screen widget shows
+today's plan, and the app uses the adapted GymMane/Streak visual language.
+Multi-day entries, tagged shifts and the optional PIN app lock are in. English
+and Spanish are covered. Remaining work includes fuller MCP/sync, work-hours
 rules, notification actions and the real-device checklist. The constraint audit
 is in [compliance-audit.md](compliance-audit.md).
 

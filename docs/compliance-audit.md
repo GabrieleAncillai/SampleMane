@@ -1,6 +1,6 @@
 # Compliance audit
 
-Status: v0.5 baseline, audited 2026-11-09. This audit covers the project rules in
+Status: v0.8, audited 2026-11-09. This audit covers the project rules in
 `AGENTS.md`, `CONTRIBUTING.md`, the public docs and the private scenario brief.
 The private brief is reviewed locally; its details are not copied here.
 
@@ -8,11 +8,12 @@ The private brief is reviewed locally; its details are not copied here.
 
 The core promises are intact: offline-first storage, no accounts, no telemetry,
 GPL-3.0-only, optional LAN/MCP, tested migrations and green builds. The project
-is **not** v1.0-ready. The visual gap is closed in v0.6. The remaining gap is
-feature completeness: the original v1.0 gate only covered the v0.5 surface. Real
-scenario gaps remain in ICS, GymMane import, MCP tool coverage, work-hours
-behavior, per-shift checklists, multi-day entries, persisted snapshots and
-backup automation.
+is **not** v1.0-ready. The visual gap is closed (v0.6) and the v0.7/v0.8 domain
+gaps are closed: ICS exceptions, multi-day entries, per-slot checklists, GymMane
+import, backup automation, CSV, home tracking and the optional local app lock
+ship and are tested. Remaining scenario gaps are MCP tool coverage and sessions,
+persisted read-only LAN snapshots, work-hours/quiet-hours behavior, custom
+reminder times and notification actions.
 
 The completion work is in `docs/completion-plan.md`. The v0.6 M0 slice already
 fixed Android cloud backup, the CI gap and the documentation claims; the
@@ -24,17 +25,17 @@ product/visual and feature work is the active program.
 |---|---|---|---|
 | Offline core, no internet dependency | Pass | No cloud/HTTP client dependency in `pubspec.yaml`; core uses local SQLite; LAN/MCP services are behind settings | Keep |
 | No accounts, email, password reset or cloud identity | Pass | Only local `identity_records`; PIN hash stored locally; no auth provider | Keep |
-| Data ownership in SQLite, export first-class | Pass for core; auto backup pending | Drift schema, JSON export/import, file picker; Android cloud backup disabled in v0.6 | Add auto backup and older-schema import in v0.8 |
+| Data ownership in SQLite, export first-class | Pass | Drift schema, JSON export/import, rotating automatic local backups, older-schema upgrade, CSV and ICS export; Android cloud backup disabled | Keep |
 | Optional network only | Pass | `syncEnabled` and `mcpEnabled` default false; local plan works without peers | Keep, add tests for both-switch-off startup |
 | GPL-3.0-only and attribution | Pass | `LICENSE`, `ADDITIONAL_TERMS.md`, `CREDITS.md`, About screen | Keep |
 | Android + Linux both build | Pass at v0.5 | Debug APK and Linux debug pass locally; release workflow builds both | Add Linux build to the normal CI |
 | No new dependency without reason | Pass | Existing stack only; no analytics/ads/Firebase/Supabase | Keep |
-| Do not weaken tests or security | Pass | 85 app + 71 core tests; pairing/TLS/replay tests | Keep |
+| Do not weaken tests or security | Pass | 121 app + 82 core tests; pairing/TLS/replay and app-lock hashing tests | Keep |
 | Reference-first for components, styles, motion | Pass (v0.6) | Nunito, expanded `ManeColors`, `ManeType`, component themes, `lib/core/widgets` kit, floating shell and screen sweep; `test/visual_kit_test.dart` and `docs/screenshots/` | Keep |
 | Reference map describes shipped state | Pass (v0.6) | `docs/reference-map.md` now names the shipped kit and the visual deviation | Keep |
-| Every schema change has migration + real-row test | Pass | v1→v5 migration tests | Required again for v0.7/v0.9 schema work |
+| Every schema change has migration + real-row test | Pass | v1→v7 migration tests, including real v5 and v6 fixtures | Keep |
 | Timezone behavior has DST/travel tests | Pass | Core time tests and widget/reminder tests | Keep for new features |
-| Localization: English source, Spanish first | Pass for shipped screens | ARB parity and literal scanner tests | Extend for new surfaces |
+| Localization: English source, Spanish first | Pass for shipped screens | ARB parity and literal scanner tests, including v0.8 surfaces | Extend for v0.9 surfaces |
 | Accessibility basics | Partial | Semantics, text scaling, shortcuts; no certified screen-reader/contrast audit | v1.0 audit |
 | Release signing is user-provided | Pass | Release workflow refuses without keystore secrets | Keep |
 | Private brief stays private | Pass | `doc-personal/` is gitignored; no private details in public docs | Keep |
@@ -87,17 +88,16 @@ weekdays, `BYSETPOS`, negative month days, Windows/vendor TZID aliases, multi-da
 timed events and update-on-reimport are implemented and tested. Unsupported
 parts are still reported, not guessed.
 
-### P1 — GymMane read-only schedule integration is not shipped
+### P1 — GymMane read-only schedule integration was not shipped (fixed v0.8)
 
 **Evidence:** `features/import/companion_import.dart` accepts a generic JSON
-shape. GymMane's actual backup format (`weeklyPlan`, `routines`, `trainAt`) is not
-read. The private brief explicitly accepts a read-only export/provider.
+shape. GymMane's actual backup format (`weeklyPlan`, `routines`, `trainAt`) was
+not read. The private brief explicitly accepts a read-only export/provider.
 
-**Impact:** the gym blocks the scenario needs are still manual entries, and the
-companion-import promise is only partially met.
-
-**Remediation (v0.8):** add a GymMane backup JSON adapter with dedupe, read-only
-entries and documented behavior when the backup has no time of day.
+**Remediation (done):** `features/import/gymmane_import.dart` reads the JSON
+payload, writes read-only weekly Personal blocks, dedupes by routine/weekday,
+skips archived/unknown routines and falls back to all-day blocks when `trainAt`
+is missing. `planMoves` and per-routine durations remain documented limits.
 
 ### P2 — Per-shift checklist was keyed by pattern + date, not slot (fixed v0.7)
 
@@ -156,16 +156,29 @@ save path.
 entries, recurrence, `EXDATE`, `RECURRENCE-ID`, multi-day dates and concrete
 shift blocks. Settings exposes it.
 
-### P2 — Backup is manual and accepts only schema version 5
+### P2 — Backup was manual and accepted only schema version 5 (fixed v0.8)
 
-**Evidence:** `BackupService` validates `schemaVersion: 5`; no automatic backup
-or rotation.
+**Evidence:** `BackupService` validated `schemaVersion: 5`; there was no
+automatic backup or rotation.
 
-**Impact:** a lost phone loses everything unless the user remembers to export;
-future schema changes will strand old files.
+**Remediation (done):** `features/backup/auto_backup_service.dart` writes one
+local JSON copy per day with rotation, wired to app start/resume. Backup import
+accepts schemas 3–7 by defaulting missing fields, and rejects 1–2 and future
+versions. App-lock secrets are excluded from export. Tests cover v3/v4 upgrades,
+round-trip, rejection and rotation.
 
-**Remediation (v0.8):** automatic local backups with rotation and an explicit
-upgrade path for older versions.
+### P2 — No optional app lock or home-tracking views (fixed v0.8)
+
+**Evidence:** the planner opened straight into the plan, shopping had no
+grouping/clear/reorder, inventory had no quick adjustment or purchase history,
+and maintenance had no dedicated due view.
+
+**Remediation (done):** `features/app_lock` adds an optional PBKDF2 PIN lock
+with a two-step setup, resume grace and lockout; shopping groups by linked
+category/location and supports clear/reorder; inventory has quick adjustments
+and purchase history (schema v7); maintenance has a due/upcoming page with
+one-tap completion. The lock hash is device-local and absent from backups, and
+no recovery code ships, which is documented as a deliberate limitation.
 
 ### P2 — CI did not check formatting or build Linux (fixed v0.6)
 

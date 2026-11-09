@@ -24,3 +24,7 @@ Future<String?> pickTextFile(List<String> extensions) async {
 Future<String?> pickIcsText() => pickTextFile(const ['ics', 'ical']);
 
 Future<String?> pickCompanionText() => pickTextFile(const ['json']);
+
+Future<String?> pickGymManeText() => pickTextFile(const ['json']);
+
+Future<String?> pickCsvText() => pickTextFile(const ['csv']);

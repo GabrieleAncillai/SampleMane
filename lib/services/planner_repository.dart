@@ -1,6 +1,7 @@
 import 'package:mane_core/mane_core.dart';
 
 import '../models/home_item.dart';
+import '../models/home_purchase.dart';
 import '../models/local_identity.dart';
 import '../models/paired_device.dart';
 import '../models/reminder.dart';
@@ -40,6 +41,16 @@ class PlannerRepository {
   Future<void> deleteShoppingItem(String id) => _database.deleteShoppingItem(id);
 
   Future<void> setShoppingChecked(String id, bool checked) => _database.setShoppingChecked(id, checked);
+
+  Future<void> moveShoppingItem(String id, int delta) => _database.moveShoppingItem(id, delta);
+
+  Future<void> clearCheckedShopping() => _database.clearCheckedShopping();
+
+  Future<void> adjustHomeQuantity(String id, double delta, {String note = ''}) =>
+      _database.adjustHomeQuantity(id, delta, note: note);
+
+  Future<List<HomePurchase>> readPurchaseHistory(String homeItemId, {int limit = 30}) =>
+      _database.readPurchaseHistory(homeItemId, limit: limit);
 
   Future<List<ShiftChecklistItem>> readShiftChecklistItems(String patternId) =>
       _database.readShiftChecklistItems(patternId);

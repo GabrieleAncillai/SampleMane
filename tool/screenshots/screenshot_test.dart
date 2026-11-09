@@ -8,7 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/core/i18n/l10n.dart';
 import 'package:mane/core/widgets/ui_kit.dart';
+import 'package:mane/features/app_lock/pages/pin_setup_page.dart';
 import 'package:mane/features/calendar/pages/calendar_page.dart';
+import 'package:mane/features/home_inventory/pages/maintenance_page.dart';
+import 'package:mane/features/home_inventory/pages/shopping_list_page.dart';
 import 'package:mane/features/settings/pages/settings_page.dart';
 import 'package:mane/models/app_settings.dart';
 import 'package:mane/models/home_item.dart';
@@ -75,6 +78,50 @@ void main() {
 
   testWidgets('render Settings light', (tester) async {
     await render(tester, 'v0.6-settings-light.png', ManeTheme.light, const SettingsPage());
+  });
+
+  testWidgets('render Shopping light', (tester) async {
+    await render(
+      tester,
+      'v0.8-shopping-light.png',
+      ManeTheme.light,
+      const ShoppingListPage(),
+      homeItems: const [
+        HomeItem(id: 'rice', name: 'Rice', category: 'Pantry', location: 'Kitchen', quantity: 1),
+        HomeItem(id: 'soap', name: 'Soap', category: 'Bathroom', location: 'Cabinet', quantity: 2),
+      ],
+      shoppingItems: const [
+        ShoppingItem(id: 'rice', name: 'Rice', quantity: 2, homeItemId: 'rice'),
+        ShoppingItem(id: 'soap', name: 'Soap', quantity: 3, homeItemId: 'soap'),
+        ShoppingItem(id: 'batteries', name: 'Batteries', quantity: 1, note: 'AA'),
+      ],
+    );
+  });
+
+  testWidgets('render Maintenance light', (tester) async {
+    final today = LocalDate.parse('2026-11-09');
+    final now = DateTime.utc(2026, 11, 1, 8);
+    final entry = Entry(
+      id: 'pump',
+      spaceId: 'home',
+      title: 'Service the water pump',
+      date: today.addDays(-3),
+      allDay: true,
+      repeatAfterCompletionDays: 90,
+      createdAt: now,
+      updatedAt: now,
+    );
+    await render(
+      tester,
+      'v0.8-maintenance-light.png',
+      ManeTheme.light,
+      const MaintenancePage(),
+      entryOccurrences: [EntryOccurrence(date: entry.date!, displayDate: entry.date!, entry: entry)],
+    );
+  });
+
+  testWidgets('render PIN setup light', (tester) async {
+    await render(tester, 'v0.8-pin-setup-light.png', ManeTheme.light, const PinSetupPage());
   });
 }
 
@@ -152,13 +199,16 @@ Future<void> render(
   ThemeData theme,
   Widget home, {
   Future<void> Function(WidgetTester tester)? act,
+  List<EntryOccurrence>? entryOccurrences,
+  List<HomeItem> homeItems = const [],
+  List<ShoppingItem> shoppingItems = const [],
 }) async {
   tester.view.physicalSize = const Size(1290, 2796);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   final key = GlobalKey();
   final today = LocalDate.parse('2026-11-09');
-  final entries = demoEntries(today);
+  final entries = entryOccurrences ?? demoEntries(today);
   final shifts = demoShifts(today);
 
   await tester.pumpWidget(
@@ -171,8 +221,8 @@ Future<void> render(
           nowProvider.overrideWithValue(DateTime.utc(2026, 11, 9, 18)),
           spacesProvider.overrideWith((ref) => Stream.value(fallbackSpaces)),
           tagsProvider.overrideWith((ref) => Stream.value(const <Tag>[])),
-          homeItemsProvider.overrideWith((ref) => Stream.value(const <HomeItem>[])),
-          shoppingItemsProvider.overrideWith((ref) => Stream.value(const <ShoppingItem>[])),
+          homeItemsProvider.overrideWith((ref) => Stream.value(homeItems)),
+          shoppingItemsProvider.overrideWith((ref) => Stream.value(shoppingItems)),
           pairedDevicesProvider.overrideWith((ref) => Stream.value(const [])),
           entriesProvider.overrideWith(
             (ref, range) => Stream.value(

@@ -20,9 +20,12 @@ class ShoppingListPage extends ConsumerWidget {
     final c = context.mc;
     final items = ref.watch(shoppingItemsProvider).value ?? const <ShoppingItem>[];
     final homeItems = ref.watch(homeItemsProvider).value ?? const <HomeItem>[];
+    final homeById = {for (final item in homeItems) item.id: item};
     final lowStock = homeItems.where((item) => item.isLowStock).toList();
-    final homeNames = {for (final item in homeItems) item.id: item.name};
-    final done = items.where((item) => item.checked).length;
+    final available = items.where((item) => !item.checked).toList();
+    final bought = items.where((item) => item.checked).toList();
+    final done = bought.length;
+    final groups = _groupItems(available, homeById, l10n.shoppingOther);
 
     return ManePage(
       title: l10n.shoppingList,
@@ -55,6 +58,10 @@ class ShoppingListPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
+                    l10n.lowStockCount(lowStock.length),
+                    style: ManeType.body(11.5, color: c.textSecondary),
+                  ),
+                  Text(
                     lowStock.map((item) => item.name).join(', '),
                     style: ManeType.body(11.5, color: c.textSecondary),
                   ),
@@ -81,26 +88,74 @@ class ShoppingListPage extends ConsumerWidget {
               ),
             )
           else ...[
-            SoftCard(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              clip: true,
-              child: Column(
-                children: [
-                  for (var index = 0; index < items.length; index++) ...[
-                    if (index > 0) const Divider(height: 1, indent: 50),
-                    _ShoppingRow(
-                      item: items[index],
-                      homeName: items[index].homeItemId == null ? null : homeNames[items[index].homeItemId],
-                      onChecked: (value) =>
-                          ref.read(repositoryProvider).setShoppingChecked(items[index].id, value),
-                      onEdit: () => showShoppingItemSheet(context, item: items[index]),
-                      onDelete: () => ref.read(repositoryProvider).deleteShoppingItem(items[index].id),
-                    ),
-                  ],
+            if (groups.isNotEmpty) ...[
+              SectionLabel(l10n.shoppingToBuy),
+              for (final group in groups) ...[
+                if (group.label.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
+                    child: Text(group.label, style: ManeType.label(12, color: c.textSecondary)),
+                  ),
                 ],
+                SoftCard(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  clip: true,
+                  child: Column(
+                    children: [
+                      for (var index = 0; index < group.items.length; index++) ...[
+                        if (index > 0) const Divider(height: 1, indent: 50),
+                        _ShoppingRow(
+                          item: group.items[index],
+                          homeName: homeById[group.items[index].homeItemId]?.name,
+                          onChecked: (value) =>
+                              ref.read(repositoryProvider).setShoppingChecked(group.items[index].id, value),
+                          onEdit: () => showShoppingItemSheet(context, item: group.items[index]),
+                          onDelete: () =>
+                              ref.read(repositoryProvider).deleteShoppingItem(group.items[index].id),
+                          onMoveUp: index == 0
+                              ? null
+                              : () =>
+                                    ref.read(repositoryProvider).moveShoppingItem(group.items[index].id, -1),
+                          onMoveDown: index == group.items.length - 1
+                              ? null
+                              : () => ref.read(repositoryProvider).moveShoppingItem(group.items[index].id, 1),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
+            if (bought.isNotEmpty) ...[
+              SectionLabel(
+                l10n.shoppingBought,
+                trailing: TextButton(
+                  onPressed: () => _clearBought(context, ref),
+                  child: Text(l10n.clearChecked),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              SoftCard(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                clip: true,
+                child: Column(
+                  children: [
+                    for (var index = 0; index < bought.length; index++) ...[
+                      if (index > 0) const Divider(height: 1, indent: 50),
+                      _ShoppingRow(
+                        item: bought[index],
+                        homeName: homeById[bought[index].homeItemId]?.name,
+                        onChecked: (value) =>
+                            ref.read(repositoryProvider).setShoppingChecked(bought[index].id, value),
+                        onEdit: () => showShoppingItemSheet(context, item: bought[index]),
+                        onDelete: () => ref.read(repositoryProvider).deleteShoppingItem(bought[index].id),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(l10n.shoppingListSubtitle, style: ManeType.body(12, color: c.textTertiary)),
@@ -110,6 +165,56 @@ class ShoppingListPage extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _clearBought(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.clearChecked),
+        content: Text(l10n.clearCheckedBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(l10n.cancel)),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.clearChecked),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await ref.read(repositoryProvider).clearCheckedShopping();
+  }
+
+  static List<_ShoppingGroup> _groupItems(
+    List<ShoppingItem> items,
+    Map<String, HomeItem> homeById,
+    String otherLabel,
+  ) {
+    final groups = <String, List<ShoppingItem>>{};
+    for (final item in items) {
+      final home = homeById[item.homeItemId];
+      final parts = [
+        if (home != null && home.category.trim().isNotEmpty) home.category.trim(),
+        if (home != null && home.location.trim().isNotEmpty) home.location.trim(),
+      ];
+      final label = parts.isEmpty ? otherLabel : parts.join(' · ');
+      (groups[label] ??= <ShoppingItem>[]).add(item);
+    }
+    final labels = groups.keys.toList()
+      ..sort((a, b) {
+        if (a == otherLabel) return 1;
+        if (b == otherLabel) return -1;
+        return a.compareTo(b);
+      });
+    return [for (final label in labels) _ShoppingGroup(label: label, items: groups[label]!)];
+  }
+}
+
+class _ShoppingGroup {
+  const _ShoppingGroup({required this.label, required this.items});
+
+  final String label;
+  final List<ShoppingItem> items;
 }
 
 class _ShoppingRow extends StatelessWidget {
@@ -119,6 +224,8 @@ class _ShoppingRow extends StatelessWidget {
     required this.onChecked,
     required this.onEdit,
     required this.onDelete,
+    this.onMoveUp,
+    this.onMoveDown,
   });
 
   final ShoppingItem item;
@@ -126,6 +233,8 @@ class _ShoppingRow extends StatelessWidget {
   final ValueChanged<bool> onChecked;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +242,8 @@ class _ShoppingRow extends StatelessWidget {
     final c = context.mc;
     final details = [
       '${_number(item.quantity)}${item.unit.isEmpty ? '' : ' ${item.unit}'}',
-      if (homeName != null && homeName!.isNotEmpty) homeName!,
+      if (homeName != null && homeName!.isNotEmpty && homeName!.toLowerCase() != item.name.toLowerCase())
+        homeName!,
       if (item.note.isNotEmpty) item.note,
     ].where((part) => part.isNotEmpty).join(' · ');
 
@@ -185,8 +295,15 @@ class _ShoppingRow extends StatelessWidget {
           ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz, color: c.textTertiary),
-            onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+            onSelected: (value) => switch (value) {
+              'up' => onMoveUp?.call(),
+              'down' => onMoveDown?.call(),
+              'edit' => onEdit(),
+              _ => onDelete(),
+            },
             itemBuilder: (context) => [
+              if (onMoveUp != null) PopupMenuItem(value: 'up', child: Text(l10n.moveUp)),
+              if (onMoveDown != null) PopupMenuItem(value: 'down', child: Text(l10n.moveDown)),
               PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
               PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
             ],

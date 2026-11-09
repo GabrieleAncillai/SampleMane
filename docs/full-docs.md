@@ -1,8 +1,9 @@
 # Mane: full docs
 
-Status: v0.7, calendar and shift completeness. Last updated 2026-11-09. The
-active completion program is in [completion-plan.md](completion-plan.md); the
-constraint audit is in [compliance-audit.md](compliance-audit.md).
+Status: v0.8, data interchange, home tracking and privacy. Last updated
+2026-11-09. The active completion program is in
+[completion-plan.md](completion-plan.md); the constraint audit is in
+[compliance-audit.md](compliance-audit.md).
 
 This is the long version. The short version is in [overview.md](overview.md).
 The file-by-file map of the reference projects is in
@@ -791,6 +792,47 @@ events and update-on-reimport.
 - [ ] GymMane schedule import, automatic local backups and CSV.
 - [ ] Inventory adjustments, shopping grouping and a maintenance view.
 - [ ] Optional local PIN app lock.
+
+### v0.8 Data interchange, home tracking and privacy (done)
+
+- [x] GymMane schedule import, automatic local backups and CSV.
+- [x] Inventory adjustments, shopping grouping and a maintenance view.
+- [x] Optional local PIN app lock.
+
+**Shipped in v0.8:** schema v7 adds manual shopping order
+(`shopping_item_records.position`) and a lightweight `home_purchase_records`
+table, with a real v6-row migration. `features/import/gymmane_import.dart` reads
+GymMane's `weeklyPlan` / `routines` / `trainAt`, writes read-only weekly blocks
+to Personal, deduplicates by routine and weekday, and falls back to all-day
+blocks when GymMane has no time. `features/backup/auto_backup_service.dart`
+writes one JSON copy per day into the app support folder, rotates to the
+configured count and leaves manual export as the canonical path. Backup import
+now upgrades schemas 3 through 7 by treating missing lists and fields as empty
+defaults; schema 1–2 are rejected. App-lock secrets are device-local and never
+exported. `features/export/csv_interchange.dart` exports and imports entries,
+shopping and inventory with quoting, dedupe and explicit reports. Shopping is
+grouped by the linked item's category/location with clear-bought and manual
+reorder; inventory has ±1 adjustment, the existing low-stock card and a
+purchase-history sheet; maintenance has a due/upcoming page with one-tap
+completion. `features/app_lock` adapts Streak's PIN pad to the Mane kit and
+reuses the PBKDF2 PIN primitive, with a 30-second resume grace and a 30-second
+lockout after five misses.
+
+**Limitations:** GymMane import accepts the JSON payload (`gymmane.json`) rather
+than reading the backup zip directly, ignores GymMane's `planMoves` per-date
+overrides, and uses a one-hour block because GymMane stores no duration.
+Automatic backups run on app start/resume, so a device that never leaves a
+foreground session may wait; manual export still exists. A forgotten app-lock
+PIN has no recovery code: clearing app data is the only reset, and the lock is
+therefore opt-in. CSV import deduplicates by title/date/start for entries and
+by name for shopping/inventory; it does not merge changed rows.
+
+**Deviation from the references:** Streak's lock includes biometrics and a
+recovery code; Mane ships only the local PIN, because the planner must stay
+account-free and portable. GymMane has no import consumer for another app's
+weekly plan, so the read-only adapter is planner-specific. The backup rotation
+follows GymMane's `auto_backup.dart`, but writes a plain JSON document because
+Mane's backup is already canonical and readable.
 
 ### v0.9 MCP, LAN sync and notification reliability
 

@@ -6,8 +6,10 @@ import 'package:drift/native.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/home_item.dart';
+import '../models/home_purchase.dart';
 import '../models/local_identity.dart';
 import '../models/paired_device.dart';
 import '../models/reminder.dart';
@@ -110,9 +112,27 @@ class ShoppingItemRecords extends Table {
   BoolColumn get checked => boolean().withDefault(const Constant(false))();
   TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get homeItemId => text().nullable().references(HomeItemRecords, #id)();
+
+  /// Manual order inside the list. Lower values come first.
+  IntColumn get position => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Stock that entered the household inventory, from a shopping line or a
+/// manual quantity adjustment. Kept deliberately small.
+@DataClassName('HomePurchaseRow')
+class HomePurchaseRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get homeItemId => text().references(HomeItemRecords, #id)();
+  TextColumn get shoppingItemId => text().nullable().references(ShoppingItemRecords, #id)();
+  RealColumn get quantity => real()();
+  TextColumn get note => text().withDefault(const Constant(''))();
+  DateTimeColumn get purchasedAt => dateTime()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -312,6 +332,7 @@ class SettingRecords extends Table {
     IdentityRecords,
     PairedDeviceRecords,
     SettingRecords,
+    HomePurchaseRecords,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -323,7 +344,7 @@ class AppDatabase extends _$AppDatabase {
   final String defaultTimeZone;
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -337,6 +358,7 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) await _migrateToV4(m);
       if (from < 5) await _migrateToV5(m);
       if (from < 6) await _migrateToV6(m);
+      if (from < 7) await _migrateToV7(m);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -601,6 +623,8 @@ class AppDatabase extends _$AppDatabase {
       final items = rows.map(_shoppingItemFromRow).toList()
         ..sort((a, b) {
           if (a.checked != b.checked) return a.checked ? 1 : -1;
+          final byPosition = a.position.compareTo(b.position);
+          if (byPosition != 0) return byPosition;
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
       return items;
@@ -612,6 +636,12 @@ class AppDatabase extends _$AppDatabase {
     final existing = await (select(
       shoppingItemRecords,
     )..where((row) => row.id.equals(item.id))).getSingleOrNull();
+    var position = item.position;
+    if (existing == null) {
+      final rows = await select(shoppingItemRecords).get();
+      final highest = rows.isEmpty ? -1 : rows.map((row) => row.position).reduce((a, b) => a > b ? a : b);
+      if (position <= 0) position = highest + 1;
+    }
     await into(shoppingItemRecords).insertOnConflictUpdate(
       ShoppingItemRecordsCompanion(
         id: Value(item.id),
@@ -621,10 +651,44 @@ class AppDatabase extends _$AppDatabase {
         checked: Value(item.checked),
         note: Value(item.note),
         homeItemId: Value(item.homeItemId),
+        position: Value(position),
         createdAt: Value(existing?.createdAt ?? now),
         updatedAt: Value(now),
       ),
     );
+  }
+
+  /// Moves a line one slot up or down inside the unchecked part of the list.
+  /// Positions are renumbered so repeated moves stay stable.
+  Future<void> moveShoppingItem(String id, int delta) async {
+    await transaction(() async {
+      final rows = await (select(shoppingItemRecords)..where((row) => row.deletedAt.isNull())).get();
+      final ordered = rows.toList()
+        ..sort((a, b) {
+          if (a.checked != b.checked) return a.checked ? 1 : -1;
+          final byPosition = a.position.compareTo(b.position);
+          if (byPosition != 0) return byPosition;
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+      final index = ordered.indexWhere((row) => row.id == id);
+      if (index < 0) return;
+      final target = index + delta;
+      if (target < 0 || target >= ordered.length) return;
+      final moved = ordered.removeAt(index);
+      ordered.insert(target, moved);
+      final now = DateTime.now();
+      for (var i = 0; i < ordered.length; i++) {
+        await (update(shoppingItemRecords)..where((row) => row.id.equals(ordered[i].id))).write(
+          ShoppingItemRecordsCompanion(position: Value(i), updatedAt: Value(now)),
+        );
+      }
+    });
+  }
+
+  Future<void> clearCheckedShopping() async {
+    final now = DateTime.now();
+    await (update(shoppingItemRecords)..where((row) => row.checked.equals(true) & row.deletedAt.isNull()))
+        .write(ShoppingItemRecordsCompanion(deletedAt: Value(now), updatedAt: Value(now)));
   }
 
   Future<void> deleteShoppingItem(String id) async {
@@ -634,8 +698,9 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Checking a linked shopping item updates the household quantity and the
-  /// last-purchased time. Unchecking reverses the quantity change.
+  /// Checking a linked shopping item updates the household quantity, the
+  /// last-purchased time and the lightweight purchase history. Unchecking
+  /// reverses the quantity change and removes that history row.
   Future<void> setShoppingChecked(String id, bool checked) {
     return transaction(() async {
       final now = DateTime.now();
@@ -657,6 +722,24 @@ class AppDatabase extends _$AppDatabase {
               updatedAt: Value(now),
             ),
           );
+          if (checked) {
+            await into(homePurchaseRecords).insert(
+              HomePurchaseRecordsCompanion.insert(
+                id: const Uuid().v4(),
+                homeItemId: homeId,
+                shoppingItemId: Value(id),
+                quantity: row.quantity,
+                purchasedAt: now,
+              ),
+            );
+          } else {
+            final matches = await (select(
+              homePurchaseRecords,
+            )..where((purchase) => purchase.shoppingItemId.equals(id))).get();
+            for (final purchase in matches) {
+              await (delete(homePurchaseRecords)..where((row) => row.id.equals(purchase.id))).go();
+            }
+          }
         }
       }
 
@@ -664,6 +747,41 @@ class AppDatabase extends _$AppDatabase {
         ShoppingItemRecordsCompanion(checked: Value(checked), updatedAt: Value(now)),
       );
     });
+  }
+
+  /// Applies a manual stock adjustment and keeps a purchase row for increases.
+  Future<void> adjustHomeQuantity(String id, double delta, {String note = ''}) {
+    return transaction(() async {
+      final now = DateTime.now();
+      final home = await (select(homeItemRecords)..where((item) => item.id.equals(id))).getSingleOrNull();
+      if (home == null) return;
+      final quantity = (home.quantity + delta).clamp(0.0, double.infinity).toDouble();
+      await (update(homeItemRecords)..where((item) => item.id.equals(id))).write(
+        HomeItemRecordsCompanion(
+          quantity: Value(quantity),
+          lastPurchasedAt: Value(delta > 0 ? now : home.lastPurchasedAt),
+          updatedAt: Value(now),
+        ),
+      );
+      if (delta > 0) {
+        await into(homePurchaseRecords).insert(
+          HomePurchaseRecordsCompanion.insert(
+            id: const Uuid().v4(),
+            homeItemId: id,
+            quantity: delta,
+            note: Value(note),
+            purchasedAt: now,
+          ),
+        );
+      }
+    });
+  }
+
+  Future<List<HomePurchase>> readPurchaseHistory(String homeItemId, {int limit = 30}) async {
+    final rows = await (select(homePurchaseRecords)..where((row) => row.homeItemId.equals(homeItemId))).get();
+    final purchases = rows.map(_homePurchaseFromRow).toList()
+      ..sort((a, b) => b.purchasedAt.compareTo(a.purchasedAt));
+    return purchases.take(limit).toList();
   }
 
   Future<List<ShiftChecklistItem>> readShiftChecklistItems(String patternId) async {
@@ -1321,6 +1439,21 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// v7 adds manual shopping order and the lightweight purchase history.
+  Future<void> _migrateToV7(Migrator m) async {
+    final shoppingColumns = await customSelect('PRAGMA table_info(shopping_item_records)').get();
+    final shoppingNames = shoppingColumns.map((row) => row.read<String>('name')).toSet();
+    if (!shoppingNames.contains('position')) {
+      await m.addColumn(shoppingItemRecords, shoppingItemRecords.position);
+    }
+
+    final tables = await customSelect('SELECT name FROM sqlite_master WHERE type = \'table\'').get();
+    final tableNames = tables.map((row) => row.read<String>('name')).toSet();
+    if (!tableNames.contains('home_purchase_records')) {
+      await m.createTable(homePurchaseRecords);
+    }
+  }
+
   Future<ShiftPattern?> _loadPattern(String id) async {
     final row = await (select(shiftPatternRecords)..where((table) => table.id.equals(id))).getSingleOrNull();
     if (row == null) return null;
@@ -1405,6 +1538,16 @@ ShoppingItem _shoppingItemFromRow(ShoppingItemRow row) => ShoppingItem(
   checked: row.checked,
   note: row.note,
   homeItemId: row.homeItemId,
+  position: row.position,
+);
+
+HomePurchase _homePurchaseFromRow(HomePurchaseRow row) => HomePurchase(
+  id: row.id,
+  homeItemId: row.homeItemId,
+  shoppingItemId: row.shoppingItemId,
+  quantity: row.quantity,
+  note: row.note,
+  purchasedAt: row.purchasedAt,
 );
 
 ShiftChecklistItem _checklistItemFromRow(ShiftChecklistItemRow row) =>

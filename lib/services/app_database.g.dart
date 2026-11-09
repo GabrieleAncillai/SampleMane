@@ -6320,6 +6320,18 @@ class $ShoppingItemRecordsTable extends ShoppingItemRecords
       'REFERENCES home_item_records (id)',
     ),
   );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -6362,6 +6374,7 @@ class $ShoppingItemRecordsTable extends ShoppingItemRecords
     checked,
     note,
     homeItemId,
+    position,
     createdAt,
     updatedAt,
     deletedAt,
@@ -6424,6 +6437,12 @@ class $ShoppingItemRecordsTable extends ShoppingItemRecords
         ),
       );
     }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -6483,6 +6502,10 @@ class $ShoppingItemRecordsTable extends ShoppingItemRecords
         DriftSqlType.string,
         data['${effectivePrefix}home_item_id'],
       ),
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -6512,6 +6535,9 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
   final bool checked;
   final String note;
   final String? homeItemId;
+
+  /// Manual order inside the list. Lower values come first.
+  final int position;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -6523,6 +6549,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
     required this.checked,
     required this.note,
     this.homeItemId,
+    required this.position,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -6539,6 +6566,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
     if (!nullToAbsent || homeItemId != null) {
       map['home_item_id'] = Variable<String>(homeItemId);
     }
+    map['position'] = Variable<int>(position);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -6558,6 +6586,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
       homeItemId: homeItemId == null && nullToAbsent
           ? const Value.absent()
           : Value(homeItemId),
+      position: Value(position),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -6579,6 +6608,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
       checked: serializer.fromJson<bool>(json['checked']),
       note: serializer.fromJson<String>(json['note']),
       homeItemId: serializer.fromJson<String?>(json['homeItemId']),
+      position: serializer.fromJson<int>(json['position']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -6595,6 +6625,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
       'checked': serializer.toJson<bool>(checked),
       'note': serializer.toJson<String>(note),
       'homeItemId': serializer.toJson<String?>(homeItemId),
+      'position': serializer.toJson<int>(position),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -6609,6 +6640,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
     bool? checked,
     String? note,
     Value<String?> homeItemId = const Value.absent(),
+    int? position,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -6620,6 +6652,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
     checked: checked ?? this.checked,
     note: note ?? this.note,
     homeItemId: homeItemId.present ? homeItemId.value : this.homeItemId,
+    position: position ?? this.position,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -6635,6 +6668,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
       homeItemId: data.homeItemId.present
           ? data.homeItemId.value
           : this.homeItemId,
+      position: data.position.present ? data.position.value : this.position,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -6651,6 +6685,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
           ..write('checked: $checked, ')
           ..write('note: $note, ')
           ..write('homeItemId: $homeItemId, ')
+          ..write('position: $position, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -6667,6 +6702,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
     checked,
     note,
     homeItemId,
+    position,
     createdAt,
     updatedAt,
     deletedAt,
@@ -6682,6 +6718,7 @@ class ShoppingItemRow extends DataClass implements Insertable<ShoppingItemRow> {
           other.checked == this.checked &&
           other.note == this.note &&
           other.homeItemId == this.homeItemId &&
+          other.position == this.position &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
@@ -6695,6 +6732,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
   final Value<bool> checked;
   final Value<String> note;
   final Value<String?> homeItemId;
+  final Value<int> position;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -6707,6 +6745,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
     this.checked = const Value.absent(),
     this.note = const Value.absent(),
     this.homeItemId = const Value.absent(),
+    this.position = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -6720,6 +6759,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
     this.checked = const Value.absent(),
     this.note = const Value.absent(),
     this.homeItemId = const Value.absent(),
+    this.position = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -6736,6 +6776,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
     Expression<bool>? checked,
     Expression<String>? note,
     Expression<String>? homeItemId,
+    Expression<int>? position,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -6749,6 +6790,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
       if (checked != null) 'checked': checked,
       if (note != null) 'note': note,
       if (homeItemId != null) 'home_item_id': homeItemId,
+      if (position != null) 'position': position,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -6764,6 +6806,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
     Value<bool>? checked,
     Value<String>? note,
     Value<String?>? homeItemId,
+    Value<int>? position,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -6777,6 +6820,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
       checked: checked ?? this.checked,
       note: note ?? this.note,
       homeItemId: homeItemId ?? this.homeItemId,
+      position: position ?? this.position,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -6808,6 +6852,9 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
     if (homeItemId.present) {
       map['home_item_id'] = Variable<String>(homeItemId.value);
     }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -6833,6 +6880,7 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
           ..write('checked: $checked, ')
           ..write('note: $note, ')
           ..write('homeItemId: $homeItemId, ')
+          ..write('position: $position, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -8322,6 +8370,436 @@ class SettingRecordsCompanion extends UpdateCompanion<SettingRow> {
   }
 }
 
+class $HomePurchaseRecordsTable extends HomePurchaseRecords
+    with TableInfo<$HomePurchaseRecordsTable, HomePurchaseRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HomePurchaseRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _homeItemIdMeta = const VerificationMeta(
+    'homeItemId',
+  );
+  @override
+  late final GeneratedColumn<String> homeItemId = GeneratedColumn<String>(
+    'home_item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES home_item_records (id)',
+    ),
+  );
+  static const VerificationMeta _shoppingItemIdMeta = const VerificationMeta(
+    'shoppingItemId',
+  );
+  @override
+  late final GeneratedColumn<String> shoppingItemId = GeneratedColumn<String>(
+    'shopping_item_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shopping_item_records (id)',
+    ),
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<double> quantity = GeneratedColumn<double>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _purchasedAtMeta = const VerificationMeta(
+    'purchasedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> purchasedAt = GeneratedColumn<DateTime>(
+    'purchased_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    homeItemId,
+    shoppingItemId,
+    quantity,
+    note,
+    purchasedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'home_purchase_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<HomePurchaseRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('home_item_id')) {
+      context.handle(
+        _homeItemIdMeta,
+        homeItemId.isAcceptableOrUnknown(
+          data['home_item_id']!,
+          _homeItemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_homeItemIdMeta);
+    }
+    if (data.containsKey('shopping_item_id')) {
+      context.handle(
+        _shoppingItemIdMeta,
+        shoppingItemId.isAcceptableOrUnknown(
+          data['shopping_item_id']!,
+          _shoppingItemIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('purchased_at')) {
+      context.handle(
+        _purchasedAtMeta,
+        purchasedAt.isAcceptableOrUnknown(
+          data['purchased_at']!,
+          _purchasedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_purchasedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  HomePurchaseRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HomePurchaseRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      homeItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}home_item_id'],
+      )!,
+      shoppingItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}shopping_item_id'],
+      ),
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}quantity'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      purchasedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}purchased_at'],
+      )!,
+    );
+  }
+
+  @override
+  $HomePurchaseRecordsTable createAlias(String alias) {
+    return $HomePurchaseRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class HomePurchaseRow extends DataClass implements Insertable<HomePurchaseRow> {
+  final String id;
+  final String homeItemId;
+  final String? shoppingItemId;
+  final double quantity;
+  final String note;
+  final DateTime purchasedAt;
+  const HomePurchaseRow({
+    required this.id,
+    required this.homeItemId,
+    this.shoppingItemId,
+    required this.quantity,
+    required this.note,
+    required this.purchasedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['home_item_id'] = Variable<String>(homeItemId);
+    if (!nullToAbsent || shoppingItemId != null) {
+      map['shopping_item_id'] = Variable<String>(shoppingItemId);
+    }
+    map['quantity'] = Variable<double>(quantity);
+    map['note'] = Variable<String>(note);
+    map['purchased_at'] = Variable<DateTime>(purchasedAt);
+    return map;
+  }
+
+  HomePurchaseRecordsCompanion toCompanion(bool nullToAbsent) {
+    return HomePurchaseRecordsCompanion(
+      id: Value(id),
+      homeItemId: Value(homeItemId),
+      shoppingItemId: shoppingItemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shoppingItemId),
+      quantity: Value(quantity),
+      note: Value(note),
+      purchasedAt: Value(purchasedAt),
+    );
+  }
+
+  factory HomePurchaseRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HomePurchaseRow(
+      id: serializer.fromJson<String>(json['id']),
+      homeItemId: serializer.fromJson<String>(json['homeItemId']),
+      shoppingItemId: serializer.fromJson<String?>(json['shoppingItemId']),
+      quantity: serializer.fromJson<double>(json['quantity']),
+      note: serializer.fromJson<String>(json['note']),
+      purchasedAt: serializer.fromJson<DateTime>(json['purchasedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'homeItemId': serializer.toJson<String>(homeItemId),
+      'shoppingItemId': serializer.toJson<String?>(shoppingItemId),
+      'quantity': serializer.toJson<double>(quantity),
+      'note': serializer.toJson<String>(note),
+      'purchasedAt': serializer.toJson<DateTime>(purchasedAt),
+    };
+  }
+
+  HomePurchaseRow copyWith({
+    String? id,
+    String? homeItemId,
+    Value<String?> shoppingItemId = const Value.absent(),
+    double? quantity,
+    String? note,
+    DateTime? purchasedAt,
+  }) => HomePurchaseRow(
+    id: id ?? this.id,
+    homeItemId: homeItemId ?? this.homeItemId,
+    shoppingItemId: shoppingItemId.present
+        ? shoppingItemId.value
+        : this.shoppingItemId,
+    quantity: quantity ?? this.quantity,
+    note: note ?? this.note,
+    purchasedAt: purchasedAt ?? this.purchasedAt,
+  );
+  HomePurchaseRow copyWithCompanion(HomePurchaseRecordsCompanion data) {
+    return HomePurchaseRow(
+      id: data.id.present ? data.id.value : this.id,
+      homeItemId: data.homeItemId.present
+          ? data.homeItemId.value
+          : this.homeItemId,
+      shoppingItemId: data.shoppingItemId.present
+          ? data.shoppingItemId.value
+          : this.shoppingItemId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      note: data.note.present ? data.note.value : this.note,
+      purchasedAt: data.purchasedAt.present
+          ? data.purchasedAt.value
+          : this.purchasedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HomePurchaseRow(')
+          ..write('id: $id, ')
+          ..write('homeItemId: $homeItemId, ')
+          ..write('shoppingItemId: $shoppingItemId, ')
+          ..write('quantity: $quantity, ')
+          ..write('note: $note, ')
+          ..write('purchasedAt: $purchasedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, homeItemId, shoppingItemId, quantity, note, purchasedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HomePurchaseRow &&
+          other.id == this.id &&
+          other.homeItemId == this.homeItemId &&
+          other.shoppingItemId == this.shoppingItemId &&
+          other.quantity == this.quantity &&
+          other.note == this.note &&
+          other.purchasedAt == this.purchasedAt);
+}
+
+class HomePurchaseRecordsCompanion extends UpdateCompanion<HomePurchaseRow> {
+  final Value<String> id;
+  final Value<String> homeItemId;
+  final Value<String?> shoppingItemId;
+  final Value<double> quantity;
+  final Value<String> note;
+  final Value<DateTime> purchasedAt;
+  final Value<int> rowid;
+  const HomePurchaseRecordsCompanion({
+    this.id = const Value.absent(),
+    this.homeItemId = const Value.absent(),
+    this.shoppingItemId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.note = const Value.absent(),
+    this.purchasedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  HomePurchaseRecordsCompanion.insert({
+    required String id,
+    required String homeItemId,
+    this.shoppingItemId = const Value.absent(),
+    required double quantity,
+    this.note = const Value.absent(),
+    required DateTime purchasedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       homeItemId = Value(homeItemId),
+       quantity = Value(quantity),
+       purchasedAt = Value(purchasedAt);
+  static Insertable<HomePurchaseRow> custom({
+    Expression<String>? id,
+    Expression<String>? homeItemId,
+    Expression<String>? shoppingItemId,
+    Expression<double>? quantity,
+    Expression<String>? note,
+    Expression<DateTime>? purchasedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (homeItemId != null) 'home_item_id': homeItemId,
+      if (shoppingItemId != null) 'shopping_item_id': shoppingItemId,
+      if (quantity != null) 'quantity': quantity,
+      if (note != null) 'note': note,
+      if (purchasedAt != null) 'purchased_at': purchasedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  HomePurchaseRecordsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? homeItemId,
+    Value<String?>? shoppingItemId,
+    Value<double>? quantity,
+    Value<String>? note,
+    Value<DateTime>? purchasedAt,
+    Value<int>? rowid,
+  }) {
+    return HomePurchaseRecordsCompanion(
+      id: id ?? this.id,
+      homeItemId: homeItemId ?? this.homeItemId,
+      shoppingItemId: shoppingItemId ?? this.shoppingItemId,
+      quantity: quantity ?? this.quantity,
+      note: note ?? this.note,
+      purchasedAt: purchasedAt ?? this.purchasedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (homeItemId.present) {
+      map['home_item_id'] = Variable<String>(homeItemId.value);
+    }
+    if (shoppingItemId.present) {
+      map['shopping_item_id'] = Variable<String>(shoppingItemId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<double>(quantity.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (purchasedAt.present) {
+      map['purchased_at'] = Variable<DateTime>(purchasedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HomePurchaseRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('homeItemId: $homeItemId, ')
+          ..write('shoppingItemId: $shoppingItemId, ')
+          ..write('quantity: $quantity, ')
+          ..write('note: $note, ')
+          ..write('purchasedAt: $purchasedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8360,6 +8838,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PairedDeviceRecordsTable pairedDeviceRecords =
       $PairedDeviceRecordsTable(this);
   late final $SettingRecordsTable settingRecords = $SettingRecordsTable(this);
+  late final $HomePurchaseRecordsTable homePurchaseRecords =
+      $HomePurchaseRecordsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8382,6 +8862,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     identityRecords,
     pairedDeviceRecords,
     settingRecords,
+    homePurchaseRecords,
   ];
 }
 
@@ -14325,6 +14806,30 @@ final class $$HomeItemRecordsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$HomePurchaseRecordsTable, List<HomePurchaseRow>>
+  _homePurchaseRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.homePurchaseRecords,
+        aliasName: $_aliasNameGenerator(
+          db.homeItemRecords.id,
+          db.homePurchaseRecords.homeItemId,
+        ),
+      );
+
+  $$HomePurchaseRecordsTableProcessedTableManager get homePurchaseRecordsRefs {
+    final manager = $$HomePurchaseRecordsTableTableManager(
+      $_db,
+      $_db.homePurchaseRecords,
+    ).filter((f) => f.homeItemId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _homePurchaseRecordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$HomeItemRecordsTableFilterComposer
@@ -14412,6 +14917,31 @@ class $$HomeItemRecordsTableFilterComposer
           }) => $$ShoppingItemRecordsTableFilterComposer(
             $db: $db,
             $table: $db.shoppingItemRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> homePurchaseRecordsRefs(
+    Expression<bool> Function($$HomePurchaseRecordsTableFilterComposer f) f,
+  ) {
+    final $$HomePurchaseRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.homePurchaseRecords,
+      getReferencedColumn: (t) => t.homeItemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HomePurchaseRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.homePurchaseRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -14566,6 +15096,32 @@ class $$HomeItemRecordsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> homePurchaseRecordsRefs<T extends Object>(
+    Expression<T> Function($$HomePurchaseRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$HomePurchaseRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.homePurchaseRecords,
+          getReferencedColumn: (t) => t.homeItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$HomePurchaseRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.homePurchaseRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$HomeItemRecordsTableTableManager
@@ -14581,7 +15137,10 @@ class $$HomeItemRecordsTableTableManager
           $$HomeItemRecordsTableUpdateCompanionBuilder,
           (HomeItemRow, $$HomeItemRecordsTableReferences),
           HomeItemRow,
-          PrefetchHooks Function({bool shoppingItemRecordsRefs})
+          PrefetchHooks Function({
+            bool shoppingItemRecordsRefs,
+            bool homePurchaseRecordsRefs,
+          })
         > {
   $$HomeItemRecordsTableTableManager(
     _$AppDatabase db,
@@ -14664,38 +15223,66 @@ class $$HomeItemRecordsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({shoppingItemRecordsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (shoppingItemRecordsRefs) db.shoppingItemRecords,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (shoppingItemRecordsRefs)
-                    await $_getPrefetchedData<
-                      HomeItemRow,
-                      $HomeItemRecordsTable,
-                      ShoppingItemRow
-                    >(
-                      currentTable: table,
-                      referencedTable: $$HomeItemRecordsTableReferences
-                          ._shoppingItemRecordsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$HomeItemRecordsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).shoppingItemRecordsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.homeItemId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({
+                shoppingItemRecordsRefs = false,
+                homePurchaseRecordsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (shoppingItemRecordsRefs) db.shoppingItemRecords,
+                    if (homePurchaseRecordsRefs) db.homePurchaseRecords,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (shoppingItemRecordsRefs)
+                        await $_getPrefetchedData<
+                          HomeItemRow,
+                          $HomeItemRecordsTable,
+                          ShoppingItemRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$HomeItemRecordsTableReferences
+                              ._shoppingItemRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$HomeItemRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).shoppingItemRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.homeItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (homePurchaseRecordsRefs)
+                        await $_getPrefetchedData<
+                          HomeItemRow,
+                          $HomeItemRecordsTable,
+                          HomePurchaseRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$HomeItemRecordsTableReferences
+                              ._homePurchaseRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$HomeItemRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).homePurchaseRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.homeItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -14712,7 +15299,10 @@ typedef $$HomeItemRecordsTableProcessedTableManager =
       $$HomeItemRecordsTableUpdateCompanionBuilder,
       (HomeItemRow, $$HomeItemRecordsTableReferences),
       HomeItemRow,
-      PrefetchHooks Function({bool shoppingItemRecordsRefs})
+      PrefetchHooks Function({
+        bool shoppingItemRecordsRefs,
+        bool homePurchaseRecordsRefs,
+      })
     >;
 typedef $$ShoppingItemRecordsTableCreateCompanionBuilder =
     ShoppingItemRecordsCompanion Function({
@@ -14723,6 +15313,7 @@ typedef $$ShoppingItemRecordsTableCreateCompanionBuilder =
       Value<bool> checked,
       Value<String> note,
       Value<String?> homeItemId,
+      Value<int> position,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<DateTime?> deletedAt,
@@ -14737,6 +15328,7 @@ typedef $$ShoppingItemRecordsTableUpdateCompanionBuilder =
       Value<bool> checked,
       Value<String> note,
       Value<String?> homeItemId,
+      Value<int> position,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -14775,6 +15367,30 @@ final class $$ShoppingItemRecordsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$HomePurchaseRecordsTable, List<HomePurchaseRow>>
+  _homePurchaseRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.homePurchaseRecords,
+        aliasName: $_aliasNameGenerator(
+          db.shoppingItemRecords.id,
+          db.homePurchaseRecords.shoppingItemId,
+        ),
+      );
+
+  $$HomePurchaseRecordsTableProcessedTableManager get homePurchaseRecordsRefs {
+    final manager = $$HomePurchaseRecordsTableTableManager(
+      $_db,
+      $_db.homePurchaseRecords,
+    ).filter((f) => f.shoppingItemId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _homePurchaseRecordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -14818,6 +15434,11 @@ class $$ShoppingItemRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -14854,6 +15475,31 @@ class $$ShoppingItemRecordsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> homePurchaseRecordsRefs(
+    Expression<bool> Function($$HomePurchaseRecordsTableFilterComposer f) f,
+  ) {
+    final $$HomePurchaseRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.homePurchaseRecords,
+      getReferencedColumn: (t) => t.shoppingItemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HomePurchaseRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.homePurchaseRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -14893,6 +15539,11 @@ class $$ShoppingItemRecordsTableOrderingComposer
 
   ColumnOrderings<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14962,6 +15613,9 @@ class $$ShoppingItemRecordsTableAnnotationComposer
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
 
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -14993,6 +15647,32 @@ class $$ShoppingItemRecordsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> homePurchaseRecordsRefs<T extends Object>(
+    Expression<T> Function($$HomePurchaseRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$HomePurchaseRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.homePurchaseRecords,
+          getReferencedColumn: (t) => t.shoppingItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$HomePurchaseRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.homePurchaseRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ShoppingItemRecordsTableTableManager
@@ -15008,7 +15688,10 @@ class $$ShoppingItemRecordsTableTableManager
           $$ShoppingItemRecordsTableUpdateCompanionBuilder,
           (ShoppingItemRow, $$ShoppingItemRecordsTableReferences),
           ShoppingItemRow,
-          PrefetchHooks Function({bool homeItemId})
+          PrefetchHooks Function({
+            bool homeItemId,
+            bool homePurchaseRecordsRefs,
+          })
         > {
   $$ShoppingItemRecordsTableTableManager(
     _$AppDatabase db,
@@ -15038,6 +15721,7 @@ class $$ShoppingItemRecordsTableTableManager
                 Value<bool> checked = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String?> homeItemId = const Value.absent(),
+                Value<int> position = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -15050,6 +15734,7 @@ class $$ShoppingItemRecordsTableTableManager
                 checked: checked,
                 note: note,
                 homeItemId: homeItemId,
+                position: position,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -15064,6 +15749,7 @@ class $$ShoppingItemRecordsTableTableManager
                 Value<bool> checked = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String?> homeItemId = const Value.absent(),
+                Value<int> position = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -15076,6 +15762,7 @@ class $$ShoppingItemRecordsTableTableManager
                 checked: checked,
                 note: note,
                 homeItemId: homeItemId,
+                position: position,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -15089,49 +15776,74 @@ class $$ShoppingItemRecordsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({homeItemId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (homeItemId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.homeItemId,
-                                referencedTable:
-                                    $$ShoppingItemRecordsTableReferences
-                                        ._homeItemIdTable(db),
-                                referencedColumn:
-                                    $$ShoppingItemRecordsTableReferences
-                                        ._homeItemIdTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({homeItemId = false, homePurchaseRecordsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (homePurchaseRecordsRefs) db.homePurchaseRecords,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (homeItemId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.homeItemId,
+                                    referencedTable:
+                                        $$ShoppingItemRecordsTableReferences
+                                            ._homeItemIdTable(db),
+                                    referencedColumn:
+                                        $$ShoppingItemRecordsTableReferences
+                                            ._homeItemIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (homePurchaseRecordsRefs)
+                        await $_getPrefetchedData<
+                          ShoppingItemRow,
+                          $ShoppingItemRecordsTable,
+                          HomePurchaseRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShoppingItemRecordsTableReferences
+                              ._homePurchaseRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShoppingItemRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).homePurchaseRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shoppingItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -15148,7 +15860,7 @@ typedef $$ShoppingItemRecordsTableProcessedTableManager =
       $$ShoppingItemRecordsTableUpdateCompanionBuilder,
       (ShoppingItemRow, $$ShoppingItemRecordsTableReferences),
       ShoppingItemRow,
-      PrefetchHooks Function({bool homeItemId})
+      PrefetchHooks Function({bool homeItemId, bool homePurchaseRecordsRefs})
     >;
 typedef $$IdentityRecordsTableCreateCompanionBuilder =
     IdentityRecordsCompanion Function({
@@ -15923,6 +16635,464 @@ typedef $$SettingRecordsTableProcessedTableManager =
       SettingRow,
       PrefetchHooks Function()
     >;
+typedef $$HomePurchaseRecordsTableCreateCompanionBuilder =
+    HomePurchaseRecordsCompanion Function({
+      required String id,
+      required String homeItemId,
+      Value<String?> shoppingItemId,
+      required double quantity,
+      Value<String> note,
+      required DateTime purchasedAt,
+      Value<int> rowid,
+    });
+typedef $$HomePurchaseRecordsTableUpdateCompanionBuilder =
+    HomePurchaseRecordsCompanion Function({
+      Value<String> id,
+      Value<String> homeItemId,
+      Value<String?> shoppingItemId,
+      Value<double> quantity,
+      Value<String> note,
+      Value<DateTime> purchasedAt,
+      Value<int> rowid,
+    });
+
+final class $$HomePurchaseRecordsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $HomePurchaseRecordsTable,
+          HomePurchaseRow
+        > {
+  $$HomePurchaseRecordsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $HomeItemRecordsTable _homeItemIdTable(_$AppDatabase db) =>
+      db.homeItemRecords.createAlias(
+        $_aliasNameGenerator(
+          db.homePurchaseRecords.homeItemId,
+          db.homeItemRecords.id,
+        ),
+      );
+
+  $$HomeItemRecordsTableProcessedTableManager get homeItemId {
+    final $_column = $_itemColumn<String>('home_item_id')!;
+
+    final manager = $$HomeItemRecordsTableTableManager(
+      $_db,
+      $_db.homeItemRecords,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_homeItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ShoppingItemRecordsTable _shoppingItemIdTable(_$AppDatabase db) =>
+      db.shoppingItemRecords.createAlias(
+        $_aliasNameGenerator(
+          db.homePurchaseRecords.shoppingItemId,
+          db.shoppingItemRecords.id,
+        ),
+      );
+
+  $$ShoppingItemRecordsTableProcessedTableManager? get shoppingItemId {
+    final $_column = $_itemColumn<String>('shopping_item_id');
+    if ($_column == null) return null;
+    final manager = $$ShoppingItemRecordsTableTableManager(
+      $_db,
+      $_db.shoppingItemRecords,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shoppingItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$HomePurchaseRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $HomePurchaseRecordsTable> {
+  $$HomePurchaseRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get purchasedAt => $composableBuilder(
+    column: $table.purchasedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$HomeItemRecordsTableFilterComposer get homeItemId {
+    final $$HomeItemRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.homeItemId,
+      referencedTable: $db.homeItemRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HomeItemRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.homeItemRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShoppingItemRecordsTableFilterComposer get shoppingItemId {
+    final $$ShoppingItemRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shoppingItemId,
+      referencedTable: $db.shoppingItemRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShoppingItemRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.shoppingItemRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$HomePurchaseRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $HomePurchaseRecordsTable> {
+  $$HomePurchaseRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get purchasedAt => $composableBuilder(
+    column: $table.purchasedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$HomeItemRecordsTableOrderingComposer get homeItemId {
+    final $$HomeItemRecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.homeItemId,
+      referencedTable: $db.homeItemRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HomeItemRecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.homeItemRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShoppingItemRecordsTableOrderingComposer get shoppingItemId {
+    final $$ShoppingItemRecordsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shoppingItemId,
+          referencedTable: $db.shoppingItemRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShoppingItemRecordsTableOrderingComposer(
+                $db: $db,
+                $table: $db.shoppingItemRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$HomePurchaseRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $HomePurchaseRecordsTable> {
+  $$HomePurchaseRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get purchasedAt => $composableBuilder(
+    column: $table.purchasedAt,
+    builder: (column) => column,
+  );
+
+  $$HomeItemRecordsTableAnnotationComposer get homeItemId {
+    final $$HomeItemRecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.homeItemId,
+      referencedTable: $db.homeItemRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HomeItemRecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.homeItemRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShoppingItemRecordsTableAnnotationComposer get shoppingItemId {
+    final $$ShoppingItemRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shoppingItemId,
+          referencedTable: $db.shoppingItemRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShoppingItemRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.shoppingItemRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$HomePurchaseRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $HomePurchaseRecordsTable,
+          HomePurchaseRow,
+          $$HomePurchaseRecordsTableFilterComposer,
+          $$HomePurchaseRecordsTableOrderingComposer,
+          $$HomePurchaseRecordsTableAnnotationComposer,
+          $$HomePurchaseRecordsTableCreateCompanionBuilder,
+          $$HomePurchaseRecordsTableUpdateCompanionBuilder,
+          (HomePurchaseRow, $$HomePurchaseRecordsTableReferences),
+          HomePurchaseRow,
+          PrefetchHooks Function({bool homeItemId, bool shoppingItemId})
+        > {
+  $$HomePurchaseRecordsTableTableManager(
+    _$AppDatabase db,
+    $HomePurchaseRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$HomePurchaseRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$HomePurchaseRecordsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$HomePurchaseRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> homeItemId = const Value.absent(),
+                Value<String?> shoppingItemId = const Value.absent(),
+                Value<double> quantity = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<DateTime> purchasedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => HomePurchaseRecordsCompanion(
+                id: id,
+                homeItemId: homeItemId,
+                shoppingItemId: shoppingItemId,
+                quantity: quantity,
+                note: note,
+                purchasedAt: purchasedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String homeItemId,
+                Value<String?> shoppingItemId = const Value.absent(),
+                required double quantity,
+                Value<String> note = const Value.absent(),
+                required DateTime purchasedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => HomePurchaseRecordsCompanion.insert(
+                id: id,
+                homeItemId: homeItemId,
+                shoppingItemId: shoppingItemId,
+                quantity: quantity,
+                note: note,
+                purchasedAt: purchasedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$HomePurchaseRecordsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({homeItemId = false, shoppingItemId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (homeItemId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.homeItemId,
+                                    referencedTable:
+                                        $$HomePurchaseRecordsTableReferences
+                                            ._homeItemIdTable(db),
+                                    referencedColumn:
+                                        $$HomePurchaseRecordsTableReferences
+                                            ._homeItemIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (shoppingItemId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shoppingItemId,
+                                    referencedTable:
+                                        $$HomePurchaseRecordsTableReferences
+                                            ._shoppingItemIdTable(db),
+                                    referencedColumn:
+                                        $$HomePurchaseRecordsTableReferences
+                                            ._shoppingItemIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$HomePurchaseRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $HomePurchaseRecordsTable,
+      HomePurchaseRow,
+      $$HomePurchaseRecordsTableFilterComposer,
+      $$HomePurchaseRecordsTableOrderingComposer,
+      $$HomePurchaseRecordsTableAnnotationComposer,
+      $$HomePurchaseRecordsTableCreateCompanionBuilder,
+      $$HomePurchaseRecordsTableUpdateCompanionBuilder,
+      (HomePurchaseRow, $$HomePurchaseRecordsTableReferences),
+      HomePurchaseRow,
+      PrefetchHooks Function({bool homeItemId, bool shoppingItemId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15971,4 +17141,6 @@ class $AppDatabaseManager {
       $$PairedDeviceRecordsTableTableManager(_db, _db.pairedDeviceRecords);
   $$SettingRecordsTableTableManager get settingRecords =>
       $$SettingRecordsTableTableManager(_db, _db.settingRecords);
+  $$HomePurchaseRecordsTableTableManager get homePurchaseRecords =>
+      $$HomePurchaseRecordsTableTableManager(_db, _db.homePurchaseRecords);
 }

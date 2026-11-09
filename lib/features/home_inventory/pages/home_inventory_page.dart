@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/l10n.dart';
 import '../../../core/widgets/ui_kit.dart';
 import '../../../models/home_item.dart';
+import '../../../models/home_purchase.dart';
 import '../../../state/providers.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_typography.dart';
@@ -98,6 +99,8 @@ class _LowStockCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 5),
+          Text(l10n.lowStockCount(items.length), style: ManeType.body(11.5, color: c.textSecondary)),
+          const SizedBox(height: 2),
           Text(items.map((item) => item.name).join(', '), style: ManeType.body(11.5, color: c.textSecondary)),
           Align(
             alignment: Alignment.centerRight,
@@ -179,6 +182,16 @@ class _HomeItemTile extends ConsumerWidget {
               ),
             ),
           ),
+          _QtyButton(
+            icon: Icons.remove,
+            tooltip: l10n.decreaseQuantity,
+            onTap: () => ref.read(repositoryProvider).adjustHomeQuantity(item.id, -1),
+          ),
+          _QtyButton(
+            icon: Icons.add,
+            tooltip: l10n.increaseQuantity,
+            onTap: () => ref.read(repositoryProvider).adjustHomeQuantity(item.id, 1),
+          ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz, color: c.textTertiary),
             onSelected: (value) async {
@@ -186,10 +199,18 @@ class _HomeItemTile extends ConsumerWidget {
                 await showHomeItemSheet(context, item: item);
                 return;
               }
+              if (value == 'history') {
+                await showAppSheet<void>(
+                  context: context,
+                  builder: (_) => _PurchaseHistorySheet(item: item),
+                );
+                return;
+              }
               await _archive(context, ref);
             },
             itemBuilder: (context) => [
               PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
+              PopupMenuItem(value: 'history', child: Text(l10n.purchaseHistory)),
               PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
             ],
           ),
@@ -214,6 +235,99 @@ class _HomeItemTile extends ConsumerWidget {
     if (confirmed == true) {
       await ref.read(repositoryProvider).archiveHomeItem(item.id);
     }
+  }
+
+  static String _number(double value) =>
+      value == value.roundToDouble() ? value.toInt().toString() : value.toString();
+}
+
+class _QtyButton extends StatelessWidget {
+  const _QtyButton({required this.icon, required this.tooltip, required this.onTap});
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.mc;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: SizedBox(width: 32, height: 36, child: Icon(icon, size: 18, color: c.textSecondary)),
+      ),
+    );
+  }
+}
+
+class _PurchaseHistorySheet extends ConsumerWidget {
+  const _PurchaseHistorySheet({required this.item});
+
+  final HomeItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final c = context.mc;
+    return AppSheet(
+      title: l10n.purchaseHistory,
+      subtitle: item.name,
+      children: [
+        FutureBuilder<List<HomePurchase>>(
+          future: ref.read(repositoryProvider).readPurchaseHistory(item.id),
+          builder: (context, snapshot) {
+            final purchases = snapshot.data ?? const <HomePurchase>[];
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (purchases.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(l10n.purchaseHistoryEmpty, style: ManeType.body(13, color: c.textSecondary)),
+              );
+            }
+            return Column(
+              children: [
+                for (var index = 0; index < purchases.length; index++) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    child: Row(
+                      children: [
+                        Icon(Icons.shopping_bag_outlined, size: 18, color: c.home),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '${_number(purchases[index].quantity)}${item.unit.isEmpty ? '' : ' ${item.unit}'}',
+                            style: ManeType.body(13, weight: FontWeight.w700, color: c.text),
+                          ),
+                        ),
+                        Text(
+                          _dateLabel(purchases[index].purchasedAt),
+                          style: ManeType.body(11.5, color: c.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (index < purchases.length - 1) const Divider(height: 1, indent: 28),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  static String _dateLabel(DateTime value) {
+    final local = value.toLocal();
+    return '${local.year.toString().padLeft(4, '0')}-'
+        '${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}';
   }
 
   static String _number(double value) =>

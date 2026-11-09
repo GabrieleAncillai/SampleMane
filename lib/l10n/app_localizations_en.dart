@@ -1107,4 +1107,170 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get singleDay => 'Single day';
+
+  @override
+  String get automaticBackups => 'Automatic local backups';
+
+  @override
+  String get automaticBackupsSubtitle => 'A daily JSON copy in the app folder. Older copies rotate out.';
+
+  @override
+  String get keepBackups => 'Copies to keep';
+
+  @override
+  String get exportCsv => 'Export CSV';
+
+  @override
+  String get exportCsvSubtitle => 'Entries, shopping or inventory.';
+
+  @override
+  String get importCsv => 'Import CSV';
+
+  @override
+  String get importCsvSubtitle => 'Entries, shopping or inventory.';
+
+  @override
+  String get csvEntries => 'Entries';
+
+  @override
+  String get csvShopping => 'Shopping';
+
+  @override
+  String get csvInventory => 'Inventory';
+
+  @override
+  String csvExported(String path) {
+    return 'CSV exported to $path';
+  }
+
+  @override
+  String csvExportFailed(String error) {
+    return 'Could not export the CSV: $error';
+  }
+
+  @override
+  String csvImportDone(int imported, int duplicates, int skipped) {
+    return '$imported imported, $duplicates duplicates, $skipped skipped';
+  }
+
+  @override
+  String get csvImportEmpty => 'No rows to import.';
+
+  @override
+  String get gymmaneImport => 'GymMane schedule';
+
+  @override
+  String get gymmaneImportSubtitle => 'Read-only weekly gym blocks from a GymMane JSON backup.';
+
+  @override
+  String gymmaneImportDone(int imported, int timed, int allDay, int skipped) {
+    return '$imported blocks imported ($timed timed, $allDay all-day), $skipped skipped.';
+  }
+
+  @override
+  String gymmaneImportFailed(String error) {
+    return 'Could not import GymMane: $error';
+  }
+
+  @override
+  String get gymmaneImportEmpty => 'The backup has no weekly plan.';
+
+  @override
+  String get appLock => 'App lock';
+
+  @override
+  String get appLockSubtitle => 'Ask for a PIN when the app opens.';
+
+  @override
+  String get appLockPinTitle => 'Choose a PIN';
+
+  @override
+  String get appLockPinRepeat => 'Repeat the PIN';
+
+  @override
+  String get appLockPinMismatch => 'The PINs do not match.';
+
+  @override
+  String get appLockUnlockTitle => 'Enter your PIN';
+
+  @override
+  String get appLockUnlockSubtitle => 'Unlock Mane';
+
+  @override
+  String get appLockWrong => 'Wrong PIN. Try again.';
+
+  @override
+  String appLockLockedOut(int seconds) {
+    return 'Too many attempts. Wait ${seconds}s.';
+  }
+
+  @override
+  String get appLockEnabled => 'App lock is on.';
+
+  @override
+  String get appLockDisabled => 'App lock is off.';
+
+  @override
+  String get appLockPinLength => 'Use four to eight digits.';
+
+  @override
+  String get purchaseHistory => 'Purchase history';
+
+  @override
+  String get purchaseHistoryEmpty => 'No purchases recorded yet.';
+
+  @override
+  String get increaseQuantity => 'Increase quantity';
+
+  @override
+  String get decreaseQuantity => 'Decrease quantity';
+
+  @override
+  String lowStockCount(int count) {
+    return '$count items below their reorder level';
+  }
+
+  @override
+  String get maintenance => 'Maintenance';
+
+  @override
+  String get maintenanceSubtitle => 'Tasks due after their last service.';
+
+  @override
+  String get maintenanceDue => 'Due now';
+
+  @override
+  String get maintenanceUpcoming => 'Upcoming';
+
+  @override
+  String get maintenanceNone => 'No maintenance tasks yet.';
+
+  @override
+  String maintenanceDone(String date) {
+    return 'Done. Next due $date.';
+  }
+
+  @override
+  String get clearChecked => 'Clear bought';
+
+  @override
+  String get clearCheckedBody => 'Remove every bought line? This cannot be undone.';
+
+  @override
+  String get shoppingToBuy => 'To buy';
+
+  @override
+  String get shoppingBought => 'Bought';
+
+  @override
+  String get shoppingOther => 'Other';
+
+  @override
+  String get moveUp => 'Move up';
+
+  @override
+  String get moveDown => 'Move down';
+
+  @override
+  String get complete => 'Complete';
 }

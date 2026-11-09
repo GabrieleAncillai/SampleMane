@@ -68,6 +68,7 @@ class _AppShellState extends ConsumerState<AppShell>
     await ref.read(reminderCoordinatorProvider).reschedule();
     await ref.read(serviceCoordinatorProvider).apply(ref.read(settingsProvider));
     await _updateHomeWidget();
+    unawaited(_runAutoBackup());
   }
 
   Future<void> _refreshTimeZoneAndSchedule() async {
@@ -85,6 +86,17 @@ class _AppShellState extends ConsumerState<AppShell>
     await ref.read(serviceCoordinatorProvider).apply(settings);
     if (settings.syncEnabled) await ref.read(syncServiceProvider).refresh();
     await _updateHomeWidget();
+    unawaited(_runAutoBackup());
+  }
+
+  Future<void> _runAutoBackup() async {
+    final settings = ref.read(settingsProvider);
+    if (!settings.autoBackupEnabled) return;
+    try {
+      await ref.read(autoBackupServiceProvider).runIfDue(enabled: true, keep: settings.autoBackupKeep);
+    } catch (error) {
+      debugPrint('Auto backup failed: $error');
+    }
   }
 
   Future<void> _updateHomeWidget() async {

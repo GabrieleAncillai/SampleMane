@@ -1113,4 +1113,172 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get singleDay => 'Un solo día';
+
+  @override
+  String get automaticBackups => 'Copias de seguridad locales automáticas';
+
+  @override
+  String get automaticBackupsSubtitle =>
+      'Una copia JSON diaria en la carpeta de la app. Las copias antiguas se rotan.';
+
+  @override
+  String get keepBackups => 'Copias que conservar';
+
+  @override
+  String get exportCsv => 'Exportar CSV';
+
+  @override
+  String get exportCsvSubtitle => 'Entradas, compras o inventario.';
+
+  @override
+  String get importCsv => 'Importar CSV';
+
+  @override
+  String get importCsvSubtitle => 'Entradas, compras o inventario.';
+
+  @override
+  String get csvEntries => 'Entradas';
+
+  @override
+  String get csvShopping => 'Compras';
+
+  @override
+  String get csvInventory => 'Inventario';
+
+  @override
+  String csvExported(String path) {
+    return 'CSV exportado a $path';
+  }
+
+  @override
+  String csvExportFailed(String error) {
+    return 'No se pudo exportar el CSV: $error';
+  }
+
+  @override
+  String csvImportDone(int imported, int duplicates, int skipped) {
+    return '$imported importadas, $duplicates duplicadas, $skipped omitidas';
+  }
+
+  @override
+  String get csvImportEmpty => 'No hay filas que importar.';
+
+  @override
+  String get gymmaneImport => 'Horario de GymMane';
+
+  @override
+  String get gymmaneImportSubtitle =>
+      'Bloques semanales de gimnasio de solo lectura desde un respaldo JSON de GymMane.';
+
+  @override
+  String gymmaneImportDone(int imported, int timed, int allDay, int skipped) {
+    return '$imported bloques importados ($timed con hora, $allDay de todo el día), $skipped omitidos.';
+  }
+
+  @override
+  String gymmaneImportFailed(String error) {
+    return 'No se pudo importar GymMane: $error';
+  }
+
+  @override
+  String get gymmaneImportEmpty => 'El respaldo no contiene un plan semanal.';
+
+  @override
+  String get appLock => 'Bloqueo de la app';
+
+  @override
+  String get appLockSubtitle => 'Pide un PIN al abrir la app.';
+
+  @override
+  String get appLockPinTitle => 'Elige un PIN';
+
+  @override
+  String get appLockPinRepeat => 'Repite el PIN';
+
+  @override
+  String get appLockPinMismatch => 'Los PIN no coinciden.';
+
+  @override
+  String get appLockUnlockTitle => 'Introduce tu PIN';
+
+  @override
+  String get appLockUnlockSubtitle => 'Desbloquea Mane';
+
+  @override
+  String get appLockWrong => 'PIN incorrecto. Inténtalo de nuevo.';
+
+  @override
+  String appLockLockedOut(int seconds) {
+    return 'Demasiados intentos. Espera $seconds s.';
+  }
+
+  @override
+  String get appLockEnabled => 'Bloqueo activado.';
+
+  @override
+  String get appLockDisabled => 'Bloqueo desactivado.';
+
+  @override
+  String get appLockPinLength => 'Usa de 4 a 8 dígitos.';
+
+  @override
+  String get purchaseHistory => 'Historial de compras';
+
+  @override
+  String get purchaseHistoryEmpty => 'Aún no hay compras registradas.';
+
+  @override
+  String get increaseQuantity => 'Aumentar cantidad';
+
+  @override
+  String get decreaseQuantity => 'Reducir cantidad';
+
+  @override
+  String lowStockCount(int count) {
+    return '$count productos bajo el umbral';
+  }
+
+  @override
+  String get maintenance => 'Mantenimiento';
+
+  @override
+  String get maintenanceSubtitle => 'Tareas que vencen después del último servicio.';
+
+  @override
+  String get maintenanceDue => 'Vence ahora';
+
+  @override
+  String get maintenanceUpcoming => 'Próximas';
+
+  @override
+  String get maintenanceNone => 'No hay tareas de mantenimiento.';
+
+  @override
+  String maintenanceDone(String date) {
+    return 'Hecho. Próxima fecha: $date.';
+  }
+
+  @override
+  String get clearChecked => 'Vaciar comprados';
+
+  @override
+  String get clearCheckedBody => '¿Eliminar todas las líneas compradas? No se puede deshacer.';
+
+  @override
+  String get shoppingToBuy => 'Por comprar';
+
+  @override
+  String get shoppingBought => 'Comprados';
+
+  @override
+  String get shoppingOther => 'Otros';
+
+  @override
+  String get moveUp => 'Subir';
+
+  @override
+  String get moveDown => 'Bajar';
+
+  @override
+  String get complete => 'Completar';
 }

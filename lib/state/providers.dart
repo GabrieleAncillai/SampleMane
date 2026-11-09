@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mane_core/mane_core.dart';
 
+import '../features/app_lock/app_lock_service.dart';
+import '../features/backup/auto_backup_service.dart';
 import '../features/backup/backup_service.dart';
 import '../features/home_widget/home_widget_service.dart';
 import '../features/mcp/mcp_server.dart';
@@ -81,6 +83,14 @@ final shoppingItemsProvider = StreamProvider<List<ShoppingItem>>(
 );
 
 final backupServiceProvider = Provider<BackupService>((ref) => BackupService(ref.watch(databaseProvider)));
+
+final autoBackupServiceProvider = Provider<AutoBackupService>(
+  (ref) => AutoBackupService(ref.watch(backupServiceProvider)),
+);
+
+final appLockServiceProvider = Provider<AppLockService>(
+  (ref) => AppLockService(ref.watch(repositoryProvider)),
+);
 
 final homeWidgetServiceProvider = Provider<HomeWidgetService>((ref) => HomeWidgetService());
 

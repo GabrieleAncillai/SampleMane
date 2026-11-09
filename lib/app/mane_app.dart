@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/i18n/l10n.dart';
+import '../features/app_lock/widgets/app_lock_gate.dart';
 import '../state/settings_controller.dart';
 import '../theme/app_theme.dart';
 import 'app_shell.dart';
@@ -26,7 +27,7 @@ class ManeApp extends ConsumerWidget {
         value: ManeTheme.systemBars(Theme.of(context).brightness),
         child: child ?? const SizedBox.shrink(),
       ),
-      home: const AppShell(),
+      home: const AppLockGate(child: AppShell()),
     );
   }
 }

@@ -8,14 +8,18 @@ import '../../../core/widgets/ui_kit.dart';
 import '../../../models/app_settings.dart';
 import '../../../state/providers.dart';
 import '../../../state/settings_controller.dart';
+import '../../app_lock/pages/pin_setup_page.dart';
 import '../../tags/pages/tags_page.dart';
 import '../../backup/backup_files.dart';
 import '../../backup/backup_service.dart';
+import '../../export/csv_interchange.dart';
 import '../../export/export_files.dart';
 import '../../export/ics_export_service.dart';
 import '../../home_inventory/pages/home_inventory_page.dart';
+import '../../home_inventory/pages/maintenance_page.dart';
 import '../../home_inventory/pages/shopping_list_page.dart';
 import '../../import/companion_import.dart';
+import '../../import/gymmane_import.dart';
 import '../../import/ics_import_service.dart';
 import '../../import/import_dialogs.dart';
 import '../../import/import_files.dart';
@@ -165,11 +169,33 @@ class SettingsPage extends ConsumerWidget {
                   context,
                 ).push(MaterialPageRoute<void>(builder: (_) => const ShoppingListPage())),
               ),
+              SettingsNavRow(
+                icon: Icons.build_outlined,
+                title: l10n.maintenance,
+                subtitle: l10n.maintenanceSubtitle,
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => const MaintenancePage())),
+              ),
             ],
           ),
           SettingsSection(
             title: l10n.dataAndBackup,
             children: [
+              SettingsSwitchRow(
+                icon: Icons.backup_outlined,
+                title: l10n.automaticBackups,
+                subtitle: l10n.automaticBackupsSubtitle,
+                value: settings.autoBackupEnabled,
+                onChanged: controller.setAutoBackupEnabled,
+              ),
+              if (settings.autoBackupEnabled)
+                SettingsNavRow(
+                  icon: Icons.history,
+                  title: l10n.keepBackups,
+                  value: '${settings.autoBackupKeep}',
+                  onTap: () => _showKeepBackups(context, ref),
+                ),
               SettingsNavRow(
                 icon: Icons.upload_file_outlined,
                 title: l10n.exportBackup,
@@ -193,6 +219,24 @@ class SettingsPage extends ConsumerWidget {
                 title: l10n.importCompanion,
                 subtitle: l10n.importCompanionSubtitle,
                 onTap: () => _importCompanion(context, ref),
+              ),
+              SettingsNavRow(
+                icon: Icons.fitness_center,
+                title: l10n.gymmaneImport,
+                subtitle: l10n.gymmaneImportSubtitle,
+                onTap: () => _importGymMane(context, ref),
+              ),
+              SettingsNavRow(
+                icon: Icons.table_view_outlined,
+                title: l10n.exportCsv,
+                subtitle: l10n.exportCsvSubtitle,
+                onTap: () => _exportCsv(context, ref),
+              ),
+              SettingsNavRow(
+                icon: Icons.table_view,
+                title: l10n.importCsv,
+                subtitle: l10n.importCsvSubtitle,
+                onTap: () => _importCsv(context, ref),
               ),
               SettingsNavRow(
                 icon: Icons.ios_share_outlined,
@@ -226,6 +270,13 @@ class SettingsPage extends ConsumerWidget {
           SettingsSection(
             title: l10n.privacySection,
             children: [
+              SettingsSwitchRow(
+                icon: Icons.lock_outline,
+                title: l10n.appLock,
+                subtitle: l10n.appLockSubtitle,
+                value: settings.appLockEnabled,
+                onChanged: (value) => _setAppLock(context, ref, value),
+              ),
               SettingsSwitchRow(
                 icon: Icons.lan_outlined,
                 title: l10n.syncEnabled,
@@ -372,6 +423,279 @@ class SettingsPage extends ConsumerWidget {
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.importCalendarFailed('$error'))));
     }
+  }
+
+  Future<void> _importGymMane(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final String? source;
+    try {
+      source = await pickGymManeText();
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.gymmaneImportFailed('$error'))));
+      return;
+    }
+    if (source == null) return;
+
+    final spaces = await ref.read(repositoryProvider).watchSpaces().first;
+    if (spaces.isEmpty) return;
+    var space = spaces.first;
+    for (final candidate in spaces) {
+      if (candidate.id == 'personal') {
+        space = candidate;
+        break;
+      }
+    }
+    final timeZone = ref.read(deviceTimeZoneProvider);
+    final today = localDateAt(ref.read(nowProvider), timeZone);
+    try {
+      final report = await GymManeImportService(
+        ref.read(repositoryProvider),
+      ).importJson(source, spaceId: space.id, today: today, timeZone: timeZone);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            report.imported == 0 && report.duplicates == 0 && report.skipped == 0
+                ? l10n.gymmaneImportEmpty
+                : l10n.gymmaneImportDone(report.imported, report.timed, report.allDay, report.skipped),
+          ),
+        ),
+      );
+    } on GymManeImportException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.gymmaneImportFailed('$error'))));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.gymmaneImportFailed('$error'))));
+    }
+  }
+
+  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    await showAppSheet<void>(
+      context: context,
+      builder: (sheetContext) => AppSheet(
+        title: l10n.exportCsv,
+        subtitle: l10n.exportCsvSubtitle,
+        children: [
+          SettingsNavRow(
+            icon: Icons.event_note_outlined,
+            title: l10n.csvEntries,
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              _exportCsvEntries(context, ref);
+            },
+          ),
+          SettingsNavRow(
+            icon: Icons.shopping_cart_outlined,
+            title: l10n.csvShopping,
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              _exportCsvShopping(context, ref);
+            },
+          ),
+          SettingsNavRow(
+            icon: Icons.inventory_2_outlined,
+            title: l10n.csvInventory,
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              _exportCsvInventory(context, ref);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _importCsv(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    await showAppSheet<void>(
+      context: context,
+      builder: (sheetContext) => AppSheet(
+        title: l10n.importCsv,
+        subtitle: l10n.importCsvSubtitle,
+        children: [
+          SettingsNavRow(
+            icon: Icons.event_note_outlined,
+            title: l10n.csvEntries,
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              _importCsvEntries(context, ref);
+            },
+          ),
+          SettingsNavRow(
+            icon: Icons.shopping_cart_outlined,
+            title: l10n.csvShopping,
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              _importCsvShopping(context, ref);
+            },
+          ),
+          SettingsNavRow(
+            icon: Icons.inventory_2_outlined,
+            title: l10n.csvInventory,
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              _importCsvInventory(context, ref);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportCsvEntries(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final timeZone = ref.read(deviceTimeZoneProvider);
+      final today = localDateAt(ref.read(nowProvider), timeZone);
+      final csv = await CsvInterchangeService(
+        ref.read(repositoryProvider),
+      ).exportEntries(start: today.addDays(-30), end: today.addDays(365), viewerTimeZone: timeZone);
+      final path = await saveCsvFile(csv, dialogTitle: l10n.exportCsv, fileName: _csvFileName('entries'));
+      if (path == null) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExported(path))));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+    }
+  }
+
+  Future<void> _exportCsvShopping(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final csv = await CsvInterchangeService(ref.read(repositoryProvider)).exportShopping();
+      final path = await saveCsvFile(csv, dialogTitle: l10n.exportCsv, fileName: _csvFileName('shopping'));
+      if (path == null) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExported(path))));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+    }
+  }
+
+  Future<void> _exportCsvInventory(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final csv = await CsvInterchangeService(ref.read(repositoryProvider)).exportInventory();
+      final path = await saveCsvFile(csv, dialogTitle: l10n.exportCsv, fileName: _csvFileName('inventory'));
+      if (path == null) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExported(path))));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+    }
+  }
+
+  Future<void> _importCsvEntries(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final String? source;
+    try {
+      source = await pickCsvText();
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+      return;
+    }
+    if (source == null) return;
+    try {
+      final report = await CsvInterchangeService(
+        ref.read(repositoryProvider),
+      ).importEntries(source, defaultTimeZone: ref.read(deviceTimeZoneProvider));
+      await ref.read(reminderCoordinatorProvider).reschedule();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            report.imported == 0 && report.duplicates == 0 && report.skipped == 0
+                ? l10n.csvImportEmpty
+                : l10n.csvImportDone(report.imported, report.duplicates, report.skipped),
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+    }
+  }
+
+  Future<void> _importCsvShopping(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final String? source;
+    try {
+      source = await pickCsvText();
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+      return;
+    }
+    if (source == null) return;
+    try {
+      final report = await CsvInterchangeService(ref.read(repositoryProvider)).importShopping(source);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            report.imported == 0 && report.duplicates == 0 && report.skipped == 0
+                ? l10n.csvImportEmpty
+                : l10n.csvImportDone(report.imported, report.duplicates, report.skipped),
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+    }
+  }
+
+  Future<void> _importCsvInventory(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final String? source;
+    try {
+      source = await pickCsvText();
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+      return;
+    }
+    if (source == null) return;
+    try {
+      final report = await CsvInterchangeService(ref.read(repositoryProvider)).importInventory(source);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            report.imported == 0 && report.duplicates == 0 && report.skipped == 0
+                ? l10n.csvImportEmpty
+                : l10n.csvImportDone(report.imported, report.duplicates, report.skipped),
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.csvExportFailed('$error'))));
+    }
+  }
+
+  Future<void> _setAppLock(BuildContext context, WidgetRef ref, bool value) async {
+    final l10n = context.l10n;
+    if (value) {
+      final result = await Navigator.of(
+        context,
+      ).push<bool>(MaterialPageRoute<bool>(builder: (_) => const PinSetupPage(), fullscreenDialog: true));
+      if (result != true || !context.mounted) return;
+      _showNotice(context, l10n.appLockEnabled);
+      return;
+    }
+    await ref.read(appLockServiceProvider).disable();
+    await ref.read(settingsProvider.notifier).reload();
+    if (context.mounted) _showNotice(context, l10n.appLockDisabled);
+  }
+
+  Future<void> _showKeepBackups(BuildContext context, WidgetRef ref) async {
+    await showAppSheet<void>(
+      context: context,
+      builder: (_) => _KeepBackupsSheet(initial: ref.read(settingsProvider).autoBackupKeep),
+    );
+  }
+
+  static String _csvFileName(String kind) {
+    final now = DateTime.now();
+    return 'mane-$kind-${now.year.toString().padLeft(4, '0')}'
+        '${now.month.toString().padLeft(2, '0')}'
+        '${now.day.toString().padLeft(2, '0')}.csv';
   }
 
   Future<void> _importCompanion(BuildContext context, WidgetRef ref) async {
@@ -562,6 +886,38 @@ class _DefaultRemindersSheetState extends ConsumerState<_DefaultRemindersSheet> 
             if (context.mounted) Navigator.of(context).pop();
           },
           child: Text(l10n.save),
+        ),
+      ],
+    );
+  }
+}
+
+class _KeepBackupsSheet extends ConsumerWidget {
+  const _KeepBackupsSheet({required this.initial});
+
+  final int initial;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return AppSheet(
+      title: l10n.keepBackups,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 20),
+          child: ManeSegmented<int>(
+            segments: const [
+              ManeSegment(value: 3, label: '3'),
+              ManeSegment(value: 5, label: '5'),
+              ManeSegment(value: 10, label: '10'),
+              ManeSegment(value: 20, label: '20'),
+            ],
+            selected: initial,
+            onChanged: (value) async {
+              await ref.read(settingsProvider.notifier).setAutoBackupKeep(value);
+              if (context.mounted) Navigator.of(context).pop();
+            },
+          ),
         ),
       ],
     );

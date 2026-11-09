@@ -105,6 +105,25 @@ second device.
       the original state returns.
 - [ ] Pair the devices, export a backup, and import it into a fresh install.
       The pairing is not restored and both devices still open normally.
+- [ ] Enable automatic local backups, background and resume Mane, and confirm a
+      `mane-auto-*.json` file exists in the app support `backups` folder (use
+      `adb shell run-as` on a debug build).
+- [ ] Change the copy count, let several days pass or adjust the clock, and
+      confirm older copies are removed.
+- [ ] Import a GymMane `gymmane.json` backup and confirm the weekly blocks are
+      read-only. A backup without `trainAt` must produce all-day blocks.
+- [ ] Export and re-import entries, shopping and inventory CSV files.
+
+## App lock
+
+- [ ] Enable the lock, set a four-digit PIN, background the app for more than
+      30 seconds, and confirm the PIN pad covers the plan on resume.
+- [ ] Enter the wrong PIN five times; confirm the 30-second lockout, then
+      unlock with the correct PIN.
+- [ ] Kill and relaunch the app; the lock must appear before the plan.
+- [ ] Disable the lock and confirm the app opens directly again.
+- [ ] Import a backup into a fresh install; the lock must stay off, because its
+      hash is device-local.
 
 ## Report
 

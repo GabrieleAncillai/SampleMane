@@ -5,9 +5,11 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/features/backup/backup_service.dart';
+import 'package:mane/models/home_item.dart';
 import 'package:mane/models/local_identity.dart';
 import 'package:mane/models/paired_device.dart';
 import 'package:mane/models/reminder.dart';
+import 'package:mane/models/shopping_item.dart';
 import 'package:mane/services/app_database.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:sqlite3/open.dart';
@@ -106,6 +108,28 @@ void main() {
     await database.writeSetting('themeMode', 'dark');
     await database.writeSetting('locale', 'es');
     await database.writeSetting('weekStart', '7');
+    await database.saveHomeItem(
+      const HomeItem(
+        id: 'rice',
+        name: 'Rice',
+        category: 'Pantry',
+        location: 'Kitchen',
+        quantity: 2,
+        unit: 'kg',
+        reorderLevel: 1,
+      ),
+    );
+    await database.saveShoppingItem(
+      const ShoppingItem(
+        id: 'rice-buy',
+        name: 'Rice',
+        quantity: 3,
+        unit: 'kg',
+        homeItemId: 'rice',
+        position: 2,
+      ),
+    );
+    await database.adjustHomeQuantity('rice', 2, note: 'Weekend shop');
   }
 
   test('backups exclude the pairing identity, certificates and shared keys', () async {
@@ -140,7 +164,7 @@ void main() {
 
     final exported = await BackupService(source).exportJson();
     final payload = jsonDecode(exported) as Map<String, dynamic>;
-    expect(payload['schemaVersion'], 6);
+    expect(payload['schemaVersion'], 7);
     expect(payload.containsKey('identity'), isFalse);
     expect(payload.containsKey('pairedDevices'), isFalse);
     expect(exported, isNot(contains('cGluaGFzaA==')));
@@ -184,6 +208,32 @@ void main() {
     );
 
     await expectLater(BackupService(source).importJson('{not json'), throwsA(isA<BackupFormatException>()));
+
+    final entries = await source
+        .watchEntriesBetween(LocalDate.parse('2026-11-09'), LocalDate.parse('2026-11-09'), 'Europe/Madrid')
+        .first;
+    expect(entries.single.entry.id, 'keep');
+  });
+
+  test('rejects a backup missing its required lists without touching existing data', () async {
+    await source.saveEntry(
+      Entry(
+        id: 'keep',
+        spaceId: 'home',
+        title: 'Keep me',
+        date: LocalDate.parse('2026-11-09'),
+        allDay: true,
+        createdAt: DateTime.utc(2026, 11, 1),
+        updatedAt: DateTime.utc(2026, 11, 1),
+      ),
+    );
+    final payload = jsonDecode(await BackupService(source).exportJson()) as Map<String, Object?>;
+    payload.remove('entries');
+
+    await expectLater(
+      BackupService(source).importJson(jsonEncode(payload)),
+      throwsA(isA<BackupFormatException>()),
+    );
 
     final entries = await source
         .watchEntriesBetween(LocalDate.parse('2026-11-09'), LocalDate.parse('2026-11-09'), 'Europe/Madrid')
@@ -242,5 +292,143 @@ void main() {
         .watchEntriesBetween(LocalDate.parse('2026-11-09'), LocalDate.parse('2026-11-09'), 'Europe/Madrid')
         .first;
     expect(loaded.single.entry.id, 'keep');
+  });
+
+  test('upgrades a v3 payload and leaves device-local settings behind', () async {
+    await source.writeSetting('appLockEnabled', 'true');
+    await source.writeSetting('appLockPinSalt', 'c2FsdA==');
+    await source.writeSetting('appLockPinHash', 'cGluaGFzaA==');
+    final exported = jsonDecode(await BackupService(source).exportJson()) as Map<String, Object?>;
+    expect(exported.containsKey('homePurchases'), isTrue);
+    expect(jsonEncode(exported), isNot(contains('cGluaGFzaA==')));
+
+    final legacy = <String, Object?>{
+      'app': 'mane',
+      'schemaVersion': 3,
+      'exportedAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+      'spaces': [
+        {
+          'id': 'personal',
+          'name': 'Personal',
+          'color': 0xFFB07D5C,
+          'position': 0,
+          'createdAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'updatedAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+        },
+      ],
+      'tags': <Object?>[],
+      'entries': [
+        {
+          'id': 'old-v3',
+          'spaceId': 'personal',
+          'title': 'Imported from v3',
+          'notes': '',
+          'kind': 'task',
+          'dateKey': 20261109,
+          'endDateKey': null,
+          'startMinute': null,
+          'endMinute': null,
+          'timeZone': null,
+          'startAt': null,
+          'endAt': null,
+          'allDay': true,
+          'status': 'open',
+          'recurrenceJson': null,
+          'createdAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'updatedAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'deletedAt': null,
+        },
+      ],
+      'entryTags': <Object?>[],
+      'completions': <Object?>[],
+      'reminders': <Object?>[],
+      'shiftPatterns': <Object?>[],
+      'shiftSlots': <Object?>[],
+      'shiftExceptions': <Object?>[],
+      'settings': {
+        'themeMode': 'dark',
+        'appLockEnabled': 'true',
+        'appLockPinSalt': 'c2FsdA==',
+        'appLockPinHash': 'cGluaGFzaA==',
+      },
+    };
+
+    final target = AppDatabase(NativeDatabase.memory(), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(target.close);
+    await BackupService(target).importJson(jsonEncode(legacy));
+
+    final entry = await target.readEntry('old-v3');
+    expect(entry?.readOnly, isFalse);
+    expect(entry?.allDay, isTrue);
+    final settings = await target.readSettings();
+    expect(settings['themeMode'], 'dark');
+    expect(settings.containsKey('appLockPinHash'), isFalse);
+    expect(settings.containsKey('appLockEnabled'), isFalse);
+  });
+
+  test('upgrades a v4 payload with home items and shopping', () async {
+    final legacy = <String, Object?>{
+      'app': 'mane',
+      'schemaVersion': 4,
+      'exportedAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+      'spaces': [
+        {
+          'id': 'home',
+          'name': 'Home',
+          'color': 0xFF5B7F6B,
+          'position': 0,
+          'createdAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'updatedAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+        },
+      ],
+      'entries': <Object?>[],
+      'homeItems': [
+        {
+          'id': 'soap',
+          'name': 'Soap',
+          'category': 'Bathroom',
+          'location': 'Cabinet',
+          'quantity': 4,
+          'reorderLevel': 1,
+          'unit': 'bars',
+          'notes': '',
+          'lastPurchasedAt': null,
+          'createdAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'updatedAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'deletedAt': null,
+        },
+      ],
+      'shoppingItems': [
+        {
+          'id': 'soap-buy',
+          'name': 'Soap',
+          'quantity': 2,
+          'unit': 'bars',
+          'checked': false,
+          'note': '',
+          'homeItemId': 'soap',
+          'createdAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'updatedAt': DateTime.utc(2026, 11, 1).toIso8601String(),
+          'deletedAt': null,
+        },
+      ],
+    };
+
+    final target = AppDatabase(NativeDatabase.memory(), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(target.close);
+    await BackupService(target).importJson(jsonEncode(legacy));
+
+    final shopping = (await target.watchShoppingItems().first).single;
+    expect(shopping.position, 0);
+    expect(shopping.homeItemId, 'soap');
+    expect(await target.readPurchaseHistory('soap'), isEmpty);
+  });
+
+  test('rejects payloads older than the supported upgrade window', () async {
+    final legacy = <String, Object?>{'app': 'mane', 'schemaVersion': 2, 'spaces': <Object?>[]};
+    await expectLater(
+      BackupService(source).importJson(jsonEncode(legacy)),
+      throwsA(isA<BackupFormatException>()),
+    );
   });
 }

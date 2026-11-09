@@ -15,6 +15,13 @@ abstract final class SettingsKeys {
   static const sleepCommuteMinutes = 'sleepCommuteMinutes';
   static const sleepWindDownMinutes = 'sleepWindDownMinutes';
   static const sleepWakeBufferMinutes = 'sleepWakeBufferMinutes';
+  static const autoBackupEnabled = 'autoBackupEnabled';
+  static const autoBackupKeep = 'autoBackupKeep';
+  static const appLockEnabled = 'appLockEnabled';
+  static const appLockPinSalt = 'appLockPinSalt';
+  static const appLockPinHash = 'appLockPinHash';
+  static const appLockMisses = 'appLockMisses';
+  static const appLockBlockedUntil = 'appLockBlockedUntil';
 }
 
 /// App-wide preferences. Persisted in the `setting_records` table.
@@ -32,6 +39,10 @@ class AppSettings {
     this.sleepCommuteMinutes = 30,
     this.sleepWindDownMinutes = 60,
     this.sleepWakeBufferMinutes = 30,
+    this.autoBackupEnabled = false,
+    this.autoBackupKeep = 5,
+    this.appLockEnabled = false,
+    this.hasAppLockPin = false,
   });
 
   final ThemeMode themeMode;
@@ -55,6 +66,15 @@ class AppSettings {
   final int sleepCommuteMinutes;
   final int sleepWindDownMinutes;
   final int sleepWakeBufferMinutes;
+
+  /// Writes a rotating JSON copy into the app's local backup folder.
+  final bool autoBackupEnabled;
+  final int autoBackupKeep;
+
+  /// A PIN pad before the planner opens. The hash is device-local and never
+  /// travels in a backup.
+  final bool appLockEnabled;
+  final bool hasAppLockPin;
 
   Duration get commute => Duration(minutes: sleepCommuteMinutes);
   Duration get windDown => Duration(minutes: sleepWindDownMinutes);
@@ -92,7 +112,19 @@ class AppSettings {
       sleepCommuteMinutes: _minutes(values[SettingsKeys.sleepCommuteMinutes], 30),
       sleepWindDownMinutes: _minutes(values[SettingsKeys.sleepWindDownMinutes], 60),
       sleepWakeBufferMinutes: _minutes(values[SettingsKeys.sleepWakeBufferMinutes], 30),
+      autoBackupEnabled: values[SettingsKeys.autoBackupEnabled] == 'true',
+      autoBackupKeep: _keep(values[SettingsKeys.autoBackupKeep]),
+      hasAppLockPin: (values[SettingsKeys.appLockPinHash] ?? '').isNotEmpty,
+      appLockEnabled:
+          values[SettingsKeys.appLockEnabled] == 'true' &&
+          (values[SettingsKeys.appLockPinHash] ?? '').isNotEmpty,
     );
+  }
+
+  static int _keep(String? value) {
+    final parsed = int.tryParse(value ?? '');
+    if (parsed == null || parsed < 1) return 5;
+    return parsed.clamp(1, 20);
   }
 
   static int _minutes(String? value, int fallback) {
@@ -114,6 +146,10 @@ class AppSettings {
     int? sleepCommuteMinutes,
     int? sleepWindDownMinutes,
     int? sleepWakeBufferMinutes,
+    bool? autoBackupEnabled,
+    int? autoBackupKeep,
+    bool? appLockEnabled,
+    bool? hasAppLockPin,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     locale: clearLocale ? null : (locale ?? this.locale),
@@ -127,5 +163,9 @@ class AppSettings {
     sleepCommuteMinutes: sleepCommuteMinutes ?? this.sleepCommuteMinutes,
     sleepWindDownMinutes: sleepWindDownMinutes ?? this.sleepWindDownMinutes,
     sleepWakeBufferMinutes: sleepWakeBufferMinutes ?? this.sleepWakeBufferMinutes,
+    autoBackupEnabled: autoBackupEnabled ?? this.autoBackupEnabled,
+    autoBackupKeep: autoBackupKeep ?? this.autoBackupKeep,
+    appLockEnabled: appLockEnabled ?? this.appLockEnabled,
+    hasAppLockPin: hasAppLockPin ?? this.hasAppLockPin,
   );
 }
