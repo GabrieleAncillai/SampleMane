@@ -1,0 +1,129 @@
+// Mane development tasks. See https://zed.dev/docs/tasks
+[
+  {
+    "label": "deps: pub get",
+    "command": "flutter pub get",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "none"
+  },
+  {
+    "label": "codegen: build",
+    "command": "dart run build_runner build --force-jit",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "codegen: watch",
+    "command": "dart run build_runner watch --force-jit",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "dev: linux",
+    "command": "flutter run -d linux",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "save": "all"
+  },
+  {
+    "label": "dev: device",
+    "command": "flutter run",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "save": "all"
+  },
+  {
+    "label": "test: app",
+    "command": "flutter test",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "test: core",
+    "command": "cd packages/mane_core && dart test",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "test: all",
+    "command": "flutter test && (cd packages/mane_core && dart test)",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "lint: analyze",
+    "command": "flutter analyze --no-fatal-infos",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "lint: format",
+    "command": "find lib test packages/mane_core/lib packages/mane_core/test -type f -name '*.dart' -not -name '*.g.dart' -print0 | xargs -0 dart format --line-length 110",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "build: linux debug",
+    "command": "flutter build linux --debug",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "build: linux release",
+    "command": "flutter build linux --release",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "build: apk debug",
+    "command": "if [ -d /usr/lib/jvm/java-21-openjdk ]; then export JAVA_HOME=/usr/lib/jvm/java-21-openjdk; export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; flutter build apk --debug",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "build: apk release",
+    "command": "if [ -d /usr/lib/jvm/java-21-openjdk ]; then export JAVA_HOME=/usr/lib/jvm/java-21-openjdk; export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; flutter build apk --release --split-per-abi",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "deploy: apk to device",
+    "command": "if [ -d /usr/lib/jvm/java-21-openjdk ]; then export JAVA_HOME=/usr/lib/jvm/java-21-openjdk; export PATH=\"$JAVA_HOME/bin:$PATH\"; fi; flutter build apk --debug && flutter install --debug",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "all"
+  },
+  {
+    "label": "clean",
+    "command": "flutter clean && flutter pub get",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "none"
+  },
+  {
+    "label": "devices",
+    "command": "flutter devices",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "none"
+  },
+  {
+    "label": "doctor",
+    "command": "flutter doctor -v",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "save": "none"
+  }
+]
