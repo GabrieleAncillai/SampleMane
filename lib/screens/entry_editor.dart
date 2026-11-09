@@ -64,6 +64,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   late Set<String> _tagIds;
   late Set<LocalDate> _skipDates;
   late Set<int> _reminderOffsets;
+  late Set<int> _reminderTimes;
   bool _onlyThisOccurrence = false;
   bool _remindersLoaded = true;
   bool _saving = false;
@@ -97,8 +98,10 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     _skipDates = {...?entry?.recurrence?.skipDates};
     if (entry == null) {
       _reminderOffsets = {...ref.read(settingsProvider).defaultReminderOffsets};
+      _reminderTimes = <int>{};
     } else {
       _reminderOffsets = <int>{};
+      _reminderTimes = <int>{};
       _remindersLoaded = false;
       _loadReminders(entry.id);
     }
@@ -111,7 +114,11 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
       setState(() {
         _reminderOffsets = {
           for (final reminder in reminders)
-            if (reminder.enabled) reminder.offsetMinutes,
+            if (reminder.enabled && !reminder.isAtTime) reminder.offsetMinutes,
+        };
+        _reminderTimes = {
+          for (final reminder in reminders)
+            if (reminder.enabled && reminder.timeMinute != null) reminder.timeMinute!,
         };
         _remindersLoaded = true;
       });
@@ -411,7 +418,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                   ),
                 ],
               ),
-              if (_reminderOffsets.isEmpty)
+              if (_reminderOffsets.isEmpty && _reminderTimes.isEmpty)
                 Text(l10n.remindersOff, style: ManeType.body(11.5, color: c.textTertiary))
               else
                 Wrap(
@@ -422,6 +429,15 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                       InputChip(
                         label: Text(reminderOffsetLabel(context, offset)),
                         onDeleted: _saving ? null : () => setState(() => _reminderOffsets.remove(offset)),
+                      ),
+                    for (final minute in (_reminderTimes.toList()..sort()))
+                      InputChip(
+                        label: Text(
+                          MaterialLocalizations.of(
+                            context,
+                          ).formatTimeOfDay(TimeOfDay(hour: minute ~/ 60, minute: minute % 60)),
+                        ),
+                        onDeleted: _saving ? null : () => setState(() => _reminderTimes.remove(minute)),
                       ),
                   ],
                 ),
@@ -582,8 +598,15 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
       await repository.saveRemindersForEntry(entry.id, [
         for (final offset in _reminderOffsets)
           Reminder(id: Reminder.idFor(entry.id, offset), entryId: entry.id, offsetMinutes: offset),
+        for (final minute in _reminderTimes)
+          Reminder(
+            id: Reminder.timeIdFor(entry.id, minute),
+            entryId: entry.id,
+            offsetMinutes: 0,
+            timeMinute: minute,
+          ),
       ]);
-      if (_reminderOffsets.isNotEmpty) {
+      if (_reminderOffsets.isNotEmpty || _reminderTimes.isNotEmpty) {
         final allowed = await ref.read(notificationServiceProvider).ensurePermissions();
         if (!allowed && mounted) {
           ScaffoldMessenger.of(
@@ -645,9 +668,16 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   }
 
   Future<void> _editReminders() async {
-    final result = await showReminderOffsetSheet(context, initial: _reminderOffsets);
+    final result = await showReminderSelectionSheet(
+      context,
+      offsets: _reminderOffsets,
+      times: _reminderTimes,
+    );
     if (result != null && mounted) {
-      setState(() => _reminderOffsets = result);
+      setState(() {
+        _reminderOffsets = result.offsets;
+        _reminderTimes = result.times;
+      });
     }
   }
 

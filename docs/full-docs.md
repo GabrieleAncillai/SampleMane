@@ -1,6 +1,6 @@
 # Mane: full docs
 
-Status: v0.8, data interchange, home tracking and privacy. Last updated
+Status: v0.9, MCP, LAN reliability and notification controls. Last updated
 2026-11-09. The active completion program is in
 [completion-plan.md](completion-plan.md); the constraint audit is in
 [compliance-audit.md](compliance-audit.md).
@@ -312,15 +312,22 @@ is off by default, binds to `127.0.0.1:8765` only, and requires a random bearer
 token stored with the local identity.
 
 It speaks JSON-RPC 2.0 over `POST /mcp` and implements `initialize`, `ping`,
-`tools/list`, `tools/call` and the client `notifications/*` messages. Read tools
-are always available; write tools appear only when the setting is on:
+`tools/list`, `tools/call`, `DELETE /mcp` and the client `notifications/*`
+messages. `initialize` returns an `Mcp-Session-Id`; explicit sessions are
+touched, expire after an hour, and are rejected when unknown. Clients that send
+`Accept: text/event-stream` receive one SSE `message` event per JSON-RPC call.
+Read tools are always available; write tools appear only when the setting is on:
 
-- `personal.today`, `work.next_shifts`, `home.shopping` (read).
-- `plan.create`, `plan.complete` (write, gated).
+- Read: `personal.today`, `work.next_shifts`, `work.shifts`, `plan.range`,
+  `plan.search`, `plan.get`, `home.shopping`, `home.inventory`, `tags.list` and
+  `sleep.window`.
+- Write, gated: `plan.create`, `plan.update`, `plan.complete`, `plan.uncomplete`,
+  `plan.delete`, `home.shopping_add` and `home.shopping_check`.
 
 No internet, no external server, no account. The agent runs on the same
-machine. SSE/streamable sessions and a LAN-bound MCP listener are not part of
-this version; this is the core tools JSON-RPC surface, documented as such.
+machine. `GET /mcp` is rejected because this server has no messages to push; the
+SSE form is request-scoped, not a long-lived bidirectional stream. A LAN-bound
+MCP listener is not part of v0.9.
 
 ### 5.6 Companion apps
 
@@ -380,7 +387,7 @@ checklists, shift tags, per-pattern sleep buffers and the local pairing identity
   timezone. This is what makes a recurring chore checkable per occurrence.
   Checking this week's bins does not check next week's, and travel does not
   lose the check.
-- **reminders**: entry id, offset in minutes, enabled. Multiple rows per entry.
+- **reminders**: entry id, offset in minutes or an absolute local time (`timeMinute`), enabled. Multiple rows per entry.
 - **shift_patterns**: id, space, name, timezone, cycle length in days, anchor
   date, enabled, timestamps, soft delete.
 - **shift_slots**: id, pattern id, cycle day index, start and end local
@@ -436,7 +443,7 @@ migrating existing data.
   the day. Reference: Streak's `activity_calendar.dart`,
   `express_month.dart` and `day_timeline_page.dart`.
 - **Entry editor.** Title, space, type, date/time or all-day, timezone,
-  recurrence, reminder offsets, tags, notes, delete.
+  recurrence, reminder offsets or times, tags, notes, delete.
 - **Shift pattern editor.** Cycle, anchor, timezone, per-day slots, exceptions,
   preview and overlap validation.
 - **Tags manager.**
@@ -703,8 +710,9 @@ setup, host/guest pairing and read-only snapshots; a local MCP endpoint with a
 bearer token, JSON-RPC `initialize`/`tools/list`/`tools/call`, read tools and
 gated write tools; and a read-only companion JSON export import.
 
-**Limitations:** the MCP endpoint is loopback-only and implements the core
-tools JSON-RPC surface, not SSE/streamable sessions. mDNS depends on the
+**Limitations at v0.4:** the MCP endpoint was loopback-only and implemented the
+core tools JSON-RPC surface, not SSE/streamable sessions; v0.9 supersedes that
+surface. mDNS depends on the
 platform daemon (Avahi on Linux, NSD on Android) and still needs the user's real
 device check. Pairing sessions live in memory, so an app restart cancels them.
 Snapshots are not persisted and are never merged into the local plan. The
@@ -834,11 +842,59 @@ weekly plan, so the read-only adapter is planner-specific. The backup rotation
 follows GymMane's `auto_backup.dart`, but writes a plain JSON document because
 Mane's backup is already canonical and readable.
 
-### v0.9 MCP, LAN sync and notification reliability
+### v0.9 MCP, LAN sync and notification reliability (done)
 
-- [ ] Full MCP tool set and streamable HTTP sessions.
-- [ ] Persistent read-only LAN snapshots and a richer query payload.
-- [ ] Work-hours visibility, quiet hours, custom reminder times and actions.
+- [x] Full MCP tool set and streamable HTTP sessions.
+- [x] Persistent read-only LAN snapshots and a richer query payload.
+- [x] Work-hours visibility, quiet hours, custom reminder times and actions.
+
+**Shipped in v0.9:** schema v8 adds `reminder_records.time_minute` and
+`remote_snapshot_records`, with a real v7-row migration. The MCP adapter now
+implements `plan.range`, `plan.search`, `plan.get`, `work.shifts`,
+`home.inventory`, `tags.list`, `sleep.window`, `plan.update`, `plan.uncomplete`,
+`plan.delete`, `home.shopping_add` and `home.shopping_check` alongside the
+existing tools. Writes stay gated by the setting. `initialize` returns an
+`Mcp-Session-Id`; explicit sessions are touched and expired, `DELETE /mcp`
+closes one, and clients sending `Accept: text/event-stream` get one SSE message
+per JSON-RPC call. The LAN `snapshot` resource carries the compact summary plus
+spaces, tags, the next week of entries and shifts, inventory and shopping; the
+client stores the raw payload in `remote_snapshot_records`, restores it on
+start and prunes rows for unpaired devices. Work hours hide Work tasks from
+aggregate screens outside the window (deadlines stay visible, search still
+finds them); quiet hours and work hours are applied to each notification's
+fire time in the device zone. Reminders can use an absolute local time as well
+as an offset. Android notifications carry snooze (10 minutes) and complete
+actions; the payload carries the occurrence date so recurring completions are
+correct. The queue is rebuilt on launch, every resume and after the zone is
+re-read; the plugin's boot receiver restores scheduled alarms after a reboot.
+
+**Why this is timezone-safe:** a timed occurrence is stored as an absolute UTC
+instant plus its IANA template zone. The notification planner schedules the
+absolute instant with `timezone`, so a later device-zone change does not move
+an already-scheduled alarm. On resume the app re-reads the zone, reschedules
+from the current plan, and the quiet/work windows are evaluated in the new
+device zone when building the new queue. All-day reminders are counted from
+09:00 on the all-day date in the device zone, which is why a date never shifts
+but its reminder time can follow travel.
+
+**Screenshots:** `docs/screenshots/v0.9-settings-hours-light.png` and
+`v0.9-reminders-light.png`.
+
+**Limitations:** MCP streamable HTTP is one SSE message per request, not a
+long-lived bidirectional stream; there are no server-initiated messages, and
+`GET /mcp` is rejected. Sessions are in memory and expire after an hour, so a
+restart requires a new `initialize`. The notification action labels are English
+at the OS level, and action buttons are Android-only. Work-hours hiding is an
+aggregate-screen rule; it does not remove Work from search or from an opened
+entry. Quiet-hours suppression happens when the queue is built; changing the window
+in Settings rebuilds it immediately, while a reminder already scheduled before
+an external change can still fire until the next launch/resume rebuild.
+
+**Deviation from the references:** neither GymMane nor Streak implements MCP or
+LAN query, so the tool and session surface is planner-specific and documented
+in the MCP page and this file. Streak's notification actions informed the
+snooze/complete shape, but Mane keeps the action handler in the app so the same
+repository rules apply as the UI.
 
 ### v1.0 finish line
 
@@ -846,7 +902,8 @@ Mane is v1.0 when v0.1.5 through v0.9 are complete, every generalized scenario i
 [completion-plan.md](completion-plan.md) passes, the visual layer follows the
 references or documents a deviation, the real-device checklist passes, and
 `flutter analyze`, both test suites, the format check and both platform builds
-succeed. v0.5 is shipped; v0.6 through v1.0 are the active program.
+succeed. v0.9 is shipped; only the v1.0 device verification, accessibility
+and release work remains.
 
 ## 10. Contributing
 

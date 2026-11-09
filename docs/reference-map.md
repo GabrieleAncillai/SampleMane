@@ -21,10 +21,10 @@ git clone https://github.com/InlitX/streak.git ../Streak
 | Entry / habit editing | `lib/screens/exercise_detail_screen.dart`, `lib/screens/routine_edit_screen.dart`, `lib/screens/settings_screen.dart` | `lib/features/habits/pages/habit_details_page.dart`, `lib/features/habits/widgets/habit_form_schedule.dart`, `lib/features/habits/widgets/habit_form_kind.dart` | Sheets, validation, segmented controls, date/time picking. |
 | App lock and PIN pad | none | `lib/app/app_lock.dart`, `lib/app/app_lock_pin.dart`, `lib/app/pin_pad.dart`, `lib/app/pin_setup_page.dart` | Shipped in `features/app_lock` over the existing PBKDF2 primitive. Mane keeps the PIN pad and gate, not Streak's biometrics or recovery code. |
 | GymMane schedule import | `lib/state/fit_state.dart` (`weeklyPlan`, `routines`, `trainAt`), `lib/services/local_store.dart`, `lib/services/backup_zip.dart` | none | Shipped in `features/import/gymmane_import.dart`: read-only weekly blocks, dedupe, all-day fallback. Never workout logs. |
-| Automatic local backup | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/auto_sync.dart` | Shipped in `features/backup/auto_backup_service.dart`: daily JSON copies with rotation and a schema 3–7 import upgrade. No cloud. |
+| Automatic local backup | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/auto_sync.dart` | Shipped in `features/backup/auto_backup_service.dart`: daily JSON copies with rotation and a schema 3–8 import upgrade. No cloud. |
 | CSV and calendar export | `lib/services/local_store.dart` (`exportCsv`), `lib/services/fit_export.dart`, `lib/services/plan_share.dart` | `lib/services/import_service.dart`, `lib/services/backup_service.dart` | Shipped: `features/export/csv_interchange.dart` for entries, shopping and inventory, plus read-only ICS export. |
 | Calendar / month / week | `lib/screens/history_screen.dart`, `lib/screens/timeline_screen.dart` | `lib/features/habits/widgets/activity_calendar.dart`, `lib/core/express/express_month.dart`, `lib/features/habits/pages/day_timeline_page.dart`, `lib/features/habits/widgets/grid_habit_cards.dart` | Streak is the primary calendar reference. |
-| Notifications and reminders | `lib/services/alarm_store.dart`, `lib/services/rest_alarm.dart`, `lib/services/train_reminder.dart`, `lib/services/supplement_reminder.dart` | `lib/services/notification_service.dart`, `lib/services/reminder_schedule.dart`, `lib/services/reminder_sounds.dart` | Streak is the primary reminder reference. |
+| Notifications and reminders | `lib/services/alarm_store.dart`, `lib/services/rest_alarm.dart`, `lib/services/train_reminder.dart`, `lib/services/supplement_reminder.dart` | `lib/services/notification_service.dart`, `lib/services/reminder_schedule.dart`, `lib/services/reminder_sounds.dart` | Streak is the primary reminder reference. Mane adds absolute-time reminders, quiet/work-hour suppression and snooze/complete actions. |
 | Backup and import | `lib/services/auto_backup.dart`, `lib/services/backup_zip.dart`, `lib/services/fitnotes_backup.dart`, `lib/services/workout_import.dart` | `lib/services/backup_service.dart`, `lib/services/backup_archive.dart`, `lib/services/import_service.dart`, `lib/services/auto_sync.dart` | Versioned files, validation, test coverage. |
 | Settings | `lib/screens/settings_screen.dart`, `lib/state/settings_state.dart` | `lib/features/settings/pages/settings_page.dart`, `lib/features/settings/state/settings_controller.dart` | Theme, locale, week start, reminders, data folder, privacy. |
 | Localization | `l10n.yaml`, `lib/l10n/l10n.dart`, `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb` | `l10n.yaml`, `lib/core/i18n/l10n.dart`, `lib/core/i18n/app_locale.dart`, `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb` | English source, Spanish first translation. |
@@ -35,7 +35,7 @@ git clone https://github.com/InlitX/streak.git ../Streak
 | Home inventory, shopping and maintenance | none | none | New planner domain. The settings rows and sheets follow GymMane/Streak patterns; the model and rules live in Mane. |
 | ICS import | `lib/services/workout_import.dart` for local file-picking patterns | `lib/services/import_service.dart` for validation and dedupe patterns | No reference implements iCalendar. The parser is Mane-specific and deliberately narrow. |
 | Sleep window and shift checklists | none | none | New planner domain; pure calculation in `mane_core`, UI in `features/sleep` and `features/shifts`. |
-| LAN pairing, query and MCP | none | `lib/services/auto_sync.dart`, `lib/services/folder_sync.dart` (shared-folder backup exchange only) | Neither reference has LAN pairing or MCP. Mane uses standard TLS pinning, PBKDF2, HMAC and a nonce cache in `features/sync` and `features/mcp`; settings rows follow the reference style. |
+| LAN pairing, query and MCP | none | `lib/services/auto_sync.dart`, `lib/services/folder_sync.dart` (shared-folder backup exchange only) | Neither reference has LAN pairing or MCP. Mane uses standard TLS pinning, PBKDF2, HMAC and a nonce cache in `features/sync`; the richer snapshot is persisted read-only. The MCP adapter exposes the v0.9 tool set with `Mcp-Session-Id` and one-message SSE responses. |
 | Device / desktop behavior | `lib/services/device_kind.dart` | `lib/services/desktop_window.dart`, `lib/core/utils/responsive.dart` | Phone-first, desktop-aware. |
 | Build and release | `.github/workflows/build-apk.yml` | `.github/workflows/build-apk.yml`, `.github/workflows/linux.yml`, `fdroid/com.streak.app.yml`, `fastlane/` | Split APKs, GitHub Releases, F-Droid metadata, signing docs. |
 | Tests | `test/` | `test/` | Copy the test style and coverage areas. |
@@ -67,9 +67,10 @@ git clone https://github.com/InlitX/streak.git ../Streak
   the lock hash is excluded from backups and there is no recovery code.
 - **LAN pairing, query and MCP.** Streak has a shared-folder backup exchange,
   not LAN discovery. Mane implements pinned TLS, a short-code pairing
-  handshake, signed read-only queries and a loopback MCP adapter. These stay in
-  `lib/features/sync` and `lib/features/mcp`. See the v0.4 deviation note in
-  `docs/full-docs.md`.
+  handshake, signed read-only queries, persisted snapshots and a loopback MCP
+  adapter with the full tool set and session ids. These stay in
+  `lib/features/sync` and `lib/features/mcp`. See the v0.4 and v0.9 deviation
+  notes in `docs/full-docs.md`.
 - **Search and the Android widget.** Neither reference has a global search
   across entries, tags and household items, or a widget with this data shape.
   Search uses a Drift query in `lib/services/app_database.dart`; the widget
@@ -77,8 +78,8 @@ git clone https://github.com/InlitX/streak.git ../Streak
   v0.5 notes.
 
 - **Work-hours rules, quiet hours and full MCP tool coverage.** Neither
-  reference has these surfaces. They are a v0.9 deliverable, designed against
-  the planner model rather than copied. See `docs/completion-plan.md`.
+  reference has these surfaces. They are implemented against the planner model
+  in v0.9; see `docs/full-docs.md`.
 - **Visual layer.** v0.6 adapts GymMane's shell, Nunito, warm palette and
   settings rows, plus Streak's floating nav, sheet shape and page motion. Mane
   does not ship GymMane's photo/pattern background picker or Streak's three

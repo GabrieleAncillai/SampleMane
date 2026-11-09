@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:mane_core/mane_core.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import 'reminder_planner.dart';
@@ -19,9 +22,18 @@ class NotificationService {
   bool _ready = false;
   String _deviceTimeZone = 'UTC';
   String? _pendingEntryId;
+  (String, String, LocalDate?)? _pendingAction;
 
   /// Called when a notification is tapped while the app is running.
   void Function(String entryId)? onOpenEntry;
+
+  /// Called for the snooze/complete action buttons where the platform supports
+  /// them. The callback runs on the app side, never in the notification helper.
+  void Function(String actionId, String entryId, LocalDate? date)? onAction;
+
+  /// Action identifiers used by the Android notification buttons.
+  static const snoozeAction = 'snooze';
+  static const completeAction = 'complete';
 
   bool get isReady => _ready;
 
@@ -29,6 +41,12 @@ class NotificationService {
     final id = _pendingEntryId;
     _pendingEntryId = null;
     return id;
+  }
+
+  (String, String, LocalDate?)? takePendingAction() {
+    final action = _pendingAction;
+    _pendingAction = null;
+    return action;
   }
 
   Future<void> initialize({required String deviceTimeZone}) async {
@@ -56,8 +74,16 @@ class NotificationService {
 
       final launch = await _plugin.getNotificationAppLaunchDetails();
       if (launch?.didNotificationLaunchApp == true) {
-        final payload = launch?.notificationResponse?.payload;
-        if (payload != null && payload.isNotEmpty) _pendingEntryId = payload;
+        final response = launch?.notificationResponse;
+        final payload = _decodePayload(response?.payload);
+        if (payload != null) {
+          final actionId = response?.actionId;
+          if (actionId == snoozeAction || actionId == completeAction) {
+            _pendingAction = (actionId!, payload.$1, payload.$2);
+          } else {
+            _pendingEntryId = payload.$1;
+          }
+        }
       }
       _ready = true;
     } catch (_) {
@@ -113,6 +139,10 @@ class NotificationService {
           channelDescription: channelDescription,
           importance: Importance.high,
           priority: Priority.high,
+          actions: [
+            AndroidNotificationAction(snoozeAction, 'Snooze 10 minutes'),
+            AndroidNotificationAction(completeAction, 'Mark complete'),
+          ],
         ),
         linux: LinuxNotificationDetails(),
       );
@@ -127,7 +157,7 @@ class NotificationService {
             scheduledDate: scheduled,
             notificationDetails: details,
             androidScheduleMode: mode,
-            payload: plan.entryId,
+            payload: _encodePayload(plan.entryId, plan.date),
           );
         } catch (_) {
           // One bad row must not take the rest of the queue with it.
@@ -147,14 +177,97 @@ class NotificationService {
     }
   }
 
+  /// Schedules a one-off reminder. Used by the snooze action; the original
+  /// reminder keeps its own id, so this replaces the notification cleanly.
+  Future<void> scheduleSnooze({
+    required int notificationId,
+    required String entryId,
+    required LocalDate date,
+    required String title,
+    required String body,
+    required DateTime fireAt,
+  }) async {
+    if (!_ready) return;
+    try {
+      final scheduled = tz.TZDateTime.from(fireAt, tz.getLocation(_deviceTimeZone));
+      await _plugin.zonedSchedule(
+        id: notificationId,
+        title: title,
+        body: body.isEmpty ? null : body,
+        scheduledDate: scheduled,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            channelId,
+            channelName,
+            channelDescription: channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+            actions: [
+              AndroidNotificationAction(snoozeAction, 'Snooze 10 minutes'),
+              AndroidNotificationAction(completeAction, 'Mark complete'),
+            ],
+          ),
+          linux: LinuxNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: _encodePayload(entryId, date),
+      );
+    } catch (_) {
+      // A missed snooze is a missed notification, not a broken planner.
+    }
+  }
+
+  Future<void> cancel(int notificationId) async {
+    if (!_ready) return;
+    try {
+      await _plugin.cancel(id: notificationId);
+    } catch (_) {
+      // Best effort.
+    }
+  }
+
   void _onResponse(NotificationResponse response) {
-    final payload = response.payload;
-    if (payload == null || payload.isEmpty) return;
+    final payload = _decodePayload(response.payload);
+    if (payload == null) return;
+    final actionId = response.actionId;
+    if (actionId != null && (actionId == snoozeAction || actionId == completeAction)) {
+      final callback = onAction;
+      if (callback != null) {
+        callback(actionId, payload.$1, payload.$2);
+        return;
+      }
+    }
     final callback = onOpenEntry;
     if (callback != null) {
-      callback(payload);
+      callback(payload.$1);
     } else {
-      _pendingEntryId = payload;
+      _pendingEntryId = payload.$1;
+    }
+  }
+
+  static String _encodePayload(String entryId, LocalDate date) =>
+      jsonEncode({'entryId': entryId, 'date': date.iso});
+
+  static (String, LocalDate?)? _decodePayload(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    if (!raw.startsWith('{')) return (raw, null);
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return (raw, null);
+      final entryId = decoded['entryId'];
+      if (entryId is! String || entryId.isEmpty) return null;
+      LocalDate? date;
+      final dateRaw = decoded['date'];
+      if (dateRaw is String) {
+        try {
+          date = LocalDate.parse(dateRaw);
+        } on FormatException {
+          date = null;
+        }
+      }
+      return (entryId, date);
+    } on FormatException {
+      return (raw, null);
     }
   }
 }

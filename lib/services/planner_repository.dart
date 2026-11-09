@@ -4,6 +4,7 @@ import '../models/home_item.dart';
 import '../models/home_purchase.dart';
 import '../models/local_identity.dart';
 import '../models/paired_device.dart';
+import '../models/remote_snapshot.dart';
 import '../models/reminder.dart';
 import '../models/search_results.dart';
 import '../models/shift_checklist.dart';
@@ -93,6 +94,17 @@ class PlannerRepository {
   Future<void> savePairedDevice(PairedDevice device) => _database.savePairedDevice(device);
 
   Future<void> removePairedDevice(String id) => _database.removePairedDevice(id);
+
+  Stream<List<RemoteSnapshot>> watchRemoteSnapshots() => _database.watchRemoteSnapshots();
+
+  Future<List<RemoteSnapshot>> readRemoteSnapshots() => _database.readRemoteSnapshots();
+
+  Future<void> saveRemoteSnapshot(RemoteSnapshot snapshot) => _database.saveRemoteSnapshot(snapshot);
+
+  Future<void> pruneRemoteSnapshots(Set<String> keepDeviceIds) =>
+      _database.pruneRemoteSnapshots(keepDeviceIds);
+
+  Future<void> deleteRemoteSnapshot(String deviceId) => _database.deleteRemoteSnapshot(deviceId);
 
   Future<void> updatePairedDevicePresence(
     String id, {

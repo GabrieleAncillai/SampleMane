@@ -15,6 +15,7 @@ class PlannedReminder {
   const PlannedReminder({
     required this.notificationId,
     required this.entryId,
+    required this.date,
     required this.fireAt,
     required this.title,
     required this.body,
@@ -22,6 +23,7 @@ class PlannedReminder {
 
   final int notificationId;
   final String entryId;
+  final LocalDate date;
   final DateTime fireAt;
   final String title;
   final String body;
@@ -36,6 +38,8 @@ List<PlannedReminder> planReminders({
   required Map<String, List<Reminder>> remindersByEntry,
   required DateTime now,
   required String deviceTimeZone,
+  ({int start, int end})? quietHours,
+  ({int start, int end})? workHours,
 }) {
   final plans = <PlannedReminder>[];
   for (final occurrence in occurrences) {
@@ -48,12 +52,24 @@ List<PlannedReminder> planReminders({
         occurrence.startAt ?? instantAt(occurrence.displayDate, allDayReminderMinute, deviceTimeZone);
     for (final reminder in reminders) {
       if (!reminder.enabled) continue;
-      final fireAt = base.subtract(Duration(minutes: reminder.offsetMinutes));
+      final fireAt = reminder.timeMinute != null
+          ? instantAt(occurrence.displayDate, reminder.timeMinute!, deviceTimeZone)
+          : base.subtract(Duration(minutes: reminder.offsetMinutes));
       if (!fireAt.isAfter(now)) continue;
+
+      final minute = localMinuteAt(fireAt, deviceTimeZone);
+      if (quietHours != null && isMinuteInWindow(minute, quietHours.start, quietHours.end)) continue;
+      if (entry.spaceId == 'work' &&
+          workHours != null &&
+          !isMinuteInWindow(minute, workHours.start, workHours.end)) {
+        continue;
+      }
+
       plans.add(
         PlannedReminder(
           notificationId: notificationIdFor(entry.id, reminder.id, occurrence.date.key),
           entryId: entry.id,
+          date: occurrence.date,
           fireAt: fireAt,
           title: entry.title,
           body: entry.notes,

@@ -182,6 +182,11 @@ class LanClient {
     return data is Map<String, Object?> ? data : <String, Object?>{};
   }
 
+  Future<Map<String, Object?>> snapshot(PairedDevice device, {required String localDeviceId}) async {
+    final data = await query(device, localDeviceId: localDeviceId, resource: 'snapshot');
+    return data is Map<String, Object?> ? data : <String, Object?>{};
+  }
+
   Future<Object?> query(
     PairedDevice device, {
     required String localDeviceId,

@@ -1,5 +1,6 @@
 import 'package:mane_core/mane_core.dart';
 
+import '../models/app_settings.dart';
 import 'notification_service.dart';
 import 'planner_repository.dart';
 import 'reminder_planner.dart';
@@ -15,12 +16,14 @@ class ReminderCoordinator {
     required this.notifications,
     required this.deviceTimeZone,
     required this.clock,
+    this.settings = const AppSettings(),
   });
 
   final PlannerRepository repository;
   final NotificationService notifications;
   final String deviceTimeZone;
   final DateTime Function() clock;
+  final AppSettings settings;
 
   Future<void> reschedule() async {
     try {
@@ -37,6 +40,12 @@ class ReminderCoordinator {
         remindersByEntry: reminders,
         now: now,
         deviceTimeZone: deviceTimeZone,
+        quietHours: settings.quietHoursEnabled
+            ? (start: settings.quietHoursStartMinute, end: settings.quietHoursEndMinute)
+            : null,
+        workHours: settings.workHoursEnabled
+            ? (start: settings.workHoursStartMinute, end: settings.workHoursEndMinute)
+            : null,
       );
       await notifications.reschedule(plans);
     } catch (_) {

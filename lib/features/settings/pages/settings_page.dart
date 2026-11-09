@@ -102,6 +102,60 @@ class SettingsPage extends ConsumerWidget {
                 value: settings.hideWorkSpace,
                 onChanged: controller.setHideWorkSpace,
               ),
+              SettingsSwitchRow(
+                icon: Icons.schedule_outlined,
+                title: l10n.workHours,
+                subtitle: l10n.workHoursSubtitle,
+                value: settings.workHoursEnabled,
+                onChanged: (value) async {
+                  await controller.setWorkHoursEnabled(value);
+                  await ref.read(reminderCoordinatorProvider).reschedule();
+                },
+              ),
+              if (settings.workHoursEnabled)
+                SettingsNavRow(
+                  icon: Icons.timelapse_outlined,
+                  title: l10n.hoursWindow,
+                  value: _windowLabel(context, settings.workHoursStartMinute, settings.workHoursEndMinute),
+                  onTap: () => _showHours(
+                    context,
+                    ref,
+                    title: l10n.workHours,
+                    start: settings.workHoursStartMinute,
+                    end: settings.workHoursEndMinute,
+                    onSave: (start, end) async {
+                      await controller.setWorkHours(startMinute: start, endMinute: end);
+                      await ref.read(reminderCoordinatorProvider).reschedule();
+                    },
+                  ),
+                ),
+              SettingsSwitchRow(
+                icon: Icons.nightlight_outlined,
+                title: l10n.quietHours,
+                subtitle: l10n.quietHoursSubtitle,
+                value: settings.quietHoursEnabled,
+                onChanged: (value) async {
+                  await controller.setQuietHoursEnabled(value);
+                  await ref.read(reminderCoordinatorProvider).reschedule();
+                },
+              ),
+              if (settings.quietHoursEnabled)
+                SettingsNavRow(
+                  icon: Icons.do_not_disturb_on_outlined,
+                  title: l10n.hoursWindow,
+                  value: _windowLabel(context, settings.quietHoursStartMinute, settings.quietHoursEndMinute),
+                  onTap: () => _showHours(
+                    context,
+                    ref,
+                    title: l10n.quietHours,
+                    start: settings.quietHoursStartMinute,
+                    end: settings.quietHoursEndMinute,
+                    onSave: (start, end) async {
+                      await controller.setQuietHours(startMinute: start, endMinute: end);
+                      await ref.read(reminderCoordinatorProvider).reschedule();
+                    },
+                  ),
+                ),
               SettingsNavRow(
                 icon: Icons.notifications_outlined,
                 title: l10n.defaultReminders,
@@ -691,6 +745,27 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  Future<void> _showHours(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required int start,
+    required int end,
+    required Future<void> Function(int start, int end) onSave,
+  }) async {
+    await showAppSheet<void>(
+      context: context,
+      builder: (_) => _HoursSheet(title: title, start: start, end: end, onSave: onSave),
+    );
+  }
+
+  static String _windowLabel(BuildContext context, int start, int end) {
+    final localizations = MaterialLocalizations.of(context);
+    String label(int minute) =>
+        localizations.formatTimeOfDay(TimeOfDay(hour: minute ~/ 60, minute: minute % 60));
+    return '${label(start)} – ${label(end)}';
+  }
+
   static String _csvFileName(String kind) {
     final now = DateTime.now();
     return 'mane-$kind-${now.year.toString().padLeft(4, '0')}'
@@ -921,5 +996,72 @@ class _KeepBackupsSheet extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+class _HoursSheet extends StatefulWidget {
+  const _HoursSheet({required this.title, required this.start, required this.end, required this.onSave});
+
+  final String title;
+  final int start;
+  final int end;
+  final Future<void> Function(int start, int end) onSave;
+
+  @override
+  State<_HoursSheet> createState() => _HoursSheetState();
+}
+
+class _HoursSheetState extends State<_HoursSheet> {
+  late int _start = widget.start;
+  late int _end = widget.end;
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final localizations = MaterialLocalizations.of(context);
+    String label(int minute) =>
+        localizations.formatTimeOfDay(TimeOfDay(hour: minute ~/ 60, minute: minute % 60));
+
+    return AppSheet(
+      title: widget.title,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(onPressed: () => _pick(start: true), child: Text(label(_start))),
+            ),
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('–')),
+            Expanded(
+              child: OutlinedButton(onPressed: () => _pick(start: false), child: Text(label(_end))),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FilledButton(onPressed: _saving ? null : _save, child: Text(l10n.save)),
+      ],
+    );
+  }
+
+  Future<void> _pick({required bool start}) async {
+    final minute = start ? _start : _end;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: minute ~/ 60, minute: minute % 60),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      if (start) {
+        _start = picked.hour * 60 + picked.minute;
+      } else {
+        _end = picked.hour * 60 + picked.minute;
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await widget.onSave(_start, _end);
+    if (mounted) Navigator.of(context).pop();
   }
 }

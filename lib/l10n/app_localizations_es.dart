@@ -1281,4 +1281,40 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get complete => 'Completar';
+
+  @override
+  String get beforeStart => 'Antes del inicio';
+
+  @override
+  String get atTimeSection => 'A una hora';
+
+  @override
+  String get addTime => 'Añadir hora';
+
+  @override
+  String get customReminderHint =>
+      'Una hora personalizada se envía el día de la repetición en la zona horaria del dispositivo.';
+
+  @override
+  String get workHours => 'Horario laboral';
+
+  @override
+  String get workHoursSubtitle =>
+      'Oculta las tareas de Trabajo fuera de este horario. Las fechas límite siguen visibles.';
+
+  @override
+  String get quietHours => 'Horas de silencio';
+
+  @override
+  String get quietHoursSubtitle => 'Pausa las notificaciones durante esta franja.';
+
+  @override
+  String get mcpTools => 'Herramientas MCP';
+
+  @override
+  String get mcpToolsHint =>
+      'Solo loopback. Initialize devuelve una cabecera Mcp-Session-Id; los clientes que aceptan text/event-stream reciben un mensaje SSE por llamada. Las escrituras siguen limitadas por el interruptor de arriba.';
+
+  @override
+  String get hoursWindow => 'Configurar franja';
 }

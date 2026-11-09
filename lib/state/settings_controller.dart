@@ -94,6 +94,34 @@ class SettingsController extends Notifier<AppSettings> {
     await _repository.writeSetting(SettingsKeys.autoBackupKeep, '$keep');
   }
 
+  Future<void> setWorkHoursEnabled(bool value) async {
+    state = state.copyWith(workHoursEnabled: value);
+    await _repository.writeSetting(SettingsKeys.workHoursEnabled, '$value');
+  }
+
+  Future<void> setWorkHours({required int startMinute, required int endMinute}) async {
+    state = state.copyWith(
+      workHoursStartMinute: _cleanMinutes(startMinute),
+      workHoursEndMinute: _cleanMinutes(endMinute),
+    );
+    await _repository.writeSetting(SettingsKeys.workHoursStart, '${_cleanMinutes(startMinute)}');
+    await _repository.writeSetting(SettingsKeys.workHoursEnd, '${_cleanMinutes(endMinute)}');
+  }
+
+  Future<void> setQuietHoursEnabled(bool value) async {
+    state = state.copyWith(quietHoursEnabled: value);
+    await _repository.writeSetting(SettingsKeys.quietHoursEnabled, '$value');
+  }
+
+  Future<void> setQuietHours({required int startMinute, required int endMinute}) async {
+    state = state.copyWith(
+      quietHoursStartMinute: _cleanMinutes(startMinute),
+      quietHoursEndMinute: _cleanMinutes(endMinute),
+    );
+    await _repository.writeSetting(SettingsKeys.quietHoursStart, '${_cleanMinutes(startMinute)}');
+    await _repository.writeSetting(SettingsKeys.quietHoursEnd, '${_cleanMinutes(endMinute)}');
+  }
+
   int _cleanMinutes(int value) => value.clamp(0, 24 * 60);
 }
 

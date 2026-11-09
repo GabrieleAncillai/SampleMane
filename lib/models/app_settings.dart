@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mane_core/mane_core.dart';
 
 import '../core/i18n/l10n.dart';
 
@@ -17,6 +18,12 @@ abstract final class SettingsKeys {
   static const sleepWakeBufferMinutes = 'sleepWakeBufferMinutes';
   static const autoBackupEnabled = 'autoBackupEnabled';
   static const autoBackupKeep = 'autoBackupKeep';
+  static const workHoursEnabled = 'workHoursEnabled';
+  static const workHoursStart = 'workHoursStart';
+  static const workHoursEnd = 'workHoursEnd';
+  static const quietHoursEnabled = 'quietHoursEnabled';
+  static const quietHoursStart = 'quietHoursStart';
+  static const quietHoursEnd = 'quietHoursEnd';
   static const appLockEnabled = 'appLockEnabled';
   static const appLockPinSalt = 'appLockPinSalt';
   static const appLockPinHash = 'appLockPinHash';
@@ -43,6 +50,12 @@ class AppSettings {
     this.autoBackupKeep = 5,
     this.appLockEnabled = false,
     this.hasAppLockPin = false,
+    this.workHoursEnabled = false,
+    this.workHoursStartMinute = 9 * 60,
+    this.workHoursEndMinute = 17 * 60,
+    this.quietHoursEnabled = false,
+    this.quietHoursStartMinute = 22 * 60,
+    this.quietHoursEndMinute = 7 * 60,
   });
 
   final ThemeMode themeMode;
@@ -76,9 +89,30 @@ class AppSettings {
   final bool appLockEnabled;
   final bool hasAppLockPin;
 
+  /// When enabled, Work entries leave the aggregate screens outside this
+  /// window. Work deadlines stay visible, and search always finds them.
+  final bool workHoursEnabled;
+  final int workHoursStartMinute;
+  final int workHoursEndMinute;
+
+  /// Local notifications are not scheduled inside this window.
+  final bool quietHoursEnabled;
+  final int quietHoursStartMinute;
+  final int quietHoursEndMinute;
+
   Duration get commute => Duration(minutes: sleepCommuteMinutes);
   Duration get windDown => Duration(minutes: sleepWindDownMinutes);
   Duration get wakeBuffer => Duration(minutes: sleepWakeBufferMinutes);
+
+  bool isWorkTime(DateTime instant, String timeZone) {
+    if (!workHoursEnabled) return true;
+    return isMinuteInWindow(localMinuteAt(instant, timeZone), workHoursStartMinute, workHoursEndMinute);
+  }
+
+  bool isQuietTime(DateTime instant, String timeZone) {
+    if (!quietHoursEnabled) return false;
+    return isMinuteInWindow(localMinuteAt(instant, timeZone), quietHoursStartMinute, quietHoursEndMinute);
+  }
 
   factory AppSettings.fromMap(Map<String, String> values) {
     final localeValue = values[SettingsKeys.locale];
@@ -118,6 +152,12 @@ class AppSettings {
       appLockEnabled:
           values[SettingsKeys.appLockEnabled] == 'true' &&
           (values[SettingsKeys.appLockPinHash] ?? '').isNotEmpty,
+      workHoursEnabled: values[SettingsKeys.workHoursEnabled] == 'true',
+      workHoursStartMinute: _minutes(values[SettingsKeys.workHoursStart], 9 * 60),
+      workHoursEndMinute: _minutes(values[SettingsKeys.workHoursEnd], 17 * 60),
+      quietHoursEnabled: values[SettingsKeys.quietHoursEnabled] == 'true',
+      quietHoursStartMinute: _minutes(values[SettingsKeys.quietHoursStart], 22 * 60),
+      quietHoursEndMinute: _minutes(values[SettingsKeys.quietHoursEnd], 7 * 60),
     );
   }
 
@@ -150,6 +190,12 @@ class AppSettings {
     int? autoBackupKeep,
     bool? appLockEnabled,
     bool? hasAppLockPin,
+    bool? workHoursEnabled,
+    int? workHoursStartMinute,
+    int? workHoursEndMinute,
+    bool? quietHoursEnabled,
+    int? quietHoursStartMinute,
+    int? quietHoursEndMinute,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     locale: clearLocale ? null : (locale ?? this.locale),
@@ -167,5 +213,11 @@ class AppSettings {
     autoBackupKeep: autoBackupKeep ?? this.autoBackupKeep,
     appLockEnabled: appLockEnabled ?? this.appLockEnabled,
     hasAppLockPin: hasAppLockPin ?? this.hasAppLockPin,
+    workHoursEnabled: workHoursEnabled ?? this.workHoursEnabled,
+    workHoursStartMinute: workHoursStartMinute ?? this.workHoursStartMinute,
+    workHoursEndMinute: workHoursEndMinute ?? this.workHoursEndMinute,
+    quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
+    quietHoursStartMinute: quietHoursStartMinute ?? this.quietHoursStartMinute,
+    quietHoursEndMinute: quietHoursEndMinute ?? this.quietHoursEndMinute,
   );
 }

@@ -7,6 +7,8 @@ import 'package:mane/services/app_database.dart';
 import 'package:mane/models/home_item.dart';
 import 'package:mane/models/local_identity.dart';
 import 'package:mane/models/paired_device.dart';
+import 'package:mane/models/remote_snapshot.dart';
+import 'package:mane/models/reminder.dart';
 import 'package:mane/models/shopping_item.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:sqlite3/open.dart';
@@ -136,7 +138,7 @@ void main() {
     expect(columns.map((row) => row.data['name']), contains('time_zone'));
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 7);
+    expect(version.data.values.single, 8);
   });
 
   test('migrates real v2 data and keeps tags usable', () async {
@@ -198,7 +200,7 @@ void main() {
     expect((await database.watchTags().first).single.name, 'Tax');
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 7);
+    expect(version.data.values.single, 8);
   });
 
   test('migrates real v3 data and exposes the v0.3 tables', () async {
@@ -252,7 +254,7 @@ void main() {
 
     await database.saveShiftChecklistItems('missing-pattern', const []);
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 7);
+    expect(version.data.values.single, 8);
   });
 
   test('migrates real v4 data and creates the pairing tables', () async {
@@ -406,7 +408,7 @@ void main() {
     expect(paired.port, 8766);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 7);
+    expect(version.data.values.single, 8);
   });
 
   test('migrates real v5 checklist rows to per-slot keys', () async {
@@ -476,7 +478,7 @@ void main() {
     expect(saved.windDownMinutes, 20);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 7);
+    expect(version.data.values.single, 8);
   });
 
   test('migrates real v6 rows to shopping order and purchase history', () async {
@@ -533,6 +535,81 @@ void main() {
     expect(history.single.note, 'Shop run');
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 7);
+    expect(version.data.values.single, 8);
+  });
+
+  test('migrates real v7 rows to custom reminder times and remote snapshots', () async {
+    final directory = await Directory.systemTemp.createTemp('mane-migration-v7');
+    final path = '${directory.path}/mane.sqlite';
+    final createdAt = DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000;
+
+    final raw = sqlite3.open(path);
+    raw.execute(File('test/fixtures/schema_v7.sql').readAsStringSync());
+    raw.execute(
+      'INSERT INTO space_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['home', 'Home', 0xFF5B7F6B, 0, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO entry_records '
+      '(id, space_id, title, kind, date_key, all_day, status, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['bins', 'home', 'Bins', 'task', 20261109, 1, 'open', createdAt, createdAt],
+    );
+    raw.execute('INSERT INTO reminder_records (id, entry_id, offset_minutes, enabled) VALUES (?, ?, ?, ?)', [
+      'bins:60',
+      'bins',
+      60,
+      1,
+    ]);
+    raw.dispose();
+
+    final database = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(() async {
+      await database.close();
+      await directory.delete(recursive: true);
+    });
+
+    final reminders = await database.readRemindersForEntry('bins');
+    expect(reminders.single.offsetMinutes, 60);
+    expect(reminders.single.timeMinute, isNull);
+
+    await database.saveRemindersForEntry('bins', [
+      const Reminder(id: 'bins:at:1080', entryId: 'bins', offsetMinutes: 0, timeMinute: 18 * 60),
+    ]);
+    final saved = (await database.readRemindersForEntry('bins')).single;
+    expect(saved.timeMinute, 18 * 60);
+
+    await database.saveRemoteSnapshot(
+      RemoteSnapshot(
+        deviceId: 'phone',
+        deviceName: 'Phone',
+        fetchedAt: DateTime.utc(2026, 11, 9, 12),
+        date: LocalDate.parse('2026-11-09'),
+        todayEntries: const ['Remote plan'],
+        todayShifts: const ['Bar'],
+        openShopping: 2,
+        payload: const {
+          'date': '2026-11-09',
+          'today': {
+            'entries': [
+              {
+                'entry': {'title': 'Remote plan'},
+              },
+            ],
+            'shifts': [],
+          },
+          'openShopping': 2,
+        },
+      ),
+    );
+    final snapshots = await database.readRemoteSnapshots();
+    expect(snapshots.single.todayEntries, ['Remote plan']);
+    expect(snapshots.single.openShopping, 2);
+    await database.pruneRemoteSnapshots(const {});
+    expect(await database.readRemoteSnapshots(), isEmpty);
+
+    final version = await database.customSelect('PRAGMA user_version').getSingle();
+    expect(version.data.values.single, 8);
   });
 }

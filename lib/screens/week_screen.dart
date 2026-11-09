@@ -26,7 +26,8 @@ class _WeekScreenState extends ConsumerState<WeekScreen> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final deviceTimeZone = ref.watch(deviceTimeZoneProvider);
-    final today = localDateAt(ref.watch(nowProvider), deviceTimeZone);
+    final now = ref.watch(nowProvider);
+    final today = localDateAt(now, deviceTimeZone);
     final start = today.startOfWeek(settings.weekStart).addDays(7 * _offsetWeeks);
     final range = (start: start, end: start.addDays(6));
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
@@ -34,10 +35,15 @@ class _WeekScreenState extends ConsumerState<WeekScreen> {
     final shiftsState = ref.watch(shiftsProvider(range));
     final allEntries = entriesState.value ?? const <EntryOccurrence>[];
     final allShifts = shiftsState.value ?? const <ShiftOccurrence>[];
-    final entries = settings.hideWorkSpace
-        ? allEntries.where((entry) => entry.entry.spaceId != 'work').toList()
-        : allEntries;
-    final shifts = settings.hideWorkSpace ? const <ShiftOccurrence>[] : allShifts;
+    final entries = allEntries.where((entry) {
+      if (entry.entry.spaceId != 'work') return true;
+      if (settings.hideWorkSpace) return false;
+      if (entry.entry.kind == EntryKind.deadline) return true;
+      return settings.isWorkTime(now, deviceTimeZone);
+    }).toList();
+    final shifts = settings.hideWorkSpace || !settings.isWorkTime(now, deviceTimeZone)
+        ? const <ShiftOccurrence>[]
+        : allShifts;
 
     final entriesByDate = <LocalDate, List<EntryOccurrence>>{};
     for (final occurrence in entries) {

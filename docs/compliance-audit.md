@@ -1,19 +1,20 @@
 # Compliance audit
 
-Status: v0.8, audited 2026-11-09. This audit covers the project rules in
+Status: v0.9, audited 2026-11-09. This audit covers the project rules in
 `AGENTS.md`, `CONTRIBUTING.md`, the public docs and the private scenario brief.
 The private brief is reviewed locally; its details are not copied here.
 
 ## Verdict
 
 The core promises are intact: offline-first storage, no accounts, no telemetry,
-GPL-3.0-only, optional LAN/MCP, tested migrations and green builds. The project
-is **not** v1.0-ready. The visual gap is closed (v0.6) and the v0.7/v0.8 domain
-gaps are closed: ICS exceptions, multi-day entries, per-slot checklists, GymMane
-import, backup automation, CSV, home tracking and the optional local app lock
-ship and are tested. Remaining scenario gaps are MCP tool coverage and sessions,
-persisted read-only LAN snapshots, work-hours/quiet-hours behavior, custom
-reminder times and notification actions.
+GPL-3.0-only, optional LAN/MCP, tested migrations and green builds. v0.6 through
+v0.9 closed the visual and feature gaps: the reference kit, calendar day
+timeline, multi-day entries, recurrence exceptions, per-slot checklists,
+GymMane import, backup automation, CSV, home tracking, app lock, full MCP tools
+and sessions, persistent read-only LAN snapshots, work/quiet hours, custom
+reminder times and notification actions. The project is **not** v1.0-ready only
+because the real-device checklist, accessibility/contrast audit and signed
+release are still pending.
 
 The completion work is in `docs/completion-plan.md`. The v0.6 M0 slice already
 fixed Android cloud backup, the CI gap and the documentation claims; the
@@ -28,14 +29,14 @@ product/visual and feature work is the active program.
 | Data ownership in SQLite, export first-class | Pass | Drift schema, JSON export/import, rotating automatic local backups, older-schema upgrade, CSV and ICS export; Android cloud backup disabled | Keep |
 | Optional network only | Pass | `syncEnabled` and `mcpEnabled` default false; local plan works without peers | Keep, add tests for both-switch-off startup |
 | GPL-3.0-only and attribution | Pass | `LICENSE`, `ADDITIONAL_TERMS.md`, `CREDITS.md`, About screen | Keep |
-| Android + Linux both build | Pass at v0.5 | Debug APK and Linux debug pass locally; release workflow builds both | Add Linux build to the normal CI |
+| Android + Linux both build | Pass at v0.9 | Debug APK and Linux debug pass locally; release workflow builds both | Add Linux build to the normal CI |
 | No new dependency without reason | Pass | Existing stack only; no analytics/ads/Firebase/Supabase | Keep |
-| Do not weaken tests or security | Pass | 121 app + 82 core tests; pairing/TLS/replay and app-lock hashing tests | Keep |
+| Do not weaken tests or security | Pass | 130 app + 85 core tests; pairing/TLS/replay, app-lock hashing, MCP auth/session and snapshot tests | Keep |
 | Reference-first for components, styles, motion | Pass (v0.6) | Nunito, expanded `ManeColors`, `ManeType`, component themes, `lib/core/widgets` kit, floating shell and screen sweep; `test/visual_kit_test.dart` and `docs/screenshots/` | Keep |
 | Reference map describes shipped state | Pass (v0.6) | `docs/reference-map.md` now names the shipped kit and the visual deviation | Keep |
-| Every schema change has migration + real-row test | Pass | v1→v7 migration tests, including real v5 and v6 fixtures | Keep |
+| Every schema change has migration + real-row test | Pass | v1→v8 migration tests, including real v5, v6 and v7 fixtures | Keep |
 | Timezone behavior has DST/travel tests | Pass | Core time tests and widget/reminder tests | Keep for new features |
-| Localization: English source, Spanish first | Pass for shipped screens | ARB parity and literal scanner tests, including v0.8 surfaces | Extend for v0.9 surfaces |
+| Localization: English source, Spanish first | Pass for shipped screens | ARB parity and literal scanner tests, including the v0.8 and v0.9 surfaces | Keep |
 | Accessibility basics | Partial | Semantics, text scaling, shortcuts; no certified screen-reader/contrast audit | v1.0 audit |
 | Release signing is user-provided | Pass | Release workflow refuses without keystore secrets | Keep |
 | Private brief stays private | Pass | `doc-personal/` is gitignored; no private details in public docs | Keep |
@@ -107,39 +108,43 @@ is missing. `planMoves` and per-routine durations remain documented limits.
 **Remediation (done):** schema v6 keys completions by item, date and stable slot
 key, migrates real v5 rows to the first slot and tests two-slot independence.
 
-### P2 — Work-hours visibility is only "hide the whole Work space"
+### P2 — Work-hours visibility is only "hide the whole Work space" (fixed v0.9)
 
-**Evidence:** `AppSettings.hideWorkSpace` filters Work from screens. There is no
-work-hours window, quiet-hours notification suppression or per-space rule.
+**Evidence:** `AppSettings.hideWorkSpace` filtered Work from screens. There was
+no work-hours window, quiet-hours notification suppression or per-space rule.
 
-**Impact:** users either see all work all the time or hide Work entirely. Work
-notifications can interrupt outside work hours.
+**Remediation (done):** `workHoursEnabled`/`workHoursStart`/`workHoursEnd` hide
+Work tasks from Today, Week and Calendar outside the window while Work deadlines
+remain visible and search still finds them. `quietHoursEnabled` with start/end
+and the work window are applied to each notification's local fire time in the
+reminder planner. Settings expose switches and time pickers.
 
-**Remediation (v0.9):** work-hours visibility and quiet hours with notification
-suppression, while explicit Work views remain available.
+### P2 — LAN snapshots are in memory and disappear on restart (fixed v0.9)
 
-### P2 — LAN snapshots are in memory and disappear on restart
+**Evidence:** `SyncService` kept `_snapshots` in a map; no table or file stored
+them.
 
-**Evidence:** `SyncService` keeps `_snapshots` in a map; no table or file stores
-them. `SyncState` is rebuilt empty after launch.
+**Remediation (done):** schema v8 adds `remote_snapshot_records`; the client
+stores the raw read-only payload, restores it on start, prunes unpaired devices
+and still never merges it. A restart test keeps the last snapshot while the peer
+is offline.
 
-**Impact:** the Devices page is empty until a peer is reachable again. The
-"read-only snapshot" is not durable.
+### P2 — MCP covered only four tools and the core JSON-RPC surface (fixed v0.9)
 
-**Remediation (v0.9):** persist snapshots read-only, with schema migration,
-retention and a test that a restart keeps the last snapshot.
+**Evidence:** `McpServer` exposed the four core tools and no session handling.
 
-### P2 — MCP covers only four tools and the core JSON-RPC surface
+**Remediation (done):** the v0.9 tool set adds range, search, get, shifts,
+inventory, tags, sleep, update, uncomplete, delete and shopping add/check;
+writes stay behind the setting. `initialize` returns `Mcp-Session-Id`, explicit
+sessions expire, `DELETE /mcp` closes one, and `text/event-stream` clients get
+one SSE message per call. The MCP page lists the surface.
 
-**Evidence:** `McpServer` exposes `personal.today`, `work.next_shifts`,
-`home.shopping`, `plan.create`, `plan.complete`; no search, range listing, update,
-delete, home inventory, tags or sleep. No streamable/session handling.
+### P2 — Reminders were offset-only with no notification actions (fixed v0.9)
 
-**Impact:** a desktop agent cannot use the planner as its full local data source,
-which is one of the stated product goals.
-
-**Remediation (v0.9):** full tool set, gated writes, streamable HTTP session
-handling and tests.
+**Remediation (done):** `reminder_records.time_minute` stores an absolute local
+time; the editor and sheet support both forms. Android notifications carry
+snooze and complete actions, and the payload includes the occurrence date so a
+recurring completion does not complete the whole series.
 
 ### P2 — Multi-day entries and recurrence exceptions were incomplete (fixed v0.7)
 
@@ -163,7 +168,7 @@ automatic backup or rotation.
 
 **Remediation (done):** `features/backup/auto_backup_service.dart` writes one
 local JSON copy per day with rotation, wired to app start/resume. Backup import
-accepts schemas 3–7 by defaulting missing fields, and rejects 1–2 and future
+accepts schemas 3–8 by defaulting missing fields, and rejects 1–2 and future
 versions. App-lock secrets are excluded from export. Tests cover v3/v4 upgrades,
 round-trip, rejection and rotation.
 

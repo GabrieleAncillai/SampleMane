@@ -129,6 +129,7 @@ void main() {
     expect(service.state.value.port, greaterThan(0));
     expect(discovery.started, isTrue);
     expect(service.state.value.snapshots[hostIdentity.deviceId]!.todayEntries, contains('Remote plan'));
+    expect(service.state.value.snapshots[hostIdentity.deviceId]!.payload['spaces'], isNotEmpty);
 
     discovery.emit(
       DiscoveredPeer(
@@ -146,6 +147,34 @@ void main() {
     await service.stop();
     expect(service.state.value.running, isFalse);
     expect(discovery.stopped, isTrue);
+  });
+
+  test('keeps the last read-only snapshot across a restart', () async {
+    await service.start();
+    expect(service.state.value.snapshots[hostIdentity.deviceId], isNotNull);
+    await service.stop();
+    await hostServer.stop();
+
+    final restarted = SyncService(
+      repository: PlannerRepository(guestDb),
+      identityService: IdentityService(PlannerRepository(guestDb)),
+      client: LanClient(PlannerRepository(guestDb), clock: () => now),
+      server: LanServer(
+        repository: PlannerRepository(guestDb),
+        deviceTimeZone: () => 'Europe/Madrid',
+        clock: () => now,
+      ),
+      discovery: _FakeDiscovery(),
+      clock: () => now,
+    );
+    addTearDown(restarted.close);
+    await restarted.start();
+
+    final snapshot = restarted.state.value.snapshots[hostIdentity.deviceId];
+    expect(snapshot, isNotNull);
+    expect(snapshot!.todayEntries, contains('Remote plan'));
+    expect(snapshot.payload['range'], isNotNull);
+    expect(restarted.state.value.deviceErrors[hostIdentity.deviceId], isNotNull);
   });
 
   test('keeps the local plan when the peer is offline', () async {

@@ -31,7 +31,7 @@ class BackupService {
   BackupService(this._database);
 
   static const appTag = 'mane';
-  static const currentSchemaVersion = 7;
+  static const currentSchemaVersion = 8;
 
   /// The oldest payload this build still upgrades. v1 and v2 are excluded on
   /// purpose: they predate timezone-aware entries and cannot be mapped safely.
@@ -168,7 +168,13 @@ class BackupService {
       ],
       'reminders': [
         for (final row in reminders)
-          {'id': row.id, 'entryId': row.entryId, 'offsetMinutes': row.offsetMinutes, 'enabled': row.enabled},
+          {
+            'id': row.id,
+            'entryId': row.entryId,
+            'offsetMinutes': row.offsetMinutes,
+            'timeMinute': row.timeMinute,
+            'enabled': row.enabled,
+          },
       ],
       'shiftPatterns': [
         for (final row in patterns)
@@ -482,6 +488,7 @@ class BackupService {
                 id: _string(row, 'id'),
                 entryId: _string(row, 'entryId'),
                 offsetMinutes: _integer(row, 'offsetMinutes'),
+                timeMinute: Value(_optionalInteger(row, 'timeMinute')),
                 enabled: Value(_boolean(row, 'enabled')),
               ),
             );

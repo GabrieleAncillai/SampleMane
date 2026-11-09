@@ -136,6 +136,42 @@ class McpPage extends ConsumerWidget {
                 ),
               ],
             ),
+            SettingsSection(
+              title: l10n.mcpTools,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SelectableText(
+                        'personal.today  work.next_shifts  plan.range\n'
+                        'plan.search  plan.get  work.shifts  tags.list\n'
+                        'home.shopping  home.inventory  sleep.window',
+                        style: ManeType.body(
+                          11.5,
+                          color: context.mc.textSecondary,
+                        ).copyWith(fontFamily: 'monospace', height: 1.5),
+                      ),
+                      if (settings.mcpWritesEnabled) ...[
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          'plan.create  plan.update  plan.complete\n'
+                          'plan.uncomplete  plan.delete\n'
+                          'home.shopping_add  home.shopping_check',
+                          style: ManeType.body(
+                            11.5,
+                            color: context.mc.textSecondary,
+                          ).copyWith(fontFamily: 'monospace', height: 1.5),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Text(l10n.mcpToolsHint, style: ManeType.body(11.5, color: context.mc.textSecondary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),

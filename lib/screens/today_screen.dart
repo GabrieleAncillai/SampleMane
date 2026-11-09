@@ -19,7 +19,8 @@ class TodayScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final deviceTimeZone = ref.watch(deviceTimeZoneProvider);
-    final today = localDateAt(ref.watch(nowProvider), deviceTimeZone);
+    final now = ref.watch(nowProvider);
+    final today = localDateAt(now, deviceTimeZone);
     final range = (start: today, end: today);
     final settings = ref.watch(settingsProvider);
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
@@ -28,12 +29,13 @@ class TodayScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final c = context.mc;
 
-    final entries = settings.hideWorkSpace
-        ? (entriesState.value ?? const <EntryOccurrence>[])
-              .where((entry) => entry.entry.spaceId != 'work')
-              .toList()
-        : entriesState.value ?? const <EntryOccurrence>[];
-    final shifts = settings.hideWorkSpace
+    final entries = (entriesState.value ?? const <EntryOccurrence>[]).where((entry) {
+      if (entry.entry.spaceId != 'work') return true;
+      if (settings.hideWorkSpace) return false;
+      if (entry.entry.kind == EntryKind.deadline) return true;
+      return settings.isWorkTime(now, deviceTimeZone);
+    }).toList();
+    final shifts = settings.hideWorkSpace || !settings.isWorkTime(now, deviceTimeZone)
         ? const <ShiftOccurrence>[]
         : shiftsState.value ?? const <ShiftOccurrence>[];
 

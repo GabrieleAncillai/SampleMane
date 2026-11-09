@@ -45,6 +45,15 @@ second device.
 - [ ] Tap the notification while the app is open; no duplicate screen stack.
 - [ ] Edit the entry time, then verify the old notification is gone and the new
       time is scheduled.
+- [ ] Add an "at a time" reminder (for example 08:00) and verify it fires on the
+      occurrence day at that local time.
+- [ ] Enable quiet hours around the reminder time and verify it is suppressed
+      after the next queue rebuild.
+- [ ] Enable work hours and create a Work reminder outside them; verify it is
+      suppressed while the task remains visible as a deadline if it is one.
+- [ ] On Android, use the notification's Snooze action; it fires again in about
+      ten minutes. Use Complete and verify the entry (or one occurrence) is
+      marked done.
 
 ## Reboot
 
@@ -70,6 +79,8 @@ second device.
 - [ ] Change the timezone back and verify the timed entry returns.
 - [ ] Schedule a reminder, change the timezone, resume the app, and confirm the
       reminder is still scheduled for the same absolute moment.
+- [ ] Enable work and quiet hours, then repeat the timezone change. The windows
+      must be evaluated in the new device zone after the resume rebuild.
 
 ## LAN pairing and query
 
@@ -78,18 +89,30 @@ second device.
 - [ ] Device B finds A over mDNS, or connects with A's address and port.
 - [ ] Enter the code on B; both devices show the pairing.
 - [ ] A's today view and next shift appear on B's Devices page after refresh.
+- [ ] Kill and reopen B while A is offline; B still shows A's last read-only
+      snapshot and never merges it into B's plan.
 - [ ] Turn on airplane mode, open B, and verify B's own plan still works. Turn
       airplane mode off and refresh; A's snapshot returns.
-- [ ] Unpair on one device and verify queries are rejected.
+- [ ] Unpair on one device and verify queries are rejected and the cached
+      snapshot is removed.
 
 ## MCP
 
 - [ ] Enable the MCP endpoint and allow write tools.
 - [ ] From the same machine, call `initialize`, `tools/list` and
       `home.shopping` with the bearer token. Use `curl` or an MCP client.
+- [ ] Check that `initialize` returns an `Mcp-Session-Id`; send it on a later
+      call and confirm it is accepted, then `DELETE /mcp` it and confirm the
+      next explicit-session call is rejected.
+- [ ] Send `Accept: text/event-stream` on a `tools/call` and confirm one SSE
+      message containing the JSON-RPC result.
 - [ ] A request without the token is rejected.
-- [ ] `plan.create` creates an entry visible in the app; `plan.complete` marks
-      it done.
+- [ ] Exercise `plan.range`, `plan.search`, `work.shifts`, `home.inventory`,
+      `tags.list` and `sleep.window`.
+- [ ] `plan.create` creates an entry visible in the app; `plan.update`,
+      `plan.complete`, `plan.uncomplete` and `plan.delete` behave as expected.
+- [ ] `home.shopping_add` then `home.shopping_check` updates the linked
+      inventory quantity.
 - [ ] Disable the endpoint and verify the port is closed.
 
 ## Widget

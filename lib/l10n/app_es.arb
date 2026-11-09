@@ -439,5 +439,16 @@
   "shoppingOther": "Otros",
   "moveUp": "Subir",
   "moveDown": "Bajar",
-  "complete": "Completar"
+  "complete": "Completar",
+  "beforeStart": "Antes del inicio",
+  "atTimeSection": "A una hora",
+  "addTime": "Añadir hora",
+  "customReminderHint": "Una hora personalizada se envía el día de la repetición en la zona horaria del dispositivo.",
+  "workHours": "Horario laboral",
+  "workHoursSubtitle": "Oculta las tareas de Trabajo fuera de este horario. Las fechas límite siguen visibles.",
+  "quietHours": "Horas de silencio",
+  "quietHoursSubtitle": "Pausa las notificaciones durante esta franja.",
+  "mcpTools": "Herramientas MCP",
+  "mcpToolsHint": "Solo loopback. Initialize devuelve una cabecera Mcp-Session-Id; los clientes que aceptan text/event-stream reciben un mensaje SSE por llamada. Las escrituras siguen limitadas por el interruptor de arriba.",
+  "hoursWindow": "Configurar franja"
 }

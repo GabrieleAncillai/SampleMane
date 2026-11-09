@@ -112,4 +112,34 @@ abstract final class SyncPayloads {
       'openShopping': openShopping,
     };
   }
+
+  /// A richer read-only snapshot for the Devices page. It keeps the compact
+  /// summary keys and adds the next week of entries and shifts plus the tag,
+  /// space, inventory and shopping lists. Nothing here is written locally.
+  static Future<Map<String, Object?>> fullSnapshot({
+    required PlannerRepository repository,
+    required DateTime now,
+    required String timeZone,
+  }) async {
+    final base = await summary(repository: repository, now: now, timeZone: timeZone);
+    final today = localDateAt(now, timeZone);
+    final end = today.addDays(7);
+    final entries = await repository.loadEntries(today, end, timeZone);
+    final shifts = await repository.watchShifts(today, end, timeZone).first;
+    final spaces = await repository.watchSpaces().first;
+    final tags = await repository.watchTags().first;
+    final home = await repository.watchHomeItems().first;
+    final shopping = await repository.watchShoppingItems().first;
+
+    return {
+      ...base,
+      'range': {'start': today.iso, 'end': end.iso},
+      'spaces': [for (final space in spaces) spaceJson(space)],
+      'tags': [for (final tag in tags) tagJson(tag)],
+      'entries': [for (final occurrence in entries) occurrenceJson(occurrence)],
+      'shifts': [for (final shift in shifts) shiftJson(shift)],
+      'home': [for (final item in home) homeItemJson(item)],
+      'shopping': [for (final item in shopping) shoppingItemJson(item)],
+    };
+  }
 }

@@ -439,5 +439,16 @@
   "shoppingOther": "Other",
   "moveUp": "Move up",
   "moveDown": "Move down",
-  "complete": "Complete"
+  "complete": "Complete",
+  "beforeStart": "Before the start",
+  "atTimeSection": "At a time",
+  "addTime": "Add time",
+  "customReminderHint": "A custom time fires on the occurrence day in the device timezone.",
+  "workHours": "Work hours",
+  "workHoursSubtitle": "Hide Work tasks outside these hours. Work deadlines stay visible.",
+  "quietHours": "Quiet hours",
+  "quietHoursSubtitle": "Pause notifications during this window.",
+  "mcpTools": "MCP tools",
+  "mcpToolsHint": "Loopback only. Initialize returns an Mcp-Session-Id header; clients that accept text/event-stream receive one SSE message per call. Writes stay gated by the switch above.",
+  "hoursWindow": "Set window"
 }

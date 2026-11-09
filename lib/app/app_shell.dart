@@ -13,6 +13,8 @@ import '../features/home_widget/home_widget_service.dart';
 import '../features/search/pages/search_page.dart';
 import '../features/settings/pages/settings_page.dart';
 import '../features/tags/widgets/tag_filter_sheet.dart';
+import '../services/notification_service.dart';
+import '../services/reminder_planner.dart';
 import '../screens/entry_editor.dart';
 import '../screens/today_screen.dart';
 import '../screens/week_screen.dart';
@@ -62,8 +64,13 @@ class _AppShellState extends ConsumerState<AppShell>
     if (!mounted) return;
     final notifications = ref.read(notificationServiceProvider);
     notifications.onOpenEntry = _openEntry;
+    notifications.onAction = _handleNotificationAction;
     final pending = notifications.takePendingEntry();
     if (pending != null) await _openEntry(pending);
+    final pendingAction = notifications.takePendingAction();
+    if (pendingAction != null) {
+      await _handleNotificationAction(pendingAction.$1, pendingAction.$2, pendingAction.$3);
+    }
     if (!mounted) return;
     await ref.read(reminderCoordinatorProvider).reschedule();
     await ref.read(serviceCoordinatorProvider).apply(ref.read(settingsProvider));
@@ -130,6 +137,41 @@ class _AppShellState extends ConsumerState<AppShell>
     if (entry == null || !mounted) return;
     final spaces = ref.read(spacesProvider).value ?? fallbackSpaces;
     await showEntryEditor(context, entry: entry, initialDate: entry.date, spaces: spaces);
+  }
+
+  Future<void> _handleNotificationAction(String actionId, String entryId, LocalDate? date) async {
+    final repository = ref.read(repositoryProvider);
+    final entry = await repository.readEntry(entryId);
+    if (entry == null || entry.deletedAt != null) return;
+    final timeZone = ref.read(deviceTimeZoneProvider);
+    final today = localDateAt(ref.read(nowProvider), timeZone);
+
+    if (actionId == NotificationService.completeAction) {
+      if (entry.isMaintenance) {
+        await repository.completeMaintenanceEntry(entryId, today);
+      } else if (entry.recurrence != null && date != null) {
+        await repository.setOccurrenceCompleted(entryId, date, true);
+      } else {
+        await repository.setEntryStatus(entryId, EntryStatus.done);
+      }
+      await ref.read(reminderCoordinatorProvider).reschedule();
+      await _updateHomeWidget();
+      return;
+    }
+
+    if (actionId == NotificationService.snoozeAction) {
+      final occurrenceDate = date ?? today;
+      await ref
+          .read(notificationServiceProvider)
+          .scheduleSnooze(
+            notificationId: notificationIdFor(entryId, 'snooze', occurrenceDate.key),
+            entryId: entryId,
+            date: occurrenceDate,
+            title: entry.title,
+            body: entry.notes,
+            fireAt: ref.read(clockProvider)().toUtc().add(const Duration(minutes: 10)),
+          );
+    }
   }
 
   void _selectTab(int value) {

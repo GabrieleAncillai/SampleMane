@@ -140,6 +140,80 @@ void main() {
     expect(plans[1].fireAt, DateTime.utc(2026, 3, 8, 12, 50));
   });
 
+  test('a custom time fires on the occurrence day in the device zone', () {
+    final entry = timedEntry();
+    final occurrences = expandEntries(
+      entries: [entry],
+      start: monday,
+      end: monday,
+      viewerTimeZone: 'America/New_York',
+    );
+    final plans = planReminders(
+      occurrences: occurrences,
+      remindersByEntry: {
+        entry.id: [const Reminder(id: 'at8', entryId: 'standup', offsetMinutes: 0, timeMinute: 8 * 60)],
+      },
+      now: DateTime.utc(2026, 3, 2, 0),
+      deviceTimeZone: 'America/New_York',
+    );
+
+    expect(plans.single.fireAt, DateTime.utc(2026, 3, 2, 13));
+    expect(plans.single.date, monday);
+  });
+
+  test('quiet hours suppress every reminder inside the window', () {
+    final entry = timedEntry();
+    final occurrences = expandEntries(
+      entries: [entry],
+      start: monday,
+      end: monday,
+      viewerTimeZone: 'America/New_York',
+    );
+    final plans = planReminders(
+      occurrences: occurrences,
+      remindersByEntry: {
+        entry.id: [const Reminder(id: 'at23', entryId: 'standup', offsetMinutes: 0, timeMinute: 23 * 60)],
+      },
+      now: DateTime.utc(2026, 3, 2, 0),
+      deviceTimeZone: 'America/New_York',
+      quietHours: (start: 22 * 60, end: 7 * 60),
+    );
+    expect(plans, isEmpty);
+  });
+
+  test('work hours suppress work reminders but not personal ones', () {
+    final work = timedEntry();
+    final personal = Entry(
+      id: 'dinner',
+      spaceId: 'personal',
+      title: 'Dinner',
+      date: monday,
+      startMinute: 19 * 60,
+      endMinute: 20 * 60,
+      timeZone: 'America/New_York',
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+    final occurrences = expandEntries(
+      entries: [work, personal],
+      start: monday,
+      end: monday,
+      viewerTimeZone: 'America/New_York',
+    );
+    final plans = planReminders(
+      occurrences: occurrences,
+      remindersByEntry: {
+        work.id: [const Reminder(id: 'w18', entryId: 'standup', offsetMinutes: 0, timeMinute: 18 * 60)],
+        personal.id: [const Reminder(id: 'p18', entryId: 'dinner', offsetMinutes: 0, timeMinute: 18 * 60)],
+      },
+      now: DateTime.utc(2026, 3, 2, 0),
+      deviceTimeZone: 'America/New_York',
+      workHours: (start: 9 * 60, end: 17 * 60),
+    );
+
+    expect(plans.map((plan) => plan.entryId), ['dinner']);
+  });
+
   test('notification ids are stable and distinct per occurrence', () {
     final first = notificationIdFor('entry', 'entry:10', 20260302);
     final again = notificationIdFor('entry', 'entry:10', 20260302);

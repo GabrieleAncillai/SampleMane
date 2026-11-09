@@ -17,6 +17,7 @@ import '../models/local_identity.dart';
 import '../models/paired_device.dart';
 import '../models/shopping_item.dart';
 import '../models/app_settings.dart';
+import '../state/settings_controller.dart';
 import '../services/app_database.dart';
 import '../services/notification_service.dart';
 import '../services/planner_repository.dart';
@@ -63,6 +64,7 @@ final reminderCoordinatorProvider = Provider<ReminderCoordinator>(
     notifications: ref.watch(notificationServiceProvider),
     deviceTimeZone: ref.watch(deviceTimeZoneProvider),
     clock: ref.watch(clockProvider),
+    settings: ref.watch(settingsProvider),
   ),
 );
 

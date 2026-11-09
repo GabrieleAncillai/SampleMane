@@ -2389,6 +2389,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Complete'**
   String get complete;
+
+  /// No description provided for @beforeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Before the start'**
+  String get beforeStart;
+
+  /// No description provided for @atTimeSection.
+  ///
+  /// In en, this message translates to:
+  /// **'At a time'**
+  String get atTimeSection;
+
+  /// No description provided for @addTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Add time'**
+  String get addTime;
+
+  /// No description provided for @customReminderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A custom time fires on the occurrence day in the device timezone.'**
+  String get customReminderHint;
+
+  /// No description provided for @workHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Work hours'**
+  String get workHours;
+
+  /// No description provided for @workHoursSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Work tasks outside these hours. Work deadlines stay visible.'**
+  String get workHoursSubtitle;
+
+  /// No description provided for @quietHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get quietHours;
+
+  /// No description provided for @quietHoursSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause notifications during this window.'**
+  String get quietHoursSubtitle;
+
+  /// No description provided for @mcpTools.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP tools'**
+  String get mcpTools;
+
+  /// No description provided for @mcpToolsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Loopback only. Initialize returns an Mcp-Session-Id header; clients that accept text/event-stream receive one SSE message per call. Writes stay gated by the switch above.'**
+  String get mcpToolsHint;
+
+  /// No description provided for @hoursWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Set window'**
+  String get hoursWindow;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

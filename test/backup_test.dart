@@ -81,6 +81,7 @@ void main() {
     await database.saveRemindersForEntry('shift', const [
       Reminder(id: 'shift:15', entryId: 'shift', offsetMinutes: 15),
       Reminder(id: 'shift:60', entryId: 'shift', offsetMinutes: 60),
+      Reminder(id: 'shift:at:1200', entryId: 'shift', offsetMinutes: 0, timeMinute: 20 * 60),
     ]);
     await database.saveShiftPattern(
       ShiftPattern(
@@ -164,7 +165,7 @@ void main() {
 
     final exported = await BackupService(source).exportJson();
     final payload = jsonDecode(exported) as Map<String, dynamic>;
-    expect(payload['schemaVersion'], 7);
+    expect(payload['schemaVersion'], 8);
     expect(payload.containsKey('identity'), isFalse);
     expect(payload.containsKey('pairedDevices'), isFalse);
     expect(exported, isNot(contains('cGluaGFzaA==')));

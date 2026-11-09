@@ -15,6 +15,7 @@ class RemoteSnapshot {
     this.nextShiftLabel,
     this.nextShiftStart,
     required this.openShopping,
+    this.payload = const <String, Object?>{},
   });
 
   final String deviceId;
@@ -26,6 +27,10 @@ class RemoteSnapshot {
   final String? nextShiftLabel;
   final DateTime? nextShiftStart;
   final int openShopping;
+
+  /// The full read-only query payload, kept so a restart can show the same
+  /// snapshot without calling the peer again.
+  final Map<String, Object?> payload;
 
   factory RemoteSnapshot.fromPayload({
     required String deviceId,
@@ -65,12 +70,21 @@ class RemoteSnapshot {
       deviceId: deviceId,
       deviceName: deviceName,
       fetchedAt: fetchedAt,
-      date: LocalDate.parse('${data['date']}'),
+      date: _dateFrom(data, fetchedAt),
       todayEntries: entries,
       todayShifts: shifts,
       nextShiftLabel: nextShiftLabel,
       nextShiftStart: nextShiftStart,
       openShopping: data['openShopping'] is int ? data['openShopping'] as int : 0,
+      payload: data,
     );
+  }
+
+  static LocalDate _dateFrom(Map<String, Object?> data, DateTime fetchedAt) {
+    try {
+      return LocalDate.parse('${data['date']}');
+    } on FormatException {
+      return LocalDate.fromDateTime(fetchedAt.toLocal());
+    }
   }
 }

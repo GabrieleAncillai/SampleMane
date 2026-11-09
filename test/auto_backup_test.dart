@@ -48,7 +48,7 @@ void main() {
     expect(files, hasLength(2));
     final payload = jsonDecode(await files.first.readAsString()) as Map<String, Object?>;
     expect(payload['app'], 'mane');
-    expect(payload['schemaVersion'], 7);
+    expect(payload['schemaVersion'], 8);
     final entries = payload['entries']! as List<Object?>;
     expect(entries, isEmpty);
   });

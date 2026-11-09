@@ -154,7 +154,7 @@ export a backup and an ICS, restore the backup, and unlock with the local PIN.
 
 **Shipped in v0.8:** schema v7 (`shopping_items.position` and
 `home_purchases`); `features/import/gymmane_import.dart`; rotating daily
-backups in `features/backup/auto_backup_service.dart`; backup schema 3–7 import;
+backups in `features/backup/auto_backup_service.dart`; backup schema 3–8 import;
 `features/export/csv_interchange.dart`; grouped shopping with clear/reorder;
 inventory quick adjustments and purchase history; the maintenance due view; and
 the optional PIN lock over PBKDF2 in `features/app_lock`. Tests: 121 app tests
@@ -162,25 +162,36 @@ and 82 core tests, plus the v6→v7 real-row migration.
 
 ### v0.9 MCP, LAN sync and notification reliability
 
-- [ ] Extend MCP beyond the four core tools: search, list by range, update,
+- [x] Extend MCP beyond the four core tools: search, list by range, update,
       uncomplete, delete, shifts by range, home inventory, shopping add/check,
       tags and sleep window.
-- [ ] Add MCP session handling for streamable HTTP clients and document the
+- [x] Add MCP session handling for streamable HTTP clients and document the
       supported protocol surface.
-- [ ] Persist read-only LAN snapshots so the Devices page survives restarts;
+- [x] Persist read-only LAN snapshots so the Devices page survives restarts;
       never merge them into the local plan.
-- [ ] Extend the LAN query payload beyond the compact summary while keeping it
+- [x] Extend the LAN query payload beyond the compact summary while keeping it
       read-only.
-- [ ] Add work-hours visibility and quiet hours, including notification
+- [x] Add work-hours visibility and quiet hours, including notification
       suppression, without hiding work deadlines the user explicitly opens.
-- [ ] Support custom reminder times in addition to offsets, and notification
+- [x] Support custom reminder times in addition to offsets, and notification
       actions for snooze and complete where the platform allows.
-- [ ] Document why absolute-instant scheduling is timezone-change safe and
+- [x] Document why absolute-instant scheduling is timezone-change safe and
       rebuild the queue on every resume, timezone change and boot.
 
 Acceptance: an MCP client can read and write a full plan within the gated
 permission; a paired device shows the last snapshot offline; a Work reminder
 outside quiet hours is suppressed; a snooze action works on a real device.
+
+**Shipped in v0.9:** schema v8 (`reminder_records.time_minute` and
+`remote_snapshot_records`); the MCP adapter now exposes range, search, get,
+shifts, inventory, tags, sleep, update, uncomplete, delete and shopping tools,
+returns `Mcp-Session-Id` and answers `text/event-stream` clients; the LAN
+snapshot resource carries spaces, tags, entries, shifts, home and shopping and
+is persisted read-only with pruning on unpair; work-hours visibility, quiet
+hours and notification suppression are wired through settings, screens and the
+reminder planner; custom reminder times use `time_minute`; and Android
+notifications carry snooze/complete actions. Tests: 130 app tests and 85 core
+tests.
 
 ### v1.0 Device verification, polish and release
 
@@ -216,7 +227,7 @@ outside quiet hours is suppressed; a snooze action works on a real device.
 | LAN sync | In-memory summary snapshots | Persistent read-only snapshots and richer query | v0.9 |
 | Work visibility | Hide the whole Work space | Work-hours visibility and quiet hours | v0.9 |
 | Reminders | Offsets only | Custom times, snooze/complete actions | v0.9 |
-| Android widget | Today + next shift, app resume update | Config/deep-link polish | v0.9 |
+| Android widget | Today + next shift, app resume update | Optional configuration/deep-link polish | v1.0 polish |
 | Localization | English/Spanish | Complete, including new surfaces | v1.0 |
 | Accessibility | First pass | Screen-reader and contrast audit | v1.0 |
 

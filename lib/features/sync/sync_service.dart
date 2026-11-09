@@ -78,6 +78,7 @@ class SyncService {
 
   Future<void> start() async {
     if (_running) return;
+    await _restoreSnapshots();
     final identity = await _identityService.read();
     _identity = identity;
     if (identity == null) {
@@ -167,14 +168,16 @@ class SyncService {
       return;
     }
     try {
-      final data = await _client.summary(device, localDeviceId: identity.deviceId);
+      final data = await _client.snapshot(device, localDeviceId: identity.deviceId);
       final fetchedAt = _clock().toUtc();
-      _snapshots[device.id] = RemoteSnapshot.fromPayload(
+      final snapshot = RemoteSnapshot.fromPayload(
         deviceId: device.id,
         deviceName: device.name,
         fetchedAt: fetchedAt,
         data: data,
       );
+      _snapshots[device.id] = snapshot;
+      await _repository.saveRemoteSnapshot(snapshot);
       _deviceErrors.remove(device.id);
       await _repository.updatePairedDevicePresence(
         device.id,
@@ -251,10 +254,28 @@ class SyncService {
 
   Future<void> unpair(String id) async {
     await _repository.removePairedDevice(id);
+    await _repository.deleteRemoteSnapshot(id);
     _snapshots.remove(id);
     _deviceErrors.remove(id);
     _lastQueried.remove(id);
     _emit();
+  }
+
+  /// Restores the last read-only snapshots and drops rows for devices that are
+  /// no longer paired. Remote data is never merged into the local plan.
+  Future<void> _restoreSnapshots() async {
+    try {
+      final devices = await _repository.readPairedDevices();
+      final ids = {for (final device in devices) device.id};
+      await _repository.pruneRemoteSnapshots(ids);
+      final stored = await _repository.readRemoteSnapshots();
+      _snapshots
+        ..clear()
+        ..addEntries(stored.map((snapshot) => MapEntry(snapshot.deviceId, snapshot)));
+      _emit();
+    } catch (_) {
+      // A snapshot is display data; a failure must not block LAN startup.
+    }
   }
 
   Future<LocalIdentity> _ensureIdentity() async {

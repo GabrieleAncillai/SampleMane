@@ -12,6 +12,7 @@ import 'package:mane/features/app_lock/pages/pin_setup_page.dart';
 import 'package:mane/features/calendar/pages/calendar_page.dart';
 import 'package:mane/features/home_inventory/pages/maintenance_page.dart';
 import 'package:mane/features/home_inventory/pages/shopping_list_page.dart';
+import 'package:mane/features/reminders/widgets/reminder_offset_sheet.dart';
 import 'package:mane/features/settings/pages/settings_page.dart';
 import 'package:mane/models/app_settings.dart';
 import 'package:mane/models/home_item.dart';
@@ -123,6 +124,34 @@ void main() {
   testWidgets('render PIN setup light', (tester) async {
     await render(tester, 'v0.8-pin-setup-light.png', ManeTheme.light, const PinSetupPage());
   });
+
+  testWidgets('render work and quiet hours', (tester) async {
+    await render(
+      tester,
+      'v0.9-settings-hours-light.png',
+      ManeTheme.light,
+      const SettingsPage(),
+      settings: const AppSettings(workHoursEnabled: true, quietHoursEnabled: true),
+      act: (tester) async {
+        await tester.drag(find.byType(ListView).first, const Offset(0, -330));
+        await tester.pumpAndSettle();
+      },
+    );
+  });
+
+  testWidgets('render reminder times', (tester) async {
+    await render(
+      tester,
+      'v0.9-reminders-light.png',
+      ManeTheme.light,
+      Builder(
+        builder: (context) => Scaffold(
+          backgroundColor: context.mc.pageBg,
+          body: const ReminderSelectionSheet(initialOffsets: {10, 60}, initialTimes: {8 * 60}),
+        ),
+      ),
+    );
+  });
 }
 
 Widget shell(Widget page) {
@@ -202,6 +231,7 @@ Future<void> render(
   List<EntryOccurrence>? entryOccurrences,
   List<HomeItem> homeItems = const [],
   List<ShoppingItem> shoppingItems = const [],
+  AppSettings settings = const AppSettings(),
 }) async {
   tester.view.physicalSize = const Size(1290, 2796);
   tester.view.devicePixelRatio = 3;
@@ -216,7 +246,7 @@ Future<void> render(
       key: key,
       child: ProviderScope(
         overrides: [
-          initialSettingsProvider.overrideWithValue(const AppSettings()),
+          initialSettingsProvider.overrideWithValue(settings),
           deviceTimeZoneProvider.overrideWith(() => DeviceTimeZoneController(initial: 'Europe/Madrid')),
           nowProvider.overrideWithValue(DateTime.utc(2026, 11, 9, 18)),
           spacesProvider.overrideWith((ref) => Stream.value(fallbackSpaces)),

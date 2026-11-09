@@ -48,6 +48,25 @@ void main() {
     expect(settings.weekStart, DateTime.monday);
   });
 
+  test('work and quiet windows use the device timezone', () {
+    const settings = AppSettings(
+      workHoursEnabled: true,
+      workHoursStartMinute: 9 * 60,
+      workHoursEndMinute: 17 * 60,
+      quietHoursEnabled: true,
+      quietHoursStartMinute: 22 * 60,
+      quietHoursEndMinute: 7 * 60,
+    );
+
+    // 10:00 in Madrid (CET) is inside work hours and outside quiet hours.
+    expect(settings.isWorkTime(DateTime.utc(2026, 11, 9, 9), 'Europe/Madrid'), isTrue);
+    expect(settings.isQuietTime(DateTime.utc(2026, 11, 9, 9), 'Europe/Madrid'), isFalse);
+
+    // 23:30 in Madrid is outside work hours and inside quiet hours.
+    expect(settings.isWorkTime(DateTime.utc(2026, 11, 9, 22, 30), 'Europe/Madrid'), isFalse);
+    expect(settings.isQuietTime(DateTime.utc(2026, 11, 9, 22, 30), 'Europe/Madrid'), isTrue);
+  });
+
   test('reads automatic backup and app lock settings safely', () {
     final locked = AppSettings.fromMap({
       SettingsKeys.autoBackupEnabled: 'true',

@@ -1273,4 +1273,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get complete => 'Complete';
+
+  @override
+  String get beforeStart => 'Before the start';
+
+  @override
+  String get atTimeSection => 'At a time';
+
+  @override
+  String get addTime => 'Add time';
+
+  @override
+  String get customReminderHint => 'A custom time fires on the occurrence day in the device timezone.';
+
+  @override
+  String get workHours => 'Work hours';
+
+  @override
+  String get workHoursSubtitle => 'Hide Work tasks outside these hours. Work deadlines stay visible.';
+
+  @override
+  String get quietHours => 'Quiet hours';
+
+  @override
+  String get quietHoursSubtitle => 'Pause notifications during this window.';
+
+  @override
+  String get mcpTools => 'MCP tools';
+
+  @override
+  String get mcpToolsHint =>
+      'Loopback only. Initialize returns an Mcp-Session-Id header; clients that accept text/event-stream receive one SSE message per call. Writes stay gated by the switch above.';
+
+  @override
+  String get hoursWindow => 'Set window';
 }

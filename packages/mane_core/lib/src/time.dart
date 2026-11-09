@@ -66,3 +66,17 @@ int localMinuteAt(DateTime instant, String timeZoneId) {
   final local = tz.TZDateTime.from(instant, timeZoneLocation(timeZoneId));
   return local.hour * 60 + local.minute;
 }
+
+/// Whether [minute] falls in the half-open local window [startMinute, endMinute).
+///
+/// A window whose start is later than its end wraps midnight, which is how
+/// quiet hours such as 22:00–07:00 are expressed. Equal bounds mean an empty
+/// window, not all day.
+bool isMinuteInWindow(int minute, int startMinute, int endMinute) {
+  if (minute < 0 || minute >= 24 * 60) return false;
+  if (startMinute == endMinute) return false;
+  if (startMinute < endMinute) {
+    return minute >= startMinute && minute < endMinute;
+  }
+  return minute >= startMinute || minute < endMinute;
+}

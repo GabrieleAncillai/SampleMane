@@ -49,7 +49,7 @@ class LanServer {
        _deviceTimeZone = deviceTimeZone,
        _clock = clock ?? DateTime.now;
 
-  static const protocolVersion = 1;
+  static const protocolVersion = 2;
 
   final PlannerRepository _repository;
   final String Function() _deviceTimeZone;
@@ -353,6 +353,8 @@ class LanServer {
     switch (resource) {
       case 'summary':
         return SyncPayloads.summary(repository: _repository, now: _clock(), timeZone: timeZone);
+      case 'snapshot':
+        return SyncPayloads.fullSnapshot(repository: _repository, now: _clock(), timeZone: timeZone);
       case 'spaces':
         return [for (final space in await _repository.watchSpaces().first) SyncPayloads.spaceJson(space)];
       case 'tags':

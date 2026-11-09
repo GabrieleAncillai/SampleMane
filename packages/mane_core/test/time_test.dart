@@ -58,4 +58,23 @@ void main() {
       expect(localMinuteAt(instant, 'Europe/Madrid'), 5 * 60);
     });
   });
+
+  group('local minute windows', () {
+    test('a daytime window is half-open', () {
+      expect(isMinuteInWindow(9 * 60, 9 * 60, 17 * 60), isTrue);
+      expect(isMinuteInWindow(17 * 60, 9 * 60, 17 * 60), isFalse);
+      expect(isMinuteInWindow(8 * 60 + 59, 9 * 60, 17 * 60), isFalse);
+    });
+
+    test('an overnight window wraps midnight', () {
+      expect(isMinuteInWindow(23 * 60, 22 * 60, 7 * 60), isTrue);
+      expect(isMinuteInWindow(2 * 60, 22 * 60, 7 * 60), isTrue);
+      expect(isMinuteInWindow(7 * 60, 22 * 60, 7 * 60), isFalse);
+      expect(isMinuteInWindow(12 * 60, 22 * 60, 7 * 60), isFalse);
+    });
+
+    test('equal bounds mean an empty window', () {
+      expect(isMinuteInWindow(12 * 60, 12 * 60, 12 * 60), isFalse);
+    });
+  });
 }

@@ -12,6 +12,7 @@ import '../models/home_item.dart';
 import '../models/home_purchase.dart';
 import '../models/local_identity.dart';
 import '../models/paired_device.dart';
+import '../models/remote_snapshot.dart';
 import '../models/reminder.dart';
 import '../models/search_results.dart';
 import '../models/shift_checklist.dart';
@@ -232,6 +233,9 @@ class ReminderRecords extends Table {
   TextColumn get id => text()();
   TextColumn get entryId => text().references(EntryRecords, #id)();
   IntColumn get offsetMinutes => integer()();
+
+  /// A local time of day instead of an offset. Null uses [offsetMinutes].
+  IntColumn get timeMinute => integer().nullable()();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
 
   @override
@@ -294,6 +298,19 @@ class ShiftExceptionRecords extends Table {
   TextColumn get note => text().withDefault(const Constant(''))();
 }
 
+/// Read-only snapshots from paired devices. Display data only; never merged.
+@DataClassName('RemoteSnapshotRow')
+class RemoteSnapshotRecords extends Table {
+  TextColumn get deviceId => text()();
+  TextColumn get deviceName => text()();
+  DateTimeColumn get fetchedAt => dateTime()();
+  TextColumn get payloadJson => text()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {deviceId};
+}
+
 @DataClassName('CompletionRow')
 class CompletionRecords extends Table {
   TextColumn get entryId => text().references(EntryRecords, #id)();
@@ -333,6 +350,7 @@ class SettingRecords extends Table {
     PairedDeviceRecords,
     SettingRecords,
     HomePurchaseRecords,
+    RemoteSnapshotRecords,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -344,7 +362,7 @@ class AppDatabase extends _$AppDatabase {
   final String defaultTimeZone;
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -359,6 +377,7 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) await _migrateToV5(m);
       if (from < 6) await _migrateToV6(m);
       if (from < 7) await _migrateToV7(m);
+      if (from < 8) await _migrateToV8(m);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -949,6 +968,45 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Stream<List<RemoteSnapshot>> watchRemoteSnapshots() {
+    return select(remoteSnapshotRecords).watch().map((rows) {
+      final snapshots = [for (final row in rows) _remoteSnapshotFromRow(row)]
+        ..sort((a, b) => a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase()));
+      return snapshots;
+    });
+  }
+
+  Future<List<RemoteSnapshot>> readRemoteSnapshots() async {
+    final rows = await select(remoteSnapshotRecords).get();
+    return [for (final row in rows) _remoteSnapshotFromRow(row)];
+  }
+
+  Future<void> saveRemoteSnapshot(RemoteSnapshot snapshot) async {
+    await into(remoteSnapshotRecords).insertOnConflictUpdate(
+      RemoteSnapshotRecordsCompanion(
+        deviceId: Value(snapshot.deviceId),
+        deviceName: Value(snapshot.deviceName),
+        fetchedAt: Value(snapshot.fetchedAt),
+        payloadJson: Value(jsonEncode(snapshot.payload)),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> pruneRemoteSnapshots(Set<String> keepDeviceIds) async {
+    final rows = await select(remoteSnapshotRecords).get();
+    final stale = [
+      for (final row in rows)
+        if (!keepDeviceIds.contains(row.deviceId)) row.deviceId,
+    ];
+    if (stale.isEmpty) return;
+    await (delete(remoteSnapshotRecords)..where((row) => row.deviceId.isIn(stale))).go();
+  }
+
+  Future<void> deleteRemoteSnapshot(String deviceId) async {
+    await (delete(remoteSnapshotRecords)..where((row) => row.deviceId.equals(deviceId))).go();
+  }
+
   /// Global search over entry titles and notes, tag names, and household item
   /// name, category, location and notes.
   Future<SearchResults> search(String query) async {
@@ -1099,6 +1157,7 @@ class AppDatabase extends _$AppDatabase {
             id: reminder.id.isEmpty ? Reminder.idFor(entryId, reminder.offsetMinutes) : reminder.id,
             entryId: entryId,
             offsetMinutes: reminder.offsetMinutes,
+            timeMinute: Value(reminder.timeMinute),
             enabled: Value(reminder.enabled),
           ),
           mode: InsertMode.insertOrReplace,
@@ -1454,6 +1513,21 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// v8 adds absolute reminder times and persistent read-only LAN snapshots.
+  Future<void> _migrateToV8(Migrator m) async {
+    final reminderColumns = await customSelect('PRAGMA table_info(reminder_records)').get();
+    final reminderNames = reminderColumns.map((row) => row.read<String>('name')).toSet();
+    if (!reminderNames.contains('time_minute')) {
+      await m.addColumn(reminderRecords, reminderRecords.timeMinute);
+    }
+
+    final tables = await customSelect('SELECT name FROM sqlite_master WHERE type = \'table\'').get();
+    final tableNames = tables.map((row) => row.read<String>('name')).toSet();
+    if (!tableNames.contains('remote_snapshot_records')) {
+      await m.createTable(remoteSnapshotRecords);
+    }
+  }
+
   Future<ShiftPattern?> _loadPattern(String id) async {
     final row = await (select(shiftPatternRecords)..where((table) => table.id.equals(id))).getSingleOrNull();
     if (row == null) return null;
@@ -1515,8 +1589,29 @@ Space _spaceFromRow(SpaceRow row) =>
 Tag _tagFromRow(TagRow row) =>
     Tag(id: row.id, spaceId: row.spaceId, name: row.name, colorValue: row.color, position: row.position);
 
-Reminder _reminderFromRow(ReminderRow row) =>
-    Reminder(id: row.id, entryId: row.entryId, offsetMinutes: row.offsetMinutes, enabled: row.enabled);
+Reminder _reminderFromRow(ReminderRow row) => Reminder(
+  id: row.id,
+  entryId: row.entryId,
+  offsetMinutes: row.offsetMinutes,
+  timeMinute: row.timeMinute,
+  enabled: row.enabled,
+);
+
+RemoteSnapshot _remoteSnapshotFromRow(RemoteSnapshotRow row) {
+  Map<String, Object?> payload = const {};
+  try {
+    final decoded = jsonDecode(row.payloadJson);
+    if (decoded is Map) payload = Map<String, Object?>.from(decoded);
+  } on FormatException {
+    // A damaged display snapshot must never prevent the app from opening.
+  }
+  return RemoteSnapshot.fromPayload(
+    deviceId: row.deviceId,
+    deviceName: row.deviceName,
+    fetchedAt: row.fetchedAt,
+    data: payload,
+  );
+}
 
 HomeItem _homeItemFromRow(HomeItemRow row) => HomeItem(
   id: row.id,

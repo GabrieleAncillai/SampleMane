@@ -41,7 +41,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
-    final today = localDateAt(ref.watch(nowProvider), ref.watch(deviceTimeZoneProvider));
+    final timeZone = ref.watch(deviceTimeZoneProvider);
+    final now = ref.watch(nowProvider);
+    final today = localDateAt(now, timeZone);
     final weekStart = settings.weekStart;
     final rangeStart = switch (_mode) {
       _CalendarMode.month => _visibleMonth.startOfWeek(weekStart),
@@ -59,10 +61,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final entries = entriesState.value ?? const <EntryOccurrence>[];
     final shifts = shiftsState.value ?? const <ShiftOccurrence>[];
 
-    final visibleEntries = settings.hideWorkSpace
-        ? entries.where((entry) => entry.entry.spaceId != 'work').toList()
-        : entries;
-    final visibleShifts = settings.hideWorkSpace ? const <ShiftOccurrence>[] : shifts;
+    final visibleEntries = entries.where((entry) {
+      if (entry.entry.spaceId != 'work') return true;
+      if (settings.hideWorkSpace) return false;
+      if (entry.entry.kind == EntryKind.deadline) return true;
+      return settings.isWorkTime(now, timeZone);
+    }).toList();
+    final visibleShifts = settings.hideWorkSpace || !settings.isWorkTime(now, timeZone)
+        ? const <ShiftOccurrence>[]
+        : shifts;
 
     final colors = {for (final space in spaces) space.id: space.colorValue};
     final markers = <int, Set<int>>{};

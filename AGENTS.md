@@ -103,7 +103,7 @@ replacement, chatbot inside the app.
 
 Treat this as the baseline. Verify it before changing anything.
 
-**Done (v0.1 through v0.8):**
+**Done (v0.1 through v0.9):**
 
 - Pure Dart domain package in `packages/mane_core` with:
   - `LocalDate` (date-only values for all-day items)
@@ -113,12 +113,13 @@ Treat this as the baseline. Verify it before changing anything.
   - `ShiftPattern` with cycle days, anchor date and overnight slots
   - `computeSleepWindow` for the soft sleep hint
   - `Space` and `Tag`
-- Drift schema v7 in `lib/services/app_database.dart`: `spaces`, `entries`,
-  `reminders`, `shift_patterns`, `shift_slots`, `shift_exceptions`,
-  `shift_checklist_items`, `shift_checklist_completions`, `home_items`,
-  `shopping_items`, `home_purchases`, `completions`, `settings`,
-  `identity_records` and `paired_device_records`. UUIDs, `updatedAt`, soft
-  deletes. Pairing and app-lock secrets are excluded from backups.
+- Drift schema v8 in `lib/services/app_database.dart`: `spaces`, `entries`,
+  `reminders` (offset or custom time), `shift_patterns`, `shift_slots`,
+  `shift_exceptions`, `shift_checklist_items`, `shift_checklist_completions`,
+  `home_items`, `shopping_items`, `home_purchases`, `completions`, `settings`,
+  `identity_records`, `paired_device_records` and read-only
+  `remote_snapshot_records`. UUIDs, `updatedAt`, soft deletes. Pairing and
+  app-lock secrets are excluded from backups.
 - `PlannerRepository` as the single read/write seam.
 - Riverpod providers in `lib/state/providers.dart`.
 - Today screen, Week screen and entry editor.
@@ -128,7 +129,7 @@ Treat this as the baseline. Verify it before changing anything.
 - Timed entries and shifts are timezone-aware: wall-clock template fields in an
   IANA timezone plus resolved UTC anchor instants, expanded in the stored zone
   and displayed in the device zone.
-- Personal, Work and Home are the three seeded spaces, with migrations v1→v7
+- Personal, Work and Home are the three seeded spaces, with migrations v1→v8
   tested against real rows.
 - Tags and entry tags with a manager, editor chips and a global filter.
 - Per-occurrence completion, keyed by the occurrence date in the entry's stored
@@ -142,12 +143,13 @@ Treat this as the baseline. Verify it before changing anything.
 - Shift-pattern editor with cycles, multiple slots, overnight slots, exceptions,
   preview, overlap validation, job tags, per-date checklists and per-pattern
   sleep buffers.
-- Multiple reminders per entry, Android channels/permissions/exact alarms, a
-  90-day queue rebuilt on start/resume/timezone change and notification taps.
-- Settings for theme, English/Spanish, week start, hiding Work, defaults, sleep
-  buffers, backup, sync/MCP switches and About.
-- Versioned JSON backup with a validated, transactional import (schema v7),
-  schema 3–7 upgrades, and automatic daily local copies with rotation.
+- Multiple reminders per entry, including absolute times, Android
+  channels/permissions/exact alarms, a 90-day queue rebuilt on
+  start/resume/timezone change, notification taps and snooze/complete actions.
+- Settings for theme, English/Spanish, week start, hiding Work, work/quiet hours,
+  defaults, sleep buffers, backup, sync/MCP switches and About.
+- Versioned JSON backup with a validated, transactional import (schema v8),
+  schema 3–8 upgrades, and automatic daily local copies with rotation.
 - Home inventory, shopping list, low-stock flow, quick quantity adjustments,
   purchase history and interval maintenance with a dedicated due view.
 - CSV export/import for entries, shopping and inventory.
@@ -165,11 +167,16 @@ Treat this as the baseline. Verify it before changing anything.
 - mDNS discovery through Bonsoir with a manual host/port fallback, signed
   HTTPS queries, a nonce replay cache and automatic refresh on launch, resume,
   discovery and a five-minute timer.
-- Read-only snapshots on a Devices page; the local plan is never merged with a
-  remote one and keeps working when a peer is offline.
-- Local MCP endpoint on loopback with a bearer token, JSON-RPC tools and write
-  tools behind a setting.
+- Read-only snapshots on a Devices page, persisted across restarts; the local
+  plan is never merged with a remote one and keeps working when a peer is
+  offline. The snapshot payload carries spaces, tags, the next week of entries
+  and shifts, inventory and shopping.
+- Local MCP endpoint on loopback with a bearer token, the full tool set,
+  `Mcp-Session-Id` handling, one-message SSE responses and write tools behind a
+  setting.
 - Read-only companion JSON export import with a documented schema and dedupe.
+- Work-hours visibility and quiet hours, custom reminder times, and Android
+  snooze/complete notification actions.
 - Global search over entry titles and notes, tag names and household items.
 - Android home-screen widget with today's plan and the next shift.
 - Accessibility basics: calendar and shift semantics, calendar text scaling,
@@ -179,28 +186,27 @@ Treat this as the baseline. Verify it before changing anything.
 - A tagged release workflow for signed split-per-ABI APKs, a Linux bundle and
   checksums, with the keystore documented as a user-provided step.
 - Linux debug build and Android debug APK both pass.
-- Tests: 121 app/database/widget tests, 82 core tests, including real v1–v6
+- Tests: 130 app/database/widget tests, 85 core tests, including real v1–v7
   data migration tests, DST/travel scenarios, backup round-trip, older-schema
   upgrade and rejection, calendar navigation and semantics, shift checklists,
   ICS parsing/import/export, GymMane import, CSV, home tracking, app lock,
-  pairing crypto, TLS pinning, replay rejection, MCP auth and tools, sync
-  orchestration, search, widget data and the shift editor flow.
+  custom times, quiet/work suppression, MCP tools/sessions/SSE, sync snapshot
+  persistence, pairing crypto, TLS pinning, replay rejection, MCP auth, search,
+  widget data and the shift editor flow.
 - CI in `.github/workflows/build.yml`: format check, analyze, both test suites,
   a Linux debug build and a debug APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
   device deploy.
 
-**Known gaps:** the v0.8 baseline is functionally green but is not the full
-completion scope. Full MCP tool coverage and sessions, persisted read-only LAN
-snapshots, work-hours/quiet-hours rules, custom reminder times and notification
-actions are tracked in `docs/completion-plan.md`; the constraint audit is in
-`docs/compliance-audit.md`. Do not claim v1.0 from this list alone.
+**Known gaps:** the v0.9 baseline is functionally green; only the v1.0 device
+verification, accessibility/contrast audit and signed release remain. The
+constraint audit is in `docs/compliance-audit.md`.
 
 - Real-device notification delivery, reboot, battery optimization and
   timezone-change behavior still need the user's Android device checklist.
 - No dedicated Android `TIMEZONE_CHANGED` receiver; the queue rebuilds on
   resume and after the device zone is re-read.
-- Backup import accepts schemas 3 through 7; versions 1–2 are rejected. Import
+- Backup import accepts schemas 3 through 8; versions 1–2 are rejected. Import
   replaces the local plan rather than merging.
 - ICS import still does not support `BYHOUR`/`BYMINUTE`, multiple
   `BYMONTHDAY` values, `EXRULE`, or non-IANA zones outside the Windows alias
@@ -209,14 +215,16 @@ actions are tracked in `docs/completion-plan.md`; the constraint audit is in
   and uses a one-hour block because GymMane stores no duration.
 - The app lock has no recovery code; clearing app data is the only reset. Its
   salt and hash never enter a backup.
-- The MCP endpoint is loopback-only and implements the core tools JSON-RPC
-  methods, not SSE/streamable sessions.
+- The MCP endpoint is loopback-only and implements the v0.9 tool set. Streamable
+  HTTP is one SSE message per call, not a long-lived stream; sessions live in
+  memory and `GET /mcp` is rejected.
 - mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
   needs the user's real-device check. Pairing sessions live in memory and are
   cancelled by an app restart.
-- LAN snapshots are in memory and are not persisted or merged. A companion
-  app's ContentProvider is not integrated because no app and authority are
-  specified; the documented JSON export is the v0.4 path.
+- LAN snapshots are persisted read-only and restored after a restart; they are
+  never merged. A companion app's ContentProvider is not integrated because no
+  app and authority were specified; the documented JSON export is the v0.4 path
+  and the GymMane JSON import is the v0.8 path.
 - The Android home-screen widget updates when the app opens or resumes; it is
   Android-only and has no configuration screen.
 - Accessibility is a solid first pass, not a certified audit. Screen-reader
@@ -783,15 +791,15 @@ scanners; an O(1) count-rule ordinal; `.github/workflows/release.yml` and
 - [x] Inventory adjustments/dashboard, shopping grouping and a maintenance view.
 - [x] Optional local PIN app lock.
 
-### v0.9 MCP, LAN sync and notification reliability
+### v0.9 MCP, LAN sync and notification reliability (done)
 
-- [ ] Full MCP tool set (search, range lists, update/delete/uncomplete, shifts,
+- [x] Full MCP tool set (search, range lists, update/delete/uncomplete, shifts,
   home, shopping, tags, sleep) with writes behind the existing switch.
-- [ ] Streamable HTTP session handling for MCP clients.
-- [ ] Persistent read-only LAN snapshots and a richer query payload.
-- [ ] Work-hours visibility and quiet hours, including notification suppression.
-- [ ] Custom reminder times and notification actions where supported.
-- [ ] Document timezone-safe absolute scheduling and rebuild on resume/boot.
+- [x] Streamable HTTP session handling for MCP clients.
+- [x] Persistent read-only LAN snapshots and a richer query payload.
+- [x] Work-hours visibility and quiet hours, including notification suppression.
+- [x] Custom reminder times and notification actions where supported.
+- [x] Document timezone-safe absolute scheduling and rebuild on resume/boot.
 
 ### v1.0 finish line
 

@@ -4,11 +4,9 @@ Keep this file current. A fresh context window should be able to resume from it.
 
 ## Current milestone
 
-v0.8 is complete. The active program is v0.9 → v1.0, tracked in
-`docs/completion-plan.md`. The next slice is v0.9: the full MCP tool set and
-sessions, persistent read-only LAN snapshots, work-hours/quiet-hours rules,
-custom reminder times and notification actions. The constraint audit is in
-`docs/compliance-audit.md`.
+v0.9 is complete. The active program is v1.0 only: real-device verification,
+the accessibility/contrast audit, final docs and a signed release. The
+constraint audit is in `docs/compliance-audit.md`.
 
 ## Reference notes
 
@@ -261,7 +259,7 @@ custom reminder times and notification actions. The constraint audit is in
   per local day under the app support `backups` folder, rotation to the
   configured count, and manual export unchanged as the canonical path. Wired to
   app start and resume.
-- Backup import accepts schema versions 3–7. Missing tables and fields in older
+- Backup import accepts schema versions 3–8. Missing tables and fields in older
   payloads become empty defaults. App-lock settings (salt, hash, misses,
   blocked-until) are excluded from export, so a restored install starts
   unlocked.
@@ -283,6 +281,34 @@ custom reminder times and notification actions. The constraint audit is in
 - Validation: format check clean, analyze clean, both suites pass, Linux debug
   and Android debug APK build.
 
+### v0.9
+
+- Schema v8 adds `reminder_records.time_minute` and `remote_snapshot_records`,
+  with a real v7 fixture (`test/fixtures/schema_v7.sql`) migrated to the current
+  schema. LAN snapshots store the raw read-only payload, are restored on start
+  and are pruned for unpaired devices.
+- MCP adapter: `plan.range`, `plan.search`, `plan.get`, `work.shifts`,
+  `home.inventory`, `tags.list`, `sleep.window`, plus gated `plan.update`,
+  `plan.uncomplete`, `plan.delete`, `home.shopping_add` and
+  `home.shopping_check`. `initialize` returns `Mcp-Session-Id`; sessions expire
+  after an hour, `DELETE /mcp` closes one, and `text/event-stream` clients get
+  one SSE message per call. The MCP page lists the surface.
+- LAN: the `snapshot` resource returns the compact summary plus spaces, tags,
+  the next week of entries and shifts, inventory and shopping. The Devices page
+  keeps the last snapshot after a restart and while the peer is offline.
+- Work hours and quiet hours: settings, time pickers, aggregate-screen Work
+  filtering (deadlines stay visible), and reminder-planner suppression at each
+  notification's local fire time. Custom reminder times are stored as
+  `time_minute`; the editor and reminder sheet support offsets and times.
+- Android notification actions: snooze (10 minutes) and complete. The payload
+  carries the occurrence date, so completing one recurring occurrence is
+  correct; cold-start actions are handled at bootstrap.
+- Screenshots: `docs/screenshots/v0.9-settings-hours-light.png` and
+  `v0.9-reminders-light.png`.
+- Tests: 130 app/database/widget tests and 85 core tests.
+- Validation: format check clean, analyze clean, both suites pass, Linux debug
+  and Android debug APK build.
+
 ## Known limitations
 
 - Real-device notification delivery, reboot rescheduling, battery optimization
@@ -295,7 +321,7 @@ custom reminder times and notification actions. The constraint audit is in
   resume and after the device zone is re-read.
 - The notification channel name is English at the OS level; in-app strings are
   localized.
-- Backup import accepts schema versions 3 through 7. Versions 1–2 are rejected
+- Backup import accepts schema versions 3 through 8. Versions 1–2 are rejected
   because they predate timezone-aware entries. Import still replaces the local
   plan rather than merging it.
 - Automatic backups run on app start/resume, once per local day. A long-running
@@ -317,12 +343,13 @@ custom reminder times and notification actions. The constraint audit is in
   the shared kit and the floating shell.
 - ICS export is shipped. GymMane schedule import is shipped as a read-only
   JSON adapter in v0.8.
-- MCP is loopback-only and implements the core tools JSON-RPC surface, not
-  SSE/streamable sessions. v0.9 expands the tools and session handling.
-- LAN snapshots are in memory and are not persisted or merged. v0.9 persists
-  read-only snapshots. A companion app's ContentProvider is not integrated
-  because no app and authority were specified; the documented JSON export is
-  the v0.4 path and the GymMane JSON import is the v0.8 path.
+- MCP is loopback-only and exposes the full v0.9 tool set behind the write
+  switch. Streamable HTTP is one SSE message per call; sessions are in memory
+  and `GET /mcp` is rejected.
+- LAN snapshots are persisted read-only and restored after a restart; they are
+  never merged into the local plan. A companion app's ContentProvider is not
+  integrated because no app and authority were specified; the documented JSON
+  export is the v0.4 path and the GymMane JSON import is the v0.8 path.
 - mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
   needs the user's real-device check. Pairing sessions live in memory and are
   cancelled by an app restart.
@@ -332,15 +359,27 @@ custom reminder times and notification actions. The constraint audit is in
   audit.
 - The app lock has no recovery code; clearing app data is the only reset. The
   lock hash is deliberately absent from backups.
+- Work-hours hiding applies to Today, Week and Calendar outside the window.
+  Work deadlines stay visible; search and opened entries are never filtered.
+- Quiet hours and work hours suppress notifications when the queue is rebuilt;
+  Settings rebuilds it immediately. A reminder scheduled before an external
+  change can still fire until the next launch/resume rebuild.
+- MCP sessions live in memory and expire after one hour. Streamable HTTP is one
+  SSE message per call, not a long-lived bidirectional stream; `GET /mcp` is
+  rejected.
+- Android notification action labels are English at the OS level; buttons are
+  Android-only.
+- Remote snapshots are display data only and are never merged into the local
+  plan. They are pruned when a device is unpaired.
 - Release signing is a user-provided keystore step; local release builds fall
   back to the debug key and are not production releases.
 
 ## Next three steps
 
-1. Deliver v0.9: full MCP tools and sessions, persistent LAN snapshots,
-   work-hours/quiet-hours rules, custom reminder times and notification actions.
-2. Run the full real-device checklist, including the v0.7–v0.9 flows.
-3. Tag v1.0 only when every scenario in `docs/completion-plan.md` passes.
+1. Run the full real-device checklist, including the v0.7–v0.9 flows.
+2. Run the accessibility/contrast pass and fix what is fixable.
+3. Tag v1.0 only when every scenario in `docs/completion-plan.md` passes and a
+   signed release succeeds.
 
 ## Commands and results
 
@@ -351,14 +390,15 @@ custom reminder times and notification actions. The constraint audit is in
   (143 hand-written Dart files; generated `.g.dart` and ARB outputs excluded,
   matching CI).
 - `flutter analyze --no-fatal-infos` — no issues.
-- `flutter test` — 120 passed (database, migrations v1→v7, timezone, calendar,
-  tags, reminders, backup and pairing-secret exclusion, shift editor and
-  checklists, home inventory and purchase history, shopping grouping, app lock,
-  ICS, CSV, GymMane import, companion import, pairing crypto, certificates, TLS
-  pinning, replay rejection, MCP, sync orchestration, search, widget data, l10n
-  enforcement and widget flows).
-- `(cd packages/mane_core && dart test)` — 82 passed (recurrence including
-  constant-time ordinals, expansion, shifts, timezones, sleep).
+- `flutter test` — 130 passed (database, migrations v1→v8, timezone, calendar,
+  tags, reminders and custom times, backup and pairing-secret exclusion, shift
+  editor and checklists, home inventory and purchase history, shopping grouping,
+  app lock, ICS, CSV, GymMane import, companion import, pairing crypto,
+  certificates, TLS pinning, replay rejection, MCP tools/sessions/SSE, sync
+  orchestration and snapshot persistence, search, widget data, l10n enforcement
+  and widget flows).
+- `(cd packages/mane_core && dart test)` — 85 passed (recurrence including
+  constant-time ordinals, expansion, shifts, timezones, local windows, sleep).
 - `flutter build linux --debug` — ok, including the Bonsoir plugin.
 - `flutter build linux --release` — ok.
 - `flutter build apk --debug` — ok with Java 21 and core library desugaring.

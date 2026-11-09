@@ -12,16 +12,17 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.8 shipped. The active v0.9 → v1.0 completion program is in
+**Status:** v0.9 shipped. Only the v1.0 device verification, accessibility/contrast
+audit and signed release remain in
 [docs/completion-plan.md](docs/completion-plan.md). Today, Week and Calendar
-tabs (with a day timeline), tags, flexible shifts, reminders, settings,
-backup/restore and rotation, home inventory, shopping, maintenance, sleep, ICS
-import/export, GymMane schedule import, CSV interchange, companion import,
-optional LAN pairing, a local MCP endpoint, global search, an Android
-home-screen widget, the reference-style shell and UI kit, multi-day entries,
-per-slot shift checklists, an optional PIN app lock, and English/Spanish
-coverage are in place. The remaining work is fuller MCP/sync, work-hours rules,
-notification actions and the real-device checklist. See
+tabs (with a day timeline), tags, flexible shifts, reminders with custom times
+and actions, settings, backup/restore and rotation, home inventory, shopping,
+maintenance, sleep, ICS import/export, GymMane schedule import, CSV interchange,
+companion import, optional LAN pairing with persistent read-only snapshots, a
+local MCP endpoint with streamable sessions and the full tool set, global
+search, an Android home-screen widget, the reference-style shell and UI kit,
+multi-day entries, per-slot shift checklists, an optional PIN app lock, work and
+quiet hours, and English/Spanish coverage are in place. See
 [docs/compliance-audit.md](docs/compliance-audit.md) for the verified gaps.
 
 ## Docs
@@ -60,14 +61,17 @@ notification actions and the real-device checklist. See
   expanded in the entry's stored IANA timezone.
 - Per-occurrence completion that survives travel and a database restart.
 - Tags with a manager, entry chips and a global tag filter.
-- Multiple reminders per entry, Android notification permission and exact-alarm
-  handling, a 90-day queue rebuilt on start/resume/timezone change, and taps
-  that open the entry.
-- Settings for theme, English/Spanish, week start, hiding Work, default
-  reminders, sleep buffers, data backup, automatic backup rotation, app lock,
-  sync/MCP switches and About.
-- Versioned JSON backup and a validated, transactional restore, plus older
-  schema upgrades (3–7) and daily local copies with rotation.
+- Multiple reminders per entry, including custom times, Android notification
+  permission and exact-alarm handling, a 90-day queue rebuilt on
+  start/resume/timezone change, taps that open the entry, and snooze/complete
+  actions.
+- Work-hours visibility and quiet hours, with notification suppression and
+  persistent Work deadlines.
+- Settings for theme, English/Spanish, week start, hiding Work, work/quiet
+  hours, default reminders, sleep buffers, data backup, automatic backup
+  rotation, app lock, sync/MCP switches and About.
+- Versioned JSON backup and a validated, transactional restore, older schema
+  upgrades (3–8) and daily local copies with rotation.
 - Home inventory with quantity, unit, location, reorder levels, quick ±1
   adjustments and purchase history; a shopping list grouped by category and
   location, with clear-bought and reorder.
@@ -87,20 +91,21 @@ notification actions and the real-device checklist. See
 - Read-only companion JSON export import with a documented schema.
 - Optional LAN pairing: username + PBKDF2-hashed PIN, a six-digit short code,
   pinned self-signed TLS, signed queries and replay rejection. The switch is
-  off by default.
+  off by default. Snapshots persist read-only across restarts and are never
+  merged into the local plan.
 - mDNS discovery with a manual host/port fallback, automatic refresh on launch,
   resume and discovery, a five-minute timer and manual refresh.
-- A Devices page with read-only snapshots from paired devices. The local plan is
-  never merged with a remote one and keeps working when a peer is offline.
-- Optional local MCP endpoint on loopback with a bearer token, read tools and
-  write tools behind a second setting.
+- A Devices page with read-only snapshots from paired devices, including the
+  richer spaces/tags/entries/shifts/inventory payload.
+- Optional local MCP endpoint on loopback with a bearer token, the full tool
+  set, streamable HTTP sessions and write tools behind a second setting.
 - Global search across entry titles and notes, tag names and household items.
 - An Android home-screen widget with today's plan and the next shift.
 - A reference-style visual foundation: Nunito, `ManeColors`/`ManeType`, component
   themes, a shared UI kit, a floating shell and a dotted paper background.
 - Accessibility basics: semantics on calendar days and shifts, text scaling in
   the calendar, keyboard shortcuts for search and tab switching.
-- A schema v1/v2/v3/v4/v5/v6 to v7 migration tested against real prior rows.
+- A schema v1/v2/v3/v4/v5/v6/v7 to v8 migration tested against real prior rows.
 - A pure Dart domain package with the timezone, recurrence, shift and sleep
   rules.
 - Android debug APK, Linux debug build and a tagged release workflow for split
@@ -115,7 +120,7 @@ notification actions and the real-device checklist. See
   backup schemas, CSV interchange, home-tracking views and optional app lock.
   Done.
 - v0.9: full MCP tool set and sessions, persistent LAN snapshots, work-hours and
-  quiet-hours rules, custom reminder times and actions.
+  quiet-hours rules, custom reminder times and actions. Done.
 - v1.0: device verification, accessibility/contrast audit, final docs and a
   signed release.
 

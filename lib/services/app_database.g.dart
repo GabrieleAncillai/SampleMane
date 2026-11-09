@@ -2795,6 +2795,17 @@ class $ReminderRecordsTable extends ReminderRecords
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _timeMinuteMeta = const VerificationMeta(
+    'timeMinute',
+  );
+  @override
+  late final GeneratedColumn<int> timeMinute = GeneratedColumn<int>(
+    'time_minute',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _enabledMeta = const VerificationMeta(
     'enabled',
   );
@@ -2811,7 +2822,13 @@ class $ReminderRecordsTable extends ReminderRecords
     defaultValue: const Constant(true),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, entryId, offsetMinutes, enabled];
+  List<GeneratedColumn> get $columns => [
+    id,
+    entryId,
+    offsetMinutes,
+    timeMinute,
+    enabled,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2848,6 +2865,12 @@ class $ReminderRecordsTable extends ReminderRecords
     } else if (isInserting) {
       context.missing(_offsetMinutesMeta);
     }
+    if (data.containsKey('time_minute')) {
+      context.handle(
+        _timeMinuteMeta,
+        timeMinute.isAcceptableOrUnknown(data['time_minute']!, _timeMinuteMeta),
+      );
+    }
     if (data.containsKey('enabled')) {
       context.handle(
         _enabledMeta,
@@ -2875,6 +2898,10 @@ class $ReminderRecordsTable extends ReminderRecords
         DriftSqlType.int,
         data['${effectivePrefix}offset_minutes'],
       )!,
+      timeMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}time_minute'],
+      ),
       enabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}enabled'],
@@ -2892,11 +2919,15 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
   final String id;
   final String entryId;
   final int offsetMinutes;
+
+  /// A local time of day instead of an offset. Null uses [offsetMinutes].
+  final int? timeMinute;
   final bool enabled;
   const ReminderRow({
     required this.id,
     required this.entryId,
     required this.offsetMinutes,
+    this.timeMinute,
     required this.enabled,
   });
   @override
@@ -2905,6 +2936,9 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     map['id'] = Variable<String>(id);
     map['entry_id'] = Variable<String>(entryId);
     map['offset_minutes'] = Variable<int>(offsetMinutes);
+    if (!nullToAbsent || timeMinute != null) {
+      map['time_minute'] = Variable<int>(timeMinute);
+    }
     map['enabled'] = Variable<bool>(enabled);
     return map;
   }
@@ -2914,6 +2948,9 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       id: Value(id),
       entryId: Value(entryId),
       offsetMinutes: Value(offsetMinutes),
+      timeMinute: timeMinute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timeMinute),
       enabled: Value(enabled),
     );
   }
@@ -2927,6 +2964,7 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       id: serializer.fromJson<String>(json['id']),
       entryId: serializer.fromJson<String>(json['entryId']),
       offsetMinutes: serializer.fromJson<int>(json['offsetMinutes']),
+      timeMinute: serializer.fromJson<int?>(json['timeMinute']),
       enabled: serializer.fromJson<bool>(json['enabled']),
     );
   }
@@ -2937,6 +2975,7 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       'id': serializer.toJson<String>(id),
       'entryId': serializer.toJson<String>(entryId),
       'offsetMinutes': serializer.toJson<int>(offsetMinutes),
+      'timeMinute': serializer.toJson<int?>(timeMinute),
       'enabled': serializer.toJson<bool>(enabled),
     };
   }
@@ -2945,11 +2984,13 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     String? id,
     String? entryId,
     int? offsetMinutes,
+    Value<int?> timeMinute = const Value.absent(),
     bool? enabled,
   }) => ReminderRow(
     id: id ?? this.id,
     entryId: entryId ?? this.entryId,
     offsetMinutes: offsetMinutes ?? this.offsetMinutes,
+    timeMinute: timeMinute.present ? timeMinute.value : this.timeMinute,
     enabled: enabled ?? this.enabled,
   );
   ReminderRow copyWithCompanion(ReminderRecordsCompanion data) {
@@ -2959,6 +3000,9 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       offsetMinutes: data.offsetMinutes.present
           ? data.offsetMinutes.value
           : this.offsetMinutes,
+      timeMinute: data.timeMinute.present
+          ? data.timeMinute.value
+          : this.timeMinute,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
     );
   }
@@ -2969,13 +3013,15 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
           ..write('id: $id, ')
           ..write('entryId: $entryId, ')
           ..write('offsetMinutes: $offsetMinutes, ')
+          ..write('timeMinute: $timeMinute, ')
           ..write('enabled: $enabled')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, entryId, offsetMinutes, enabled);
+  int get hashCode =>
+      Object.hash(id, entryId, offsetMinutes, timeMinute, enabled);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2983,6 +3029,7 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
           other.id == this.id &&
           other.entryId == this.entryId &&
           other.offsetMinutes == this.offsetMinutes &&
+          other.timeMinute == this.timeMinute &&
           other.enabled == this.enabled);
 }
 
@@ -2990,12 +3037,14 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
   final Value<String> id;
   final Value<String> entryId;
   final Value<int> offsetMinutes;
+  final Value<int?> timeMinute;
   final Value<bool> enabled;
   final Value<int> rowid;
   const ReminderRecordsCompanion({
     this.id = const Value.absent(),
     this.entryId = const Value.absent(),
     this.offsetMinutes = const Value.absent(),
+    this.timeMinute = const Value.absent(),
     this.enabled = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3003,6 +3052,7 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
     required String id,
     required String entryId,
     required int offsetMinutes,
+    this.timeMinute = const Value.absent(),
     this.enabled = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -3012,6 +3062,7 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
     Expression<String>? id,
     Expression<String>? entryId,
     Expression<int>? offsetMinutes,
+    Expression<int>? timeMinute,
     Expression<bool>? enabled,
     Expression<int>? rowid,
   }) {
@@ -3019,6 +3070,7 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
       if (id != null) 'id': id,
       if (entryId != null) 'entry_id': entryId,
       if (offsetMinutes != null) 'offset_minutes': offsetMinutes,
+      if (timeMinute != null) 'time_minute': timeMinute,
       if (enabled != null) 'enabled': enabled,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3028,6 +3080,7 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
     Value<String>? id,
     Value<String>? entryId,
     Value<int>? offsetMinutes,
+    Value<int?>? timeMinute,
     Value<bool>? enabled,
     Value<int>? rowid,
   }) {
@@ -3035,6 +3088,7 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
       id: id ?? this.id,
       entryId: entryId ?? this.entryId,
       offsetMinutes: offsetMinutes ?? this.offsetMinutes,
+      timeMinute: timeMinute ?? this.timeMinute,
       enabled: enabled ?? this.enabled,
       rowid: rowid ?? this.rowid,
     );
@@ -3052,6 +3106,9 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
     if (offsetMinutes.present) {
       map['offset_minutes'] = Variable<int>(offsetMinutes.value);
     }
+    if (timeMinute.present) {
+      map['time_minute'] = Variable<int>(timeMinute.value);
+    }
     if (enabled.present) {
       map['enabled'] = Variable<bool>(enabled.value);
     }
@@ -3067,6 +3124,7 @@ class ReminderRecordsCompanion extends UpdateCompanion<ReminderRow> {
           ..write('id: $id, ')
           ..write('entryId: $entryId, ')
           ..write('offsetMinutes: $offsetMinutes, ')
+          ..write('timeMinute: $timeMinute, ')
           ..write('enabled: $enabled, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -8800,6 +8858,383 @@ class HomePurchaseRecordsCompanion extends UpdateCompanion<HomePurchaseRow> {
   }
 }
 
+class $RemoteSnapshotRecordsTable extends RemoteSnapshotRecords
+    with TableInfo<$RemoteSnapshotRecordsTable, RemoteSnapshotRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RemoteSnapshotRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
+  );
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deviceNameMeta = const VerificationMeta(
+    'deviceName',
+  );
+  @override
+  late final GeneratedColumn<String> deviceName = GeneratedColumn<String>(
+    'device_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+    'fetched_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    deviceId,
+    deviceName,
+    fetchedAt,
+    payloadJson,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'remote_snapshot_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RemoteSnapshotRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deviceIdMeta);
+    }
+    if (data.containsKey('device_name')) {
+      context.handle(
+        _deviceNameMeta,
+        deviceName.isAcceptableOrUnknown(data['device_name']!, _deviceNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deviceNameMeta);
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {deviceId};
+  @override
+  RemoteSnapshotRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RemoteSnapshotRow(
+      deviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_id'],
+      )!,
+      deviceName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_name'],
+      )!,
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fetched_at'],
+      )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RemoteSnapshotRecordsTable createAlias(String alias) {
+    return $RemoteSnapshotRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class RemoteSnapshotRow extends DataClass
+    implements Insertable<RemoteSnapshotRow> {
+  final String deviceId;
+  final String deviceName;
+  final DateTime fetchedAt;
+  final String payloadJson;
+  final DateTime updatedAt;
+  const RemoteSnapshotRow({
+    required this.deviceId,
+    required this.deviceName,
+    required this.fetchedAt,
+    required this.payloadJson,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['device_id'] = Variable<String>(deviceId);
+    map['device_name'] = Variable<String>(deviceName);
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  RemoteSnapshotRecordsCompanion toCompanion(bool nullToAbsent) {
+    return RemoteSnapshotRecordsCompanion(
+      deviceId: Value(deviceId),
+      deviceName: Value(deviceName),
+      fetchedAt: Value(fetchedAt),
+      payloadJson: Value(payloadJson),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory RemoteSnapshotRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RemoteSnapshotRow(
+      deviceId: serializer.fromJson<String>(json['deviceId']),
+      deviceName: serializer.fromJson<String>(json['deviceName']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'deviceId': serializer.toJson<String>(deviceId),
+      'deviceName': serializer.toJson<String>(deviceName),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  RemoteSnapshotRow copyWith({
+    String? deviceId,
+    String? deviceName,
+    DateTime? fetchedAt,
+    String? payloadJson,
+    DateTime? updatedAt,
+  }) => RemoteSnapshotRow(
+    deviceId: deviceId ?? this.deviceId,
+    deviceName: deviceName ?? this.deviceName,
+    fetchedAt: fetchedAt ?? this.fetchedAt,
+    payloadJson: payloadJson ?? this.payloadJson,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  RemoteSnapshotRow copyWithCompanion(RemoteSnapshotRecordsCompanion data) {
+    return RemoteSnapshotRow(
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deviceName: data.deviceName.present
+          ? data.deviceName.value
+          : this.deviceName,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RemoteSnapshotRow(')
+          ..write('deviceId: $deviceId, ')
+          ..write('deviceName: $deviceName, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(deviceId, deviceName, fetchedAt, payloadJson, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RemoteSnapshotRow &&
+          other.deviceId == this.deviceId &&
+          other.deviceName == this.deviceName &&
+          other.fetchedAt == this.fetchedAt &&
+          other.payloadJson == this.payloadJson &&
+          other.updatedAt == this.updatedAt);
+}
+
+class RemoteSnapshotRecordsCompanion
+    extends UpdateCompanion<RemoteSnapshotRow> {
+  final Value<String> deviceId;
+  final Value<String> deviceName;
+  final Value<DateTime> fetchedAt;
+  final Value<String> payloadJson;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const RemoteSnapshotRecordsCompanion({
+    this.deviceId = const Value.absent(),
+    this.deviceName = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RemoteSnapshotRecordsCompanion.insert({
+    required String deviceId,
+    required String deviceName,
+    required DateTime fetchedAt,
+    required String payloadJson,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : deviceId = Value(deviceId),
+       deviceName = Value(deviceName),
+       fetchedAt = Value(fetchedAt),
+       payloadJson = Value(payloadJson),
+       updatedAt = Value(updatedAt);
+  static Insertable<RemoteSnapshotRow> custom({
+    Expression<String>? deviceId,
+    Expression<String>? deviceName,
+    Expression<DateTime>? fetchedAt,
+    Expression<String>? payloadJson,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (deviceId != null) 'device_id': deviceId,
+      if (deviceName != null) 'device_name': deviceName,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RemoteSnapshotRecordsCompanion copyWith({
+    Value<String>? deviceId,
+    Value<String>? deviceName,
+    Value<DateTime>? fetchedAt,
+    Value<String>? payloadJson,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return RemoteSnapshotRecordsCompanion(
+      deviceId: deviceId ?? this.deviceId,
+      deviceName: deviceName ?? this.deviceName,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+      payloadJson: payloadJson ?? this.payloadJson,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (deviceName.present) {
+      map['device_name'] = Variable<String>(deviceName.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RemoteSnapshotRecordsCompanion(')
+          ..write('deviceId: $deviceId, ')
+          ..write('deviceName: $deviceName, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8840,6 +9275,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingRecordsTable settingRecords = $SettingRecordsTable(this);
   late final $HomePurchaseRecordsTable homePurchaseRecords =
       $HomePurchaseRecordsTable(this);
+  late final $RemoteSnapshotRecordsTable remoteSnapshotRecords =
+      $RemoteSnapshotRecordsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8863,6 +9300,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     pairedDeviceRecords,
     settingRecords,
     homePurchaseRecords,
+    remoteSnapshotRecords,
   ];
 }
 
@@ -11636,6 +12074,7 @@ typedef $$ReminderRecordsTableCreateCompanionBuilder =
       required String id,
       required String entryId,
       required int offsetMinutes,
+      Value<int?> timeMinute,
       Value<bool> enabled,
       Value<int> rowid,
     });
@@ -11644,6 +12083,7 @@ typedef $$ReminderRecordsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> entryId,
       Value<int> offsetMinutes,
+      Value<int?> timeMinute,
       Value<bool> enabled,
       Value<int> rowid,
     });
@@ -11695,6 +12135,11 @@ class $$ReminderRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get timeMinute => $composableBuilder(
+    column: $table.timeMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get enabled => $composableBuilder(
     column: $table.enabled,
     builder: (column) => ColumnFilters(column),
@@ -11743,6 +12188,11 @@ class $$ReminderRecordsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get timeMinute => $composableBuilder(
+    column: $table.timeMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get enabled => $composableBuilder(
     column: $table.enabled,
     builder: (column) => ColumnOrderings(column),
@@ -11786,6 +12236,11 @@ class $$ReminderRecordsTableAnnotationComposer
 
   GeneratedColumn<int> get offsetMinutes => $composableBuilder(
     column: $table.offsetMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get timeMinute => $composableBuilder(
+    column: $table.timeMinute,
     builder: (column) => column,
   );
 
@@ -11849,12 +12304,14 @@ class $$ReminderRecordsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> entryId = const Value.absent(),
                 Value<int> offsetMinutes = const Value.absent(),
+                Value<int?> timeMinute = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReminderRecordsCompanion(
                 id: id,
                 entryId: entryId,
                 offsetMinutes: offsetMinutes,
+                timeMinute: timeMinute,
                 enabled: enabled,
                 rowid: rowid,
               ),
@@ -11863,12 +12320,14 @@ class $$ReminderRecordsTableTableManager
                 required String id,
                 required String entryId,
                 required int offsetMinutes,
+                Value<int?> timeMinute = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReminderRecordsCompanion.insert(
                 id: id,
                 entryId: entryId,
                 offsetMinutes: offsetMinutes,
+                timeMinute: timeMinute,
                 enabled: enabled,
                 rowid: rowid,
               ),
@@ -17093,6 +17552,229 @@ typedef $$HomePurchaseRecordsTableProcessedTableManager =
       HomePurchaseRow,
       PrefetchHooks Function({bool homeItemId, bool shoppingItemId})
     >;
+typedef $$RemoteSnapshotRecordsTableCreateCompanionBuilder =
+    RemoteSnapshotRecordsCompanion Function({
+      required String deviceId,
+      required String deviceName,
+      required DateTime fetchedAt,
+      required String payloadJson,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$RemoteSnapshotRecordsTableUpdateCompanionBuilder =
+    RemoteSnapshotRecordsCompanion Function({
+      Value<String> deviceId,
+      Value<String> deviceName,
+      Value<DateTime> fetchedAt,
+      Value<String> payloadJson,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$RemoteSnapshotRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $RemoteSnapshotRecordsTable> {
+  $$RemoteSnapshotRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceName => $composableBuilder(
+    column: $table.deviceName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RemoteSnapshotRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $RemoteSnapshotRecordsTable> {
+  $$RemoteSnapshotRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceName => $composableBuilder(
+    column: $table.deviceName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RemoteSnapshotRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RemoteSnapshotRecordsTable> {
+  $$RemoteSnapshotRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceName => $composableBuilder(
+    column: $table.deviceName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$RemoteSnapshotRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RemoteSnapshotRecordsTable,
+          RemoteSnapshotRow,
+          $$RemoteSnapshotRecordsTableFilterComposer,
+          $$RemoteSnapshotRecordsTableOrderingComposer,
+          $$RemoteSnapshotRecordsTableAnnotationComposer,
+          $$RemoteSnapshotRecordsTableCreateCompanionBuilder,
+          $$RemoteSnapshotRecordsTableUpdateCompanionBuilder,
+          (
+            RemoteSnapshotRow,
+            BaseReferences<
+              _$AppDatabase,
+              $RemoteSnapshotRecordsTable,
+              RemoteSnapshotRow
+            >,
+          ),
+          RemoteSnapshotRow,
+          PrefetchHooks Function()
+        > {
+  $$RemoteSnapshotRecordsTableTableManager(
+    _$AppDatabase db,
+    $RemoteSnapshotRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RemoteSnapshotRecordsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$RemoteSnapshotRecordsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$RemoteSnapshotRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> deviceId = const Value.absent(),
+                Value<String> deviceName = const Value.absent(),
+                Value<DateTime> fetchedAt = const Value.absent(),
+                Value<String> payloadJson = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RemoteSnapshotRecordsCompanion(
+                deviceId: deviceId,
+                deviceName: deviceName,
+                fetchedAt: fetchedAt,
+                payloadJson: payloadJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String deviceId,
+                required String deviceName,
+                required DateTime fetchedAt,
+                required String payloadJson,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RemoteSnapshotRecordsCompanion.insert(
+                deviceId: deviceId,
+                deviceName: deviceName,
+                fetchedAt: fetchedAt,
+                payloadJson: payloadJson,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RemoteSnapshotRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RemoteSnapshotRecordsTable,
+      RemoteSnapshotRow,
+      $$RemoteSnapshotRecordsTableFilterComposer,
+      $$RemoteSnapshotRecordsTableOrderingComposer,
+      $$RemoteSnapshotRecordsTableAnnotationComposer,
+      $$RemoteSnapshotRecordsTableCreateCompanionBuilder,
+      $$RemoteSnapshotRecordsTableUpdateCompanionBuilder,
+      (
+        RemoteSnapshotRow,
+        BaseReferences<
+          _$AppDatabase,
+          $RemoteSnapshotRecordsTable,
+          RemoteSnapshotRow
+        >,
+      ),
+      RemoteSnapshotRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -17143,4 +17825,6 @@ class $AppDatabaseManager {
       $$SettingRecordsTableTableManager(_db, _db.settingRecords);
   $$HomePurchaseRecordsTableTableManager get homePurchaseRecords =>
       $$HomePurchaseRecordsTableTableManager(_db, _db.homePurchaseRecords);
+  $$RemoteSnapshotRecordsTableTableManager get remoteSnapshotRecords =>
+      $$RemoteSnapshotRecordsTableTableManager(_db, _db.remoteSnapshotRecords);
 }
