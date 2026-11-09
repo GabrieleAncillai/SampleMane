@@ -390,7 +390,7 @@ constraint audit is in `docs/compliance-audit.md`.
   (143 hand-written Dart files; generated `.g.dart` and ARB outputs excluded,
   matching CI).
 - `flutter analyze --no-fatal-infos` — no issues.
-- `flutter test` — 130 passed (database, migrations v1→v8, timezone, calendar,
+- `flutter test` — 131 passed (database, migrations v1→v8, timezone, calendar,
   tags, reminders and custom times, backup and pairing-secret exclusion, shift
   editor and checklists, home inventory and purchase history, shopping grouping,
   app lock, ICS, CSV, GymMane import, companion import, pairing crypto,
