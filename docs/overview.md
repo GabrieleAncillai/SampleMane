@@ -47,12 +47,13 @@ should follow with little extra work.
 
 ## Status
 
-v0.4 sync and MCP. Today, Week and Calendar tabs, tags, flexible shifts with
-per-shift checklists, reminders, settings, versioned backup/restore, home
-inventory, shopping lists, interval maintenance, a soft sleep window, ICS and
-companion import, optional LAN pairing with read-only snapshots, and a local
-MCP endpoint exist. Timed entries are timezone-aware; all-day items stay
-date-only. Search, widgets, accessibility and the release workflow are next.
+v0.5 release candidate. Today, Week and Calendar tabs, tags, flexible shifts
+with per-shift checklists, reminders, settings, backup/restore, home inventory,
+shopping lists, interval maintenance, a soft sleep window, ICS and companion
+import, optional LAN pairing, a local MCP endpoint and global search exist. An
+Android home-screen widget shows today's plan. English and Spanish are covered.
+v1.0 waits on the user's real-device notification, reboot, battery and
+timezone checklist.
 
 - [Full docs](full-docs.md): architecture, data model, feature areas and roadmap.
 - [Reference map](reference-map.md): where to look in GymMane and Streak.

@@ -1023,5 +1023,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mcpStopped => 'MCP endpoint is off.';
 
   @override
+  String get search => 'Search';
+
+  @override
+  String get searchHint => 'Search entries, tags and home items';
+
+  @override
+  String get searchPrompt => 'Type a title, a note, a tag or a household item.';
+
+  @override
+  String searchNoResults(String query) {
+    return 'Nothing matches “$query”.';
+  }
+
+  @override
+  String get searchEntries => 'Entries';
+
+  @override
+  String get searchHomeItems => 'Home items';
+
+  @override
+  String get nextShiftPrefix => 'Next: ';
+
+  @override
   String get backupRestoredReminders => 'Reminders have been rescheduled.';
 }

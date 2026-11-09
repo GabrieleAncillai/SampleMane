@@ -1934,6 +1934,48 @@ abstract class AppLocalizations {
   /// **'MCP endpoint is off.'**
   String get mcpStopped;
 
+  /// No description provided for @search.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get search;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search entries, tags and home items'**
+  String get searchHint;
+
+  /// No description provided for @searchPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a title, a note, a tag or a household item.'**
+  String get searchPrompt;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches “{query}”.'**
+  String searchNoResults(String query);
+
+  /// No description provided for @searchEntries.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries'**
+  String get searchEntries;
+
+  /// No description provided for @searchHomeItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Home items'**
+  String get searchHomeItems;
+
+  /// No description provided for @nextShiftPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: '**
+  String get nextShiftPrefix;
+
   /// No description provided for @backupRestoredReminders.
   ///
   /// In en, this message translates to:

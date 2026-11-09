@@ -58,6 +58,11 @@ git clone https://github.com/InlitX/streak.git ../Streak
   handshake, signed read-only queries and a loopback MCP adapter. These stay in
   `lib/features/sync` and `lib/features/mcp`. See the v0.4 deviation note in
   `docs/full-docs.md`.
+- **Search and the Android widget.** Neither reference has a global search
+  across entries, tags and household items, or a widget with this data shape.
+  Search uses a Drift query in `lib/services/app_database.dart`; the widget
+  follows the platform `home_widget` pattern with a Kotlin provider. See the
+  v0.5 notes.
 
 ## How to use this map
 

@@ -12,12 +12,12 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.4 sync and MCP. Today, Week and Calendar tabs, tags, flexible
-shifts, reminders, settings, versioned backup/restore, home inventory, shopping
-lists, interval maintenance, a soft sleep window, ICS and companion import,
-optional LAN pairing with read-only snapshots, and a local MCP endpoint are in
-place. English and Spanish are covered. Search, widgets, accessibility and the
-release workflow are next.
+**Status:** v0.5 release candidate. Today, Week and Calendar tabs, tags,
+flexible shifts, reminders, settings, backup/restore, home inventory, shopping,
+maintenance, sleep, ICS and companion import, optional LAN pairing, a local MCP
+endpoint, global search, an Android home-screen widget and English/Spanish
+coverage are in place. v1.0 waits on the user's real-device notification,
+reboot, battery and timezone checklist.
 
 ## Docs
 
@@ -27,6 +27,7 @@ release workflow are next.
 - [Reference map](docs/reference-map.md): the exact GymMane and Streak files to
   use for each area.
 - [Contributing](CONTRIBUTING.md): setup, layout, house style and tests.
+- [Release](docs/release.md): signing, split APKs and GitHub Releases.
 - [Agent brief](AGENTS.md): self-contained kickoff prompt for a coding agent.
 - [Unattended kickoff](KICKSTART.md): quality-first prompt for a long,
   unattended implementation run.
@@ -72,17 +73,21 @@ release workflow are next.
   never merged with a remote one and keeps working when a peer is offline.
 - Optional local MCP endpoint on loopback with a bearer token, read tools and
   write tools behind a second setting.
+- Global search across entry titles and notes, tag names and household items.
+- An Android home-screen widget with today's plan and the next shift.
+- Accessibility basics: semantics on calendar days and shifts, text scaling in
+  the calendar, keyboard shortcuts for search and tab switching.
 - A schema v1/v2/v3/v4 to v5 migration tested against real prior rows.
 - A pure Dart domain package with the timezone, recurrence, shift and sleep
   rules.
-- Android debug APK and Linux debug build.
+- Android debug APK, Linux debug build and a tagged release workflow for split
+  APKs and a Linux bundle.
 
-## Planned
+## Planned after v1.0
 
-- Search across entries, notes, tags and home items.
-- Home-screen widgets.
-- Accessibility, empty states and a visual polish pass.
-- Release packaging and signing workflow.
+- A ContentProvider client for a specific companion app.
+- MCP over LAN with the same pinned transport.
+- Home-screen widget variants for other platforms.
 
 ## Stack
 

@@ -40,8 +40,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final rangeStart = _monthMode ? _visibleMonth.startOfWeek(weekStart) : _selected.startOfWeek(weekStart);
     final rangeEnd = _monthMode ? rangeStart.addDays(41) : rangeStart.addDays(6);
     final range = (start: rangeStart, end: rangeEnd);
-    final entries = ref.watch(entriesProvider(range)).value ?? const <EntryOccurrence>[];
-    final shifts = ref.watch(shiftsProvider(range)).value ?? const <ShiftOccurrence>[];
+    final entriesState = ref.watch(entriesProvider(range));
+    final shiftsState = ref.watch(shiftsProvider(range));
+    final entries = entriesState.value ?? const <EntryOccurrence>[];
+    final shifts = shiftsState.value ?? const <ShiftOccurrence>[];
 
     final visibleEntries = settings.hideWorkSpace
         ? entries.where((entry) => entry.entry.spaceId != 'work').toList()
@@ -74,6 +76,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             }),
           ),
           const SizedBox(height: 14),
+          if (entriesState.hasError)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                context.l10n.couldNotLoadDay('${entriesState.error}'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          if (shiftsState.hasError)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                context.l10n.couldNotLoadShifts('${shiftsState.error}'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           if (_monthMode)
             MonthGrid(
               month: _visibleMonth,

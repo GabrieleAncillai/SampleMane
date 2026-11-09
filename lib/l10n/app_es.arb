@@ -352,5 +352,13 @@
   "mcpRunning": "Escuchando en 127.0.0.1:{port}",
   "@mcpRunning": {"placeholders": {"port": {"type": "int"}}},
   "mcpStopped": "El endpoint MCP está apagado.",
+  "search": "Buscar",
+  "searchHint": "Busca entradas, etiquetas y artículos del hogar",
+  "searchPrompt": "Escribe un título, una nota, una etiqueta o un artículo del hogar.",
+  "searchNoResults": "Nada coincide con «{query}».",
+  "@searchNoResults": {"placeholders": {"query": {"type": "String"}}},
+  "searchEntries": "Entradas",
+  "searchHomeItems": "Artículos del hogar",
+  "nextShiftPrefix": "Próximo: ",
   "backupRestoredReminders": "Los recordatorios se han vuelto a programar."
 }

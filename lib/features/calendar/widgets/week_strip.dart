@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/date_labels.dart';
+import '../../../core/i18n/l10n.dart';
 
 class WeekStrip extends StatelessWidget {
   const WeekStrip({
@@ -66,17 +67,19 @@ class _WeekDay extends StatelessWidget {
     final isSelected = date == selected;
     final isToday = date == today;
     final ink = isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
+    final count = markerColors.length + (hasShift ? 1 : 0);
+    final height = 78 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.45);
 
     return Semantics(
       button: true,
       selected: isSelected,
-      label: '${shortWeekday(context, date.weekday)} ${date.day}',
+      label: context.l10n.calendarDaySemantics('${shortWeekday(context, date.weekday)} ${date.day}', count),
       child: InkWell(
         key: ValueKey('week-day-${date.iso}'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          height: 78,
+          height: height,
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
             color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerLow,

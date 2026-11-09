@@ -113,6 +113,7 @@ class _DayCell extends StatelessWidget {
         ? theme.colorScheme.onSurface
         : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4);
     final count = markerColors.length + (hasShift ? 1 : 0);
+    final height = 50 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.45);
 
     return Semantics(
       button: true,
@@ -123,7 +124,7 @@ class _DayCell extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: 50,
+          height: height,
           margin: const EdgeInsets.all(1.5),
           decoration: BoxDecoration(
             color: isSelected ? theme.colorScheme.primary : null,

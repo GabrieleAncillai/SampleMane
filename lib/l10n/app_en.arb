@@ -352,5 +352,13 @@
   "mcpRunning": "Listening on 127.0.0.1:{port}",
   "@mcpRunning": {"placeholders": {"port": {"type": "int"}}},
   "mcpStopped": "MCP endpoint is off.",
+  "search": "Search",
+  "searchHint": "Search entries, tags and home items",
+  "searchPrompt": "Type a title, a note, a tag or a household item.",
+  "searchNoResults": "Nothing matches “{query}”.",
+  "@searchNoResults": {"placeholders": {"query": {"type": "String"}}},
+  "searchEntries": "Entries",
+  "searchHomeItems": "Home items",
+  "nextShiftPrefix": "Next: ",
   "backupRestoredReminders": "Reminders have been rescheduled."
 }

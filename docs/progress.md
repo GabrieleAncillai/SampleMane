@@ -4,8 +4,8 @@ Keep this file current. A fresh context window should be able to resume from it.
 
 ## Current milestone
 
-v0.4 complete. Next: v0.5 (search, widgets, accessibility, full en/es coverage,
-performance and release workflow).
+v0.5 complete. v1.0 is waiting only on the user's real-device notification,
+reboot, battery-optimization and timezone checklist.
 
 ## Reference notes
 
@@ -85,6 +85,16 @@ performance and release workflow).
   implemented. Write tools appear only when `mcpWritesEnabled` is on.
 - Snapshots from paired devices are display-only and stay in memory. Mane never
   merges a remote plan into the local one.
+- Search reads only non-deleted entries and home items. It matches titles,
+  notes, tag names, and home name/category/location/notes; results are grouped
+  in the UI.
+- The Android home widget uses `home_widget` plus a Kotlin provider. It is
+  updated when the app starts or resumes; Android's own minimum refresh period
+  is 30 minutes, and the widget is Android-only.
+- Accessibility is a first pass: semantics, text scaling in the calendar,
+  tooltips and desktop shortcuts. It is not a certified screen-reader audit.
+- Release signing is user-provided. The workflow refuses to publish without
+  keystore secrets; a local release build without them uses the debug key.
 
 ## Work completed
 
@@ -149,7 +159,25 @@ performance and release workflow).
 - Companion JSON export import with fixtures, dedupe, read-only rows and a space
   choice.
 - Android permissions for LAN and multicast; MCP remains loopback-only.
-- Tests: 79 app/database/widget tests and 68 core tests.
+
+### v0.5
+
+- Global search over entry titles/notes, tag names and home name, category,
+  location and notes, with grouped results and a debounced screen.
+- Android home-screen widget: `home_widget` bridge, Kotlin provider, layout,
+  widget info and manifest receiver. It shows today's plan, the next shift and
+  the update time.
+- Error banners on Calendar and Week; the search screen has prompt, loading,
+  error and no-results states.
+- Semantics for shift tiles and week days, scaled calendar cell heights,
+  Ctrl+F search and Ctrl+1..3 tab shortcuts.
+- English/Spanish ARB parity and a scanner that rejects new user-facing string
+  literals in widgets.
+- Recurrence count ordinals are constant-time; a year of a long-running daily
+  rule expands under a regression threshold.
+- Release workflow and `docs/release.md`: keystore secrets, split-per-ABI APKs,
+  Linux bundle, checksums and GitHub release.
+- Tests: 85 app/database/widget tests and 71 core tests.
 
 ## Known limitations
 
@@ -179,16 +207,21 @@ performance and release workflow).
 - LAN snapshots are in memory and are not persisted or merged. A companion
   app's ContentProvider is not integrated because no app and authority were
   specified; the documented JSON export is the v0.4 path.
-- No search, widgets or full accessibility pass yet.
+- The Android home-screen widget refreshes when the app starts or resumes; it
+  is Android-only and has no configuration screen.
+- Accessibility is a first pass, not a certified screen-reader or contrast
+  audit.
+- Release signing is a user-provided keystore step; local release builds fall
+  back to the debug key and are not production releases.
 
 ## Next three steps
 
-1. v0.5 search: repository query across entry titles/notes/tags and home items,
-   with a search screen and widget tests.
-2. v0.5 accessibility and empty/error states: semantics, contrast, text scaling,
-   44px targets and keyboard navigation on desktop.
-3. v0.5 release workflow: split-per-ABI APKs, CI artifacts, signing docs and
-   Linux release bundle, mirroring the reference projects.
+1. Run the real-device checklist on the user's Android device: notification
+   permission, delivery, reboot, battery optimization and timezone change.
+2. Fix anything the device checklist finds, with a regression test where the
+   behavior is testable off-device.
+3. Tag v1.0 only after the device checklist passes; keep the release keystore
+   as a user-provided step.
 
 ## Commands and results
 
@@ -196,13 +229,16 @@ performance and release workflow).
 - `dart run build_runner build --force-jit` — ok.
 - `flutter gen-l10n` — ok.
 - `flutter analyze --no-fatal-infos` — no issues.
-- `flutter test` — 79 passed (database, migrations v1→v5, timezone, calendar,
+- `flutter test` — 85 passed (database, migrations v1→v5, timezone, calendar,
   tags, reminders, backup and pairing-secret exclusion, shift editor and
   checklists, home inventory, ICS, companion import, pairing crypto,
-  certificates, TLS pinning, replay rejection, MCP, sync orchestration, widget
-  flows).
-- `(cd packages/mane_core && dart test)` — 68 passed (recurrence, expansion,
-  shifts, timezones, sleep).
+  certificates, TLS pinning, replay rejection, MCP, sync orchestration, search,
+  widget data, l10n enforcement and widget flows).
+- `(cd packages/mane_core && dart test)` — 71 passed (recurrence including
+  constant-time ordinals, expansion, shifts, timezones, sleep).
 - `flutter build linux --debug` — ok, including the Bonsoir plugin.
+- `flutter build linux --release` — ok.
 - `flutter build apk --debug` — ok with Java 21 and core library desugaring.
+- `flutter build apk --release --split-per-abi` — ok for armeabi-v7a, arm64-v8a
+  and x86_64 with the local debug-key fallback; CI requires the real keystore.
 - Linux launch with isolated `XDG_DATA_HOME` — starts and stays up.

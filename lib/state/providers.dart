@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mane_core/mane_core.dart';
 
 import '../features/backup/backup_service.dart';
+import '../features/home_widget/home_widget_service.dart';
 import '../features/mcp/mcp_server.dart';
 import '../features/sync/identity_service.dart';
 import '../features/sync/lan_client.dart';
@@ -80,6 +81,8 @@ final shoppingItemsProvider = StreamProvider<List<ShoppingItem>>(
 );
 
 final backupServiceProvider = Provider<BackupService>((ref) => BackupService(ref.watch(databaseProvider)));
+
+final homeWidgetServiceProvider = Provider<HomeWidgetService>((ref) => HomeWidgetService());
 
 class TagFilterController extends Notifier<Set<String>> {
   @override

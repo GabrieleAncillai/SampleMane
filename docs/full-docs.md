@@ -1,6 +1,6 @@
 # Mane: full docs
 
-Status: v0.4, sync and MCP. Last updated 2026-11-09.
+Status: v0.5, release candidate. Last updated 2026-11-09.
 
 This is the long version. The short version is in [overview.md](overview.md).
 The file-by-file map of the reference projects is in
@@ -438,12 +438,15 @@ migrating existing data.
 - **Settings.** Theme, locale, week start, work hours, default reminder lead
   times, data folder, backup, sync and MCP switches, About.
 - **Backup and import.**
-- **Search.**
+- **Search.** Global search over entry titles and notes, tag names and household
+  items, with grouped results.
+- **Android home-screen widget.** Today's plan and the next shift at a glance.
 
 The app now has Today, Week and Calendar tabs, the entry editor, the tags
 manager, the shift-pattern editor with checklists, settings, About,
 backup/import, ICS and companion import, home inventory, the shopping list, the
-Devices and pairing pages and the local MCP page. Search is later.
+Devices and pairing pages, the local MCP page and global search. An Android
+home-screen widget shows today's plan.
 
 ## 8. Platform, stack, architecture and references
 
@@ -710,17 +713,32 @@ backup exchange. Mane implements the v0.4 transport in `lib/features/sync` and
 new cryptographic protocol. The settings shell and page structure still follow
 the reference projects.
 
-### v0.5 Polish and release
+### v0.5 Polish and release (done)
 
-- [ ] Search.
-- [ ] Home screen widgets.
-- [ ] Better empty states.
-- [ ] Accessibility pass.
-- [ ] Complete English and Spanish ARB coverage.
-- [ ] Performance pass.
-- [ ] Release workflow mirroring the references: split-per-ABI APKs, GitHub
-      Releases/Obtainium, optional F-Droid/IzzyOnDroid/OpenAPK, Linux release
-      artifacts, user-provided signing keystore.
+- [x] Search across entry titles and notes, tags and home items.
+- [x] Home-screen widget on Android, with today's plan and the next shift.
+- [x] Better empty, loading and error states on Today, Week, Calendar and
+  search.
+- [x] Accessibility: calendar and shift semantics, text scaling in the
+  calendar, tooltips on icon actions and keyboard shortcuts for search and tab
+  switching on desktop.
+- [x] Complete English and Spanish ARB coverage, enforced by a test that rejects
+  new user-facing literals in widgets.
+- [x] Performance: count-limited recurrence now computes its ordinal in constant
+  time, with a long-range regression test.
+- [x] Release workflow: split-per-ABI APKs, a Linux bundle, checksums, a signed
+  GitHub release and documented keystore secrets.
+
+**Shipped in v0.5:** global search in `features/search`; an Android widget with
+`home_widget`, a Kotlin `ManeTodayWidgetProvider` and a static layout; error
+banners on the calendar and week; localized semantics for calendar days and
+shifts; `Ctrl+F` and `Ctrl+1..3` shortcuts; ARB parity plus a literal-scanner
+test; an O(1) recurrence ordinal; `.github/workflows/release.yml` and
+`docs/release.md` for signing and distribution.
+
+**Remaining v1.0 item:** real-device notification delivery, reboot, battery
+optimization and timezone changes still need the user's Android checklist.
+Everything else is shipped, tested and documented.
 
 ### v1.0 finish line
 
@@ -729,6 +747,9 @@ offline on Android, Linux builds and runs, backup and restore are proven by
 tests, reminders survive reboot and timezone changes, LAN sync and MCP are
 optional and documented, English and Spanish are complete, and `flutter
 analyze`, both test suites and both platform builds pass.
+
+The v0.1.5 through v0.5 work is complete. v1.0 is waiting only on the user's
+real-device notification, reboot, battery-optimization and timezone checklist.
 
 ## 10. Contributing
 

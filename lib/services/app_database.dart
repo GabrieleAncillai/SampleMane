@@ -11,6 +11,7 @@ import '../models/home_item.dart';
 import '../models/local_identity.dart';
 import '../models/paired_device.dart';
 import '../models/reminder.dart';
+import '../models/search_results.dart';
 import '../models/shift_checklist.dart';
 import '../models/shopping_item.dart';
 
@@ -782,6 +783,61 @@ class AppDatabase extends _$AppDatabase {
         updatedAt: Value(seenAt),
       ),
     );
+  }
+
+  /// Global search over entry titles and notes, tag names, and household item
+  /// name, category, location and notes.
+  Future<SearchResults> search(String query) async {
+    final term = query.trim().toLowerCase();
+    if (term.isEmpty) return const SearchResults(entries: [], homeItems: []);
+
+    final matchingEntries =
+        await (select(entryRecords)..where(
+              (row) =>
+                  row.deletedAt.isNull() &
+                  (row.title.lower().contains(term) | row.notes.lower().contains(term)),
+            ))
+            .get();
+    final matchingTags = await (select(
+      tagRecords,
+    )..where((row) => row.deletedAt.isNull() & row.name.lower().contains(term))).get();
+
+    final entryIds = <String>{for (final row in matchingEntries) row.id};
+    if (matchingTags.isNotEmpty) {
+      final links = await (select(
+        entryTagRecords,
+      )..where((row) => row.tagId.isIn(matchingTags.map((tag) => tag.id).toList()))).get();
+      entryIds.addAll(links.map((row) => row.entryId));
+    }
+
+    final entries = <Entry>[];
+    if (entryIds.isNotEmpty) {
+      final rows = await (select(
+        entryRecords,
+      )..where((row) => row.id.isIn(entryIds) & row.deletedAt.isNull())).get();
+      final links = await (select(entryTagRecords)..where((row) => row.entryId.isIn(entryIds))).get();
+      final tagIds = <String, Set<String>>{};
+      for (final link in links) {
+        (tagIds[link.entryId] ??= <String>{}).add(link.tagId);
+      }
+      entries.addAll(rows.map((row) => _entryFromRow(row, tagIds: tagIds[row.id] ?? const <String>{})));
+      entries.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    }
+
+    final homeRows =
+        await (select(homeItemRecords)..where(
+              (row) =>
+                  row.deletedAt.isNull() &
+                  (row.name.lower().contains(term) |
+                      row.category.lower().contains(term) |
+                      row.location.lower().contains(term) |
+                      row.notes.lower().contains(term)),
+            ))
+            .get();
+    final homeItems = homeRows.map(_homeItemFromRow).toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    return SearchResults(entries: entries, homeItems: homeItems);
   }
 
   Future<bool> hasImportedEntry(String source, String externalId) async {

@@ -4,6 +4,7 @@ import '../models/home_item.dart';
 import '../models/local_identity.dart';
 import '../models/paired_device.dart';
 import '../models/reminder.dart';
+import '../models/search_results.dart';
 import '../models/shift_checklist.dart';
 import '../models/shopping_item.dart';
 import 'app_database.dart';
@@ -87,6 +88,8 @@ class PlannerRepository {
 
   Future<List<EntryOccurrence>> loadEntries(LocalDate start, LocalDate end, String viewerTimeZone) =>
       _database.loadEntriesBetween(start, end, viewerTimeZone);
+
+  Future<SearchResults> search(String query) => _database.search(query);
 
   /// Shifts whose viewer-local date falls between [start] and [end].
   Stream<List<ShiftOccurrence>> watchShifts(LocalDate start, LocalDate end, String viewerTimeZone) =>

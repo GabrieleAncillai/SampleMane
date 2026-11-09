@@ -1029,5 +1029,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mcpStopped => 'El endpoint MCP está apagado.';
 
   @override
+  String get search => 'Buscar';
+
+  @override
+  String get searchHint => 'Busca entradas, etiquetas y artículos del hogar';
+
+  @override
+  String get searchPrompt => 'Escribe un título, una nota, una etiqueta o un artículo del hogar.';
+
+  @override
+  String searchNoResults(String query) {
+    return 'Nada coincide con «$query».';
+  }
+
+  @override
+  String get searchEntries => 'Entradas';
+
+  @override
+  String get searchHomeItems => 'Artículos del hogar';
+
+  @override
+  String get nextShiftPrefix => 'Próximo: ';
+
+  @override
   String get backupRestoredReminders => 'Los recordatorios se han vuelto a programar.';
 }

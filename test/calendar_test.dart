@@ -45,6 +45,17 @@ void main() {
     ),
   );
 
+  testWidgets('calendar days expose a descriptive semantics label', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(host());
+    await tester.pump();
+
+    expect(find.bySemanticsLabel(RegExp(r'Nov 9, 0 items')), findsOneWidget);
+    handle.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('selecting a day shows its entries and keeps the selected date', (tester) async {
     tester.view.physicalSize = const Size(500, 1200);
     tester.view.devicePixelRatio = 1;

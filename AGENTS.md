@@ -103,7 +103,7 @@ replacement, chatbot inside the app.
 
 Treat this as the baseline. Verify it before changing anything.
 
-**Done (v0.1 through v0.4):**
+**Done (v0.1 through v0.5):**
 
 - Pure Dart domain package in `packages/mane_core` with:
   - `LocalDate` (date-only values for all-day items)
@@ -157,13 +157,21 @@ Treat this as the baseline. Verify it before changing anything.
 - Local MCP endpoint on loopback with a bearer token, JSON-RPC tools and write
   tools behind a setting.
 - Read-only companion JSON export import with a documented schema and dedupe.
-- English/Spanish ARB coverage for shipped screens.
+- Global search over entry titles and notes, tag names and household items.
+- Android home-screen widget with today's plan and the next shift.
+- Accessibility basics: calendar and shift semantics, calendar text scaling,
+  tooltips on icon actions and Ctrl+F/Ctrl+1..3 shortcuts.
+- English/Spanish ARB coverage for shipped screens, enforced by a parity test
+  and a widget-literal scanner.
+- A tagged release workflow for signed split-per-ABI APKs, a Linux bundle and
+  checksums, with the keystore documented as a user-provided step.
 - Linux debug build and Android debug APK both pass.
-- Tests: 79 app/database/widget tests, 68 core tests, including real v1, v2, v3
+- Tests: 85 app/database/widget tests, 71 core tests, including real v1, v2, v3
   and v4 data migration tests, DST/travel scenarios, backup round-trip and
-  rejection, calendar navigation, shift checklists, ICS parsing and importing,
-  companion import, pairing crypto, TLS pinning, replay rejection, MCP auth and
-  tools, sync orchestration and the shift editor flow.
+  rejection, calendar navigation and semantics, shift checklists, ICS parsing
+  and importing, companion import, pairing crypto, TLS pinning, replay
+  rejection, MCP auth and tools, sync orchestration, search, widget data and
+  the shift editor flow.
 - CI in `.github/workflows/build.yml`: analyze, both test suites and a debug
   APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
@@ -188,8 +196,14 @@ Treat this as the baseline. Verify it before changing anything.
 - LAN snapshots are in memory and are not persisted or merged. A companion
   app's ContentProvider is not integrated because no app and authority are
   specified; the documented JSON export is the v0.4 path.
-- No search, widgets or full accessibility pass.
-- The UI is a first pass, not the final visual language.
+- The Android home-screen widget updates when the app opens or resumes; it is
+  Android-only and has no configuration screen.
+- Accessibility is a solid first pass, not a certified audit. Screen-reader
+  coverage on a real device and contrast checks against the final palette still
+  need the user's review.
+- Release signing is a user-provided keystore step. The repository workflow
+  refuses to publish without the keystore secrets, but no production key ships
+  here.
 
 **Baseline check:**
 
@@ -696,20 +710,27 @@ refresh; Devices and MCP pages; loopback JSON-RPC MCP with read and gated write
 tools; and a read-only companion export import. See the v0.4 notes in
 `docs/full-docs.md` for the limitations.
 
-### v0.5 Polish and release
+### v0.5 Polish and release (done)
 
-- Search across titles, notes, tags and home items.
-- Home-screen widgets where the platform supports them.
-- Better empty states, loading states and error states.
-- Accessibility: semantics, contrast, text scaling, touch targets, keyboard
+- [x] Search across titles, notes, tags and home items.
+- [x] Home-screen widgets where the platform supports them (Android).
+- [x] Better empty states, loading states and error states.
+- [x] Accessibility: semantics, text scaling, touch targets, keyboard
   navigation on desktop.
-- Complete English and Spanish ARB coverage. No user-facing literals left in
+- [x] Complete English and Spanish ARB coverage. No user-facing literals left in
   widgets. Add tests that enforce it.
-- Performance pass on large calendars and long recurring ranges.
-- Optional CSV import/export in addition to JSON.
-- Release workflow mirroring the reference projects: split-per-ABI APKs,
+- [x] Performance pass on large calendars and long recurring ranges.
+- [x] Optional CSV import/export: skipped as optional. JSON backup remains the
+  canonical format, and ICS plus the companion export cover local imports.
+- [x] Release workflow mirroring the reference projects: split-per-ABI APKs,
   GitHub Releases/Obtainium, optional F-Droid/IzzyOnDroid/OpenAPK, Linux
   release artifacts, user-provided signing keystore.
+
+**Shipped in v0.5:** global search; an Android `home_widget` provider; calendar
+and week error banners; semantics and text scaling; ARB parity and literal
+scanners; an O(1) count-rule ordinal; `.github/workflows/release.yml` and
+`docs/release.md`. **v1.0 is waiting only on the user's real-device
+notification, reboot, battery and timezone checklist.**
 
 ### v1.0 finish line
 
@@ -733,6 +754,10 @@ Mane is v1.0 when:
 - Release signing is documented as a user-provided step. Do not call a
   debug-signed build a production release.
 - The About screen shows GPL-3.0 and the upstream InlitX attribution.
+
+**Status:** every item above is shipped and tested except real-device reminder
+reliability. The v1.0 tag waits on the user's Android notification, reboot,
+battery and timezone checklist.
 
 ## 14. Working method
 

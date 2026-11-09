@@ -467,6 +467,50 @@ void main() {
     expect((await database.watchShoppingItems().first).single.checked, isFalse);
   });
 
+  test('searches titles, notes, tags and home items', () async {
+    await database.seedDefaults();
+    final monday = LocalDate.parse('2026-11-09');
+    final now = DateTime.utc(2026, 11, 9, 8);
+    await database.saveTag(
+      const Tag(id: 'admin', spaceId: 'personal', name: 'Admin', colorValue: 0xFFB07D5C),
+    );
+    await database.saveEntry(
+      Entry(
+        id: 'passport',
+        spaceId: 'personal',
+        title: 'Renew passport',
+        notes: 'Book the appointment',
+        date: monday,
+        allDay: true,
+        tagIds: const {'admin'},
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await database.saveEntry(
+      Entry(
+        id: 'deleted',
+        spaceId: 'personal',
+        title: 'Cancelled passport',
+        date: monday,
+        allDay: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await database.softDeleteEntry('deleted');
+    await database.saveHomeItem(
+      const HomeItem(id: 'coffee', name: 'Coffee beans', location: 'Kitchen', quantity: 250),
+    );
+
+    expect((await database.search('passport')).entries.single.id, 'passport');
+    expect((await database.search('appointment')).entries.single.id, 'passport');
+    expect((await database.search('admin')).entries.single.id, 'passport');
+    expect((await database.search('kitchen')).homeItems.single.id, 'coffee');
+    expect((await database.search('nothing')).isEmpty, isTrue);
+    expect((await database.search('   ')).isEmpty, isTrue);
+  });
+
   test('soft-deleted entries disappear from the stream', () async {
     await database.seedDefaults();
     final monday = LocalDate.parse('2026-11-09');

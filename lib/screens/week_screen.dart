@@ -27,8 +27,10 @@ class _WeekScreenState extends ConsumerState<WeekScreen> {
     final start = today.startOfWeek(settings.weekStart).addDays(7 * _offsetWeeks);
     final range = (start: start, end: start.addDays(6));
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
-    final allEntries = ref.watch(entriesProvider(range)).value ?? const <EntryOccurrence>[];
-    final allShifts = ref.watch(shiftsProvider(range)).value ?? const <ShiftOccurrence>[];
+    final entriesState = ref.watch(entriesProvider(range));
+    final shiftsState = ref.watch(shiftsProvider(range));
+    final allEntries = entriesState.value ?? const <EntryOccurrence>[];
+    final allShifts = shiftsState.value ?? const <ShiftOccurrence>[];
     final entries = settings.hideWorkSpace
         ? allEntries.where((entry) => entry.entry.spaceId != 'work').toList()
         : allEntries;
@@ -55,6 +57,22 @@ class _WeekScreenState extends ConsumerState<WeekScreen> {
             onToday: () => setState(() => _offsetWeeks = 0),
           ),
           const SizedBox(height: 16),
+          if (entriesState.hasError)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                context.l10n.couldNotLoadDay('${entriesState.error}'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          if (shiftsState.hasError)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                context.l10n.couldNotLoadShifts('${shiftsState.error}'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           for (var index = 0; index < 7; index++)
             _DaySection(
               date: start.addDays(index),

@@ -42,7 +42,7 @@ class RecurrenceRule {
     if (!_matches(date, anchor)) return false;
     final max = count;
     if (max == null) return true;
-    return _countUpTo(date, anchor) <= max;
+    return _ordinal(date, anchor) <= max;
   }
 
   LocalDate? nextOnOrAfter(LocalDate from, LocalDate anchor) {
@@ -95,15 +95,32 @@ class RecurrenceRule {
   int _clampedDay(LocalDate date, int targetDay) =>
       targetDay > date.daysInMonth ? date.daysInMonth : targetDay;
 
-  int _countUpTo(LocalDate date, LocalDate anchor) {
-    var total = 0;
-    var cursor = anchor;
-    final days = date.differenceInDays(anchor);
-    for (var i = 0; i <= days; i++) {
-      if (_matches(cursor, anchor)) total++;
-      cursor = cursor.addDays(1);
+  /// How many occurrences the rule has produced up to and including [date].
+  ///
+  /// Constant time for daily, monthly and yearly rules. Weekly rules count the
+  /// matching weekdays in the anchor week plus whole matching weeks, so a
+  /// long-running count rule does not rescan every day since its anchor.
+  int _ordinal(LocalDate date, LocalDate anchor) {
+    switch (frequency) {
+      case RecurrenceFrequency.daily:
+        return date.differenceInDays(anchor) ~/ interval + 1;
+      case RecurrenceFrequency.weekly:
+        final days = weekdays.isEmpty ? <int>{anchor.weekday} : weekdays;
+        final weeks = date.mondayOfWeek.differenceInDays(anchor.mondayOfWeek) ~/ 7;
+        if (weeks == 0) {
+          return days.where((day) => day >= anchor.weekday && day <= date.weekday).length;
+        }
+        var total = days.where((day) => day >= anchor.weekday).length;
+        total += ((weeks - 1) ~/ interval) * days.length;
+        if (weeks % interval == 0) {
+          total += days.where((day) => day <= date.weekday).length;
+        }
+        return total;
+      case RecurrenceFrequency.monthly:
+        return date.differenceInMonths(anchor) ~/ interval + 1;
+      case RecurrenceFrequency.yearly:
+        return (date.year - anchor.year) ~/ interval + 1;
     }
-    return total;
   }
 
   Map<String, Object?> toJson() => <String, Object?>{

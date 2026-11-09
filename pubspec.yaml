@@ -1,7 +1,7 @@
 name: mane
 description: "A local-first planner for personal life, work and home."
 publish_to: 'none'
-version: 0.4.0+4
+version: 0.5.0+5
 
 environment:
   sdk: ^3.10.7
@@ -28,6 +28,7 @@ dependencies:
   basic_utils: ^5.8.2
   bonsoir: ^6.0.1
   crypto: ^3.0.7
+  home_widget: ^0.10.0
   mane_core:
     path: packages/mane_core
 

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mane_widget_label">Mane today</string>
+    <string name="mane_widget_description">Today\'s plan at a glance</string>
+</resources>

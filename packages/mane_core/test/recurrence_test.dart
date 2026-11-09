@@ -72,6 +72,39 @@ void main() {
       expect(rule.occursOn(monday.addDays(2), monday), isTrue);
       expect(rule.occursOn(monday.addDays(3), monday), isFalse);
     });
+
+    test('weekly count respects a mid-week anchor and selected days', () {
+      const rule = RecurrenceRule(frequency: RecurrenceFrequency.weekly, weekdays: {1, 3, 5}, count: 4);
+      expect(rule.occursOn(wednesday, wednesday), isTrue); // 1
+      expect(rule.occursOn(friday, wednesday), isTrue); // 2
+      expect(rule.occursOn(monday.addDays(7), wednesday), isTrue); // 3
+      expect(rule.occursOn(wednesday.addDays(7), wednesday), isTrue); // 4
+      expect(rule.occursOn(friday.addDays(7), wednesday), isFalse);
+    });
+
+    test('weekly count with an interval counts only matching weeks', () {
+      const rule = RecurrenceRule(
+        frequency: RecurrenceFrequency.weekly,
+        interval: 2,
+        weekdays: {1},
+        count: 2,
+      );
+      expect(rule.occursOn(monday, monday), isTrue);
+      expect(rule.occursOn(monday.addDays(7), monday), isFalse);
+      expect(rule.occursOn(monday.addDays(14), monday), isTrue);
+      expect(rule.occursOn(monday.addDays(28), monday), isFalse);
+    });
+
+    test('a long-running count rule expands a year quickly', () {
+      final anchor = LocalDate.parse('2000-01-01');
+      const rule = RecurrenceRule(frequency: RecurrenceFrequency.daily, count: 1000000);
+      final start = LocalDate.parse('2026-01-01');
+      final stopwatch = Stopwatch()..start();
+      final result = rule.occurrencesBetween(start, start.addDays(365), anchor);
+      stopwatch.stop();
+      expect(result, hasLength(366));
+      expect(stopwatch.elapsedMilliseconds, lessThan(1000));
+    });
   });
 
   group('helpers', () {
