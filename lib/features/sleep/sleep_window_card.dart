@@ -26,26 +26,35 @@ class SleepWindowCard extends ConsumerWidget {
     final entries = ref.watch(entriesProvider(range)).value ?? const <EntryOccurrence>[];
     final shifts = ref.watch(shiftsProvider(range)).value ?? const <ShiftOccurrence>[];
 
-    final lastEnds = <DateTime>[
+    final lastEnds = <SleepCommitment>[
       for (final occurrence in entries)
         if (occurrence.endAt case final endAt?)
-          if (localDateAt(endAt, viewerTimeZone) == today) endAt,
+          if (localDateAt(endAt, viewerTimeZone) == today)
+            SleepCommitment(at: endAt, commute: settings.commute, windDown: settings.windDown),
       for (final occurrence in shifts)
-        if (localDateAt(occurrence.endAt, viewerTimeZone) == today) occurrence.endAt,
+        if (localDateAt(occurrence.endAt, viewerTimeZone) == today)
+          SleepCommitment(
+            at: occurrence.endAt,
+            commute: Duration(minutes: occurrence.pattern.commuteMinutes ?? settings.sleepCommuteMinutes),
+            windDown: Duration(minutes: occurrence.pattern.windDownMinutes ?? settings.sleepWindDownMinutes),
+          ),
     ];
-    final firstStarts = <DateTime>[
+    final firstStarts = <SleepCommitment>[
       for (final occurrence in entries)
         if (occurrence.startAt case final startAt?)
-          if (localDateAt(startAt, viewerTimeZone) == today.addDays(1)) startAt,
+          if (localDateAt(startAt, viewerTimeZone) == today.addDays(1))
+            SleepCommitment(at: startAt, commute: settings.commute),
       for (final occurrence in shifts)
-        if (localDateAt(occurrence.startAt, viewerTimeZone) == today.addDays(1)) occurrence.startAt,
+        if (localDateAt(occurrence.startAt, viewerTimeZone) == today.addDays(1))
+          SleepCommitment(
+            at: occurrence.startAt,
+            commute: Duration(minutes: occurrence.pattern.commuteMinutes ?? settings.sleepCommuteMinutes),
+          ),
     ];
 
-    final window = computeSleepWindow(
+    final window = computeSleepWindowFromCommitments(
       lastEndsToday: lastEnds,
       firstStartsTomorrow: firstStarts,
-      commute: settings.commute,
-      windDown: settings.windDown,
       wakeBuffer: settings.wakeBuffer,
     );
     if (window.bedtime == null && window.wakeTime == null) return const SizedBox.shrink();

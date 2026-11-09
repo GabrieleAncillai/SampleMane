@@ -24,6 +24,10 @@ class ShiftSlot {
 
   int get durationMinutes => endMinute - startMinute;
 
+  /// Stable identity for this slot inside a pattern. Checklist completions use
+  /// it so two slots on the same day stay independent.
+  String get key => '$dayIndex:$startMinute:$endMinute:$label';
+
   ShiftSlot copyWith({int? dayIndex, String? label, int? startMinute, int? endMinute}) => ShiftSlot(
     dayIndex: dayIndex ?? this.dayIndex,
     label: label ?? this.label,
@@ -120,9 +124,13 @@ class ShiftPattern {
     required this.anchorDate,
     List<ShiftSlot> slots = const <ShiftSlot>[],
     List<ShiftException> exceptions = const <ShiftException>[],
+    Set<String> tagIds = const <String>{},
+    this.commuteMinutes,
+    this.windDownMinutes,
     this.enabled = true,
   }) : slots = List.unmodifiable(slots),
-       exceptions = List.unmodifiable(exceptions) {
+       exceptions = List.unmodifiable(exceptions),
+       tagIds = Set.unmodifiable(tagIds) {
     if (cycleDays < 1) {
       throw ArgumentError.value(cycleDays, 'cycleDays', 'must be at least 1');
     }
@@ -137,6 +145,12 @@ class ShiftPattern {
     for (final exception in exceptions) {
       _checkException(exception);
     }
+    if (commuteMinutes != null && (commuteMinutes! < 0 || commuteMinutes! > 24 * 60)) {
+      throw ArgumentError.value(commuteMinutes, 'commuteMinutes', 'must be between 0 and 1440');
+    }
+    if (windDownMinutes != null && (windDownMinutes! < 0 || windDownMinutes! > 24 * 60)) {
+      throw ArgumentError.value(windDownMinutes, 'windDownMinutes', 'must be between 0 and 1440');
+    }
   }
 
   final String id;
@@ -150,6 +164,15 @@ class ShiftPattern {
   final LocalDate anchorDate;
   final List<ShiftSlot> slots;
   final List<ShiftException> exceptions;
+
+  /// Tags attached to this pattern, such as a job. The join rows live in
+  /// `shift_pattern_tag_records`.
+  final Set<String> tagIds;
+
+  /// Per-pattern sleep overrides in minutes. Null means use the global buffer.
+  final int? commuteMinutes;
+  final int? windDownMinutes;
+
   final bool enabled;
 
   /// The cycle position of [date], always in `0 .. cycleDays - 1`.
@@ -288,6 +311,9 @@ class ShiftPattern {
     LocalDate? anchorDate,
     List<ShiftSlot>? slots,
     List<ShiftException>? exceptions,
+    Set<String>? tagIds,
+    Object? commuteMinutes = _unset,
+    Object? windDownMinutes = _unset,
     bool? enabled,
   }) => ShiftPattern(
     id: id,
@@ -298,8 +324,13 @@ class ShiftPattern {
     anchorDate: anchorDate ?? this.anchorDate,
     slots: slots ?? this.slots,
     exceptions: exceptions ?? this.exceptions,
+    tagIds: tagIds ?? this.tagIds,
+    commuteMinutes: identical(commuteMinutes, _unset) ? this.commuteMinutes : commuteMinutes as int?,
+    windDownMinutes: identical(windDownMinutes, _unset) ? this.windDownMinutes : windDownMinutes as int?,
     enabled: enabled ?? this.enabled,
   );
+
+  static const _unset = Object();
 
   static ShiftSlot _slotFor(ShiftException exception, int dayIndex) => ShiftSlot(
     dayIndex: dayIndex,
@@ -343,6 +374,9 @@ class ShiftOccurrence {
   final ShiftSlot slot;
   final DateTime startAt;
   final DateTime endAt;
+
+  /// Stable per-slot checklist key for this occurrence.
+  String get slotKey => slot.key;
 }
 
 /// Two shifts that occupy the same time.

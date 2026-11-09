@@ -20,6 +20,40 @@ class SleepWindow {
   }
 }
 
+/// A commitment with its own commute and wind-down buffers.
+class SleepCommitment {
+  const SleepCommitment({required this.at, this.commute = Duration.zero, this.windDown = Duration.zero});
+
+  final DateTime at;
+  final Duration commute;
+  final Duration windDown;
+}
+
+/// Computes the window using per-commitment buffers.
+///
+/// For the last commitment of today, the latest `at + commute + windDown` wins.
+/// For the first commitment tomorrow, the earliest `at - commute - wakeBuffer`
+/// wins. This is how a job with a longer commute moves the soft bedtime without
+/// changing another job's buffer.
+SleepWindow computeSleepWindowFromCommitments({
+  required Iterable<SleepCommitment> lastEndsToday,
+  required Iterable<SleepCommitment> firstStartsTomorrow,
+  Duration wakeBuffer = Duration.zero,
+}) {
+  DateTime? bedtime;
+  for (final commitment in lastEndsToday) {
+    final candidate = commitment.at.add(commitment.commute).add(commitment.windDown);
+    if (bedtime == null || candidate.isAfter(bedtime)) bedtime = candidate;
+  }
+  DateTime? wakeTime;
+  for (final commitment in firstStartsTomorrow) {
+    final candidate = commitment.at.subtract(commitment.commute).subtract(wakeBuffer);
+    if (wakeTime == null || candidate.isBefore(wakeTime)) wakeTime = candidate;
+  }
+  final warning = bedtime != null && wakeTime != null && !bedtime.isBefore(wakeTime);
+  return SleepWindow(bedtime: bedtime, wakeTime: wakeTime, warning: warning);
+}
+
 SleepWindow computeSleepWindow({
   required Iterable<DateTime> lastEndsToday,
   required Iterable<DateTime> firstStartsTomorrow,

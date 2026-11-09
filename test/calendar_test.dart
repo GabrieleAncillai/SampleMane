@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/core/i18n/l10n.dart';
 import 'package:mane/features/calendar/pages/calendar_page.dart';
+import 'package:mane/features/calendar/widgets/day_timeline.dart';
 import 'package:mane/models/app_settings.dart';
 import 'package:mane/services/app_database.dart';
 import 'package:mane/state/providers.dart';
@@ -110,6 +111,50 @@ void main() {
     await tester.tap(find.byTooltip('Next week'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('week-day-2026-11-16')), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('day mode shows the timeline with shifts and entries', (tester) async {
+    tester.view.physicalSize = const Size(500, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await database.saveEntry(
+      Entry(
+        id: 'standup',
+        spaceId: 'personal',
+        title: 'Dentist',
+        date: LocalDate.parse('2026-11-09'),
+        startMinute: 9 * 60,
+        endMinute: 10 * 60,
+        timeZone: 'Europe/Madrid',
+        createdAt: DateTime.utc(2026, 11, 1),
+        updatedAt: DateTime.utc(2026, 11, 1),
+      ),
+    );
+    await database.saveShiftPattern(
+      ShiftPattern(
+        id: 'bar',
+        spaceId: 'work',
+        name: 'Bar',
+        timeZone: 'Europe/Madrid',
+        cycleDays: 7,
+        anchorDate: LocalDate.parse('2026-11-09'),
+        slots: const [ShiftSlot(dayIndex: 0, startMinute: 15 * 60, endMinute: 23 * 60)],
+      ),
+    );
+
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Day'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DayTimeline), findsOneWidget);
+    expect(find.text('Dentist'), findsWidgets);
+    expect(find.text('Bar'), findsWidgets);
+    expect(find.text('12:00 PM'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 1));

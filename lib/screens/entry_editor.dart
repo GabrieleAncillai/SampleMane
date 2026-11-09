@@ -53,6 +53,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   late String _spaceId;
   late EntryKind _kind;
   late LocalDate _date;
+  late LocalDate? _endDate;
   late bool _allDay;
   late int _startMinute;
   late int _endMinute;
@@ -61,7 +62,9 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   late final TextEditingController _repeatDaysController;
   late String _deviceTimeZone;
   late Set<String> _tagIds;
+  late Set<LocalDate> _skipDates;
   late Set<int> _reminderOffsets;
+  bool _onlyThisOccurrence = false;
   bool _remindersLoaded = true;
   bool _saving = false;
 
@@ -83,6 +86,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
         : _spaces.first.id;
     _kind = entry?.kind ?? EntryKind.task;
     _date = entry?.date ?? widget.initialDate ?? localDateAt(ref.read(nowProvider), _deviceTimeZone);
+    _endDate = entry?.endDate;
     _allDay = entry?.allDay ?? false;
     _startMinute = entry?.startMinute ?? 9 * 60;
     _endMinute = entry?.endMinute ?? 10 * 60;
@@ -90,6 +94,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     _repeatAfterCompletion = entry?.repeatAfterCompletionDays != null;
     _repeatDaysController = TextEditingController(text: '${entry?.repeatAfterCompletionDays ?? 30}');
     _tagIds = {...?entry?.tagIds};
+    _skipDates = {...?entry?.recurrence?.skipDates};
     if (entry == null) {
       _reminderOffsets = {...ref.read(settingsProvider).defaultReminderOffsets};
     } else {
@@ -235,6 +240,31 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                 value: DateFormat.yMMMEd(locale).format(_date.toDateTime()),
                 onTap: _pickDate,
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PickerRow(
+                      icon: Icons.date_range_outlined,
+                      label: l10n.endDate,
+                      value: _endDate == null
+                          ? l10n.singleDay
+                          : DateFormat.yMMMEd(locale).format(_endDate!.toDateTime()),
+                      onTap: _pickEndDate,
+                    ),
+                  ),
+                  if (_endDate != null)
+                    IconButton(
+                      onPressed: () => setState(() => _endDate = null),
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: l10n.singleDay,
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 0, 0),
+                child: Text(l10n.multiDayHint, style: ManeType.body(11, color: c.textTertiary)),
+              ),
               const SizedBox(height: 4),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -307,6 +337,33 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                   if (value) _repeat = _Repeat.never;
                 }),
               ),
+              if (widget.entry?.recurrence != null && widget.initialDate != null) ...[
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.onlyThisOccurrence),
+                  subtitle: Text(l10n.onlyThisOccurrenceSubtitle),
+                  value: _onlyThisOccurrence,
+                  onChanged: (value) => setState(() => _onlyThisOccurrence = value),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() {
+                      final date = widget.initialDate!;
+                      if (!_skipDates.remove(date)) _skipDates.add(date);
+                    }),
+                    icon: Icon(
+                      _skipDates.contains(widget.initialDate) ? Icons.undo : Icons.event_busy_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _skipDates.contains(widget.initialDate)
+                          ? l10n.skippedOccurrences
+                          : l10n.skipThisOccurrence,
+                    ),
+                  ),
+                ),
+              ],
               if (_repeatAfterCompletion)
                 TextFormField(
                   controller: _repeatDaysController,
@@ -416,7 +473,22 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
       lastDate: DateTime(2100),
     );
     if (picked == null || !mounted) return;
-    setState(() => _date = LocalDate.fromDateTime(picked));
+    setState(() {
+      _date = LocalDate.fromDateTime(picked);
+      if (_endDate != null && _endDate!.isBefore(_date)) _endDate = null;
+    });
+  }
+
+  Future<void> _pickEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (_endDate ?? _date).toDateTime(),
+      firstDate: _date.toDateTime(),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null || !mounted) return;
+    final end = LocalDate.fromDateTime(picked);
+    setState(() => _endDate = end.isAfter(_date) ? end : null);
   }
 
   Future<void> _pickStartTime() async {
@@ -440,8 +512,9 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     if (picked == null || !mounted) return;
     setState(() {
       var end = picked.hour * 60 + picked.minute;
-      // An end at or before the start means the entry runs into tomorrow.
-      if (end <= _startMinute) end += 1440;
+      // A single-day end at or before the start runs into tomorrow. An explicit
+      // end date already carries the day, so keep the picked wall-clock time.
+      if (_endDate == null && end <= _startMinute) end += 1440;
       _endMinute = end;
     });
   }
@@ -449,31 +522,57 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   Future<void> _save() async {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) return;
-    if (!_allDay && _endMinute <= _startMinute) {
+    final existing = widget.entry;
+    final endDate = _endDate != null && _endDate!.isAfter(_date) ? _endDate : null;
+    if (!_allDay && endDate == null && _endMinute <= _startMinute) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.endAfterStartError)));
       return;
     }
+    final singleOccurrence =
+        _onlyThisOccurrence && existing?.recurrence != null && widget.initialDate != null;
 
     setState(() => _saving = true);
     final now = DateTime.now();
+    final title = _titleController.text.trim();
+    final notes = _notesController.text.trim();
+    var recurrence = _repeatAfterCompletion ? null : _buildRecurrence();
+    if (singleOccurrence) {
+      final original = widget.initialDate!;
+      final overrides = [
+        ...existing!.recurrence!.overrides.where((override) => override.date != original),
+        if (!_skipDates.contains(original))
+          RecurrenceOverride(
+            date: original,
+            dateOverride: _date == original ? null : _date,
+            startMinute: _allDay ? null : _startMinute,
+            endMinute: _allDay ? null : _endMinute,
+            allDay: _allDay == existing.allDay ? null : _allDay,
+            title: title == existing.title ? null : title,
+            notes: notes == existing.notes ? null : notes,
+          ),
+      ];
+      recurrence = existing.recurrence!.copyWith(skipDates: _skipDates, overrides: overrides);
+    }
+
     final entry = Entry(
-      id: widget.entry?.id ?? const Uuid().v4(),
+      id: existing?.id ?? const Uuid().v4(),
       spaceId: _spaceId,
-      title: _titleController.text.trim(),
-      notes: _notesController.text.trim(),
+      title: singleOccurrence ? existing!.title : title,
+      notes: singleOccurrence ? existing!.notes : notes,
       kind: _kind,
-      date: _date,
-      startMinute: _allDay ? null : _startMinute,
-      endMinute: _allDay ? null : _endMinute,
-      timeZone: _allDay ? null : _timeZone,
+      date: singleOccurrence ? existing!.date : _date,
+      endDate: singleOccurrence ? existing!.endDate : endDate,
+      startMinute: singleOccurrence ? existing!.startMinute : (_allDay ? null : _startMinute),
+      endMinute: singleOccurrence ? existing!.endMinute : (_allDay ? null : _endMinute),
+      timeZone: singleOccurrence ? existing!.timeZone : (_allDay ? null : _timeZone),
       tagIds: _tagIds,
-      allDay: _allDay,
-      status: widget.entry?.status ?? EntryStatus.open,
-      recurrence: _repeatAfterCompletion ? null : _buildRecurrence(),
+      allDay: singleOccurrence ? existing!.allDay : _allDay,
+      status: existing?.status ?? EntryStatus.open,
+      recurrence: recurrence,
       repeatAfterCompletionDays: _repeatAfterCompletion
           ? int.tryParse(_repeatDaysController.text.trim()) ?? 30
           : null,
-      createdAt: widget.entry?.createdAt ?? now,
+      createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     );
 
@@ -559,15 +658,23 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
 
     // Keep an existing rule intact when the user did not change the shape.
     if (existing != null && existing.frequency == frequency && widget.entry?.date == _date) {
-      return existing;
+      return existing.copyWith(skipDates: _skipDates);
     }
 
     return switch (_repeat) {
       _Repeat.never => null,
-      _Repeat.daily => const RecurrenceRule(frequency: RecurrenceFrequency.daily),
-      _Repeat.weekly => RecurrenceRule(frequency: RecurrenceFrequency.weekly, weekdays: {_date.weekday}),
-      _Repeat.monthly => RecurrenceRule(frequency: RecurrenceFrequency.monthly, monthDay: _date.day),
-      _Repeat.yearly => const RecurrenceRule(frequency: RecurrenceFrequency.yearly),
+      _Repeat.daily => RecurrenceRule(frequency: RecurrenceFrequency.daily, skipDates: _skipDates),
+      _Repeat.weekly => RecurrenceRule(
+        frequency: RecurrenceFrequency.weekly,
+        weekdays: {_date.weekday},
+        skipDates: _skipDates,
+      ),
+      _Repeat.monthly => RecurrenceRule(
+        frequency: RecurrenceFrequency.monthly,
+        monthDay: _date.day,
+        skipDates: _skipDates,
+      ),
+      _Repeat.yearly => RecurrenceRule(frequency: RecurrenceFrequency.yearly, skipDates: _skipDates),
     };
   }
 

@@ -797,8 +797,8 @@ abstract class AppLocalizations {
   /// No description provided for @importCalendarDone.
   ///
   /// In en, this message translates to:
-  /// **'Imported {imported} events. Skipped {skipped} duplicates or unsupported events.'**
-  String importCalendarDone(int imported, int skipped);
+  /// **'Imported {imported}, updated {updated}, skipped {skipped} duplicates or unsupported events.'**
+  String importCalendarDone(int imported, int updated, int skipped);
 
   /// No description provided for @importCalendarEmpty.
   ///
@@ -1981,6 +1981,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reminders have been rescheduled.'**
   String get backupRestoredReminders;
+
+  /// No description provided for @dayView.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get dayView;
+
+  /// No description provided for @shiftTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Job tags'**
+  String get shiftTags;
+
+  /// No description provided for @commuteOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Commute override'**
+  String get commuteOverride;
+
+  /// No description provided for @windDownOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Wind-down override'**
+  String get windDownOverride;
+
+  /// No description provided for @inheritSleepBuffers.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty to use the sleep settings.'**
+  String get inheritSleepBuffers;
+
+  /// No description provided for @endDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends on'**
+  String get endDate;
+
+  /// No description provided for @multiDayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the end date empty for a single day.'**
+  String get multiDayHint;
+
+  /// No description provided for @skipThisOccurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this occurrence'**
+  String get skipThisOccurrence;
+
+  /// No description provided for @skippedOccurrences.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped dates'**
+  String get skippedOccurrences;
+
+  /// No description provided for @recurrenceExceptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exceptions'**
+  String get recurrenceExceptions;
+
+  /// No description provided for @exportCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Export calendar (.ics)'**
+  String get exportCalendar;
+
+  /// No description provided for @exportCalendarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share a read-only calendar file. No account or network is used.'**
+  String get exportCalendarSubtitle;
+
+  /// No description provided for @calendarExported.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar exported to {path}'**
+  String calendarExported(String path);
+
+  /// No description provided for @calendarExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export the calendar: {error}'**
+  String calendarExportFailed(String error);
+
+  /// No description provided for @icsUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} updated'**
+  String icsUpdated(int count);
+
+  /// No description provided for @onlyThisOccurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Only this occurrence'**
+  String get onlyThisOccurrence;
+
+  /// No description provided for @onlyThisOccurrenceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the series and change just this date.'**
+  String get onlyThisOccurrenceSubtitle;
+
+  /// No description provided for @singleDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Single day'**
+  String get singleDay;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -43,7 +43,7 @@ class Entry {
     DateTime? startAt,
     DateTime? endAt,
   }) : startAt = startAt ?? _resolve(date, startMinute, timeZone, allDay),
-       endAt = endAt ?? _resolve(date, endMinute, timeZone, allDay) {
+       endAt = endAt ?? _resolveEnd(date, endDate, endMinute, timeZone, allDay) {
     _check();
   }
 
@@ -107,6 +107,18 @@ class Entry {
   bool get isTimed => !allDay && date != null && startMinute != null;
 
   bool get isMaintenance => repeatAfterCompletionDays != null;
+
+  /// How many calendar days after [date] the entry ends. Zero for a single-day
+  /// entry, including one that crosses midnight through [endMinute].
+  int get endDayOffset {
+    final start = date;
+    final end = endDate;
+    if (start == null || end == null) return 0;
+    return end.differenceInDays(start);
+  }
+
+  /// Whether this entry covers more than one day in its stored timezone.
+  bool get isMultiDay => endDate != null || (!allDay && (endMinute ?? 0) >= 1440);
 
   /// The date this entry appears on when viewed in [viewerTimeZone].
   ///
@@ -190,6 +202,20 @@ class Entry {
     return instantAt(date, minute, timeZone);
   }
 
+  static DateTime? _resolveEnd(
+    LocalDate? date,
+    LocalDate? endDate,
+    int? minute,
+    String? timeZone,
+    bool allDay,
+  ) {
+    if (allDay || date == null || minute == null || timeZone == null) {
+      return null;
+    }
+    final day = endDate ?? date;
+    return instantAt(day, minute, timeZone);
+  }
+
   void _check() {
     if (repeatAfterCompletionDays != null) {
       if (repeatAfterCompletionDays! <= 0) {
@@ -231,14 +257,29 @@ class Entry {
     if (start == null || start < 0 || start >= 1440) {
       throw ArgumentError.value(startMinute, 'startMinute', 'must be between 0 and 1439');
     }
-    if (end == null || end <= start || end - start > 1440) {
-      throw ArgumentError.value(endMinute, 'endMinute', 'must be after start and at most 24 hours later');
+    if (end == null) {
+      throw ArgumentError.value(endMinute, 'endMinute', 'is required');
     }
-    if (endDate != null) {
-      throw ArgumentError('Use endMinute for a timed entry that crosses midnight');
+    if (endDate != null && endDate!.isBefore(date!)) {
+      throw ArgumentError.value(endDate, 'endDate', 'must not be before date');
+    }
+    if (endDate == null) {
+      if (end <= start || end - start > 1440) {
+        throw ArgumentError.value(endMinute, 'endMinute', 'must be after start and at most 24 hours later');
+      }
+    } else {
+      if (end < 0 || end >= 1440) {
+        throw ArgumentError.value(endMinute, 'endMinute', 'must be between 0 and 1439 with an end date');
+      }
+      if (endDate == date && end <= start) {
+        throw ArgumentError.value(endMinute, 'endMinute', 'must be after start on the same day');
+      }
     }
     if (startAt == null || endAt == null || !startAt!.isUtc || !endAt!.isUtc) {
       throw ArgumentError('A timed entry needs resolved UTC instants');
+    }
+    if (!endAt!.isAfter(startAt!)) {
+      throw ArgumentError('A timed entry must end after it starts');
     }
   }
 }

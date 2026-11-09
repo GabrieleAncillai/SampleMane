@@ -29,6 +29,9 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
   late LocalDate _anchorDate;
   late List<_SlotDraft> _slots;
   late List<ShiftException> _exceptions;
+  late Set<String> _tagIds;
+  late final TextEditingController _commuteController;
+  late final TextEditingController _windDownController;
   List<_ChecklistDraft> _checklist = <_ChecklistDraft>[];
   bool _checklistLoading = false;
   late String _deviceTimeZone;
@@ -45,6 +48,9 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
     _spaceId = pattern?.spaceId ?? 'work';
     _cycleDays = pattern?.cycleDays ?? 7;
     _anchorDate = pattern?.anchorDate ?? localDateAt(ref.read(nowProvider), _deviceTimeZone);
+    _tagIds = {...?pattern?.tagIds};
+    _commuteController = TextEditingController(text: pattern?.commuteMinutes?.toString() ?? '');
+    _windDownController = TextEditingController(text: pattern?.windDownMinutes?.toString() ?? '');
     _slots = [
       for (final slot in pattern?.slots ?? const <ShiftSlot>[])
         _SlotDraft(
@@ -89,7 +95,14 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
   void dispose() {
     _nameController.dispose();
     _timeZoneController.dispose();
+    _commuteController.dispose();
+    _windDownController.dispose();
     super.dispose();
+  }
+
+  int? _optionalMinutes(TextEditingController controller) {
+    final text = controller.text.trim();
+    return text.isEmpty ? null : int.tryParse(text);
   }
 
   @override
@@ -97,6 +110,9 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
+    final availableTags = (ref.watch(tagsProvider).value ?? const <Tag>[])
+        .where((tag) => tag.appliesTo(_spaceId))
+        .toList();
     final locale = Localizations.localeOf(context).toLanguageTag();
     final activeSpace = spaces.any((space) => space.id == _spaceId) ? _spaceId : spaces.first.id;
     _spaceId = activeSpace;
@@ -147,6 +163,29 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
                 if (value != null) setState(() => _spaceId = value);
               },
             ),
+            if (availableTags.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              SectionLabel(l10n.shiftTags),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final tag in availableTags)
+                    FilterChip(
+                      label: Text(tag.name),
+                      selected: _tagIds.contains(tag.id),
+                      avatar: CircleAvatar(backgroundColor: Color(tag.colorValue), radius: 5),
+                      onSelected: (selected) => setState(() {
+                        if (selected) {
+                          _tagIds.add(tag.id);
+                        } else {
+                          _tagIds.remove(tag.id);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _timeZoneController,
@@ -156,6 +195,44 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
                 if (zone.isEmpty || !isKnownTimeZone(zone)) return l10n.invalidTimeZone;
                 return null;
               },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _commuteController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: l10n.commuteOverride,
+                      helperText: l10n.inheritSleepBuffers,
+                    ),
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) return null;
+                      final minutes = int.tryParse(text);
+                      return minutes == null || minutes < 0 || minutes > 1440 ? l10n.invalidTimeZone : null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _windDownController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: l10n.windDownOverride,
+                      helperText: l10n.inheritSleepBuffers,
+                    ),
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) return null;
+                      final minutes = int.tryParse(text);
+                      return minutes == null || minutes < 0 || minutes > 1440 ? l10n.invalidTimeZone : null;
+                    },
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Row(
@@ -494,6 +571,9 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
             ),
         ],
         exceptions: _exceptions,
+        tagIds: _tagIds,
+        commuteMinutes: _optionalMinutes(_commuteController),
+        windDownMinutes: _optionalMinutes(_windDownController),
         enabled: true,
       );
     } on ArgumentError {
@@ -523,6 +603,9 @@ class _ShiftPatternEditorPageState extends ConsumerState<ShiftPatternEditorPage>
       anchorDate: pattern.anchorDate,
       slots: pattern.slots,
       exceptions: pattern.exceptions,
+      tagIds: pattern.tagIds,
+      commuteMinutes: pattern.commuteMinutes,
+      windDownMinutes: pattern.windDownMinutes,
       enabled: widget.pattern?.enabled ?? true,
     );
     try {

@@ -146,4 +146,76 @@ void main() {
       expect(rule.describe(), 'Every week on Mon, Wed');
     });
   });
+
+  group('advanced rules', () {
+    final november = LocalDate.parse('2026-11-01');
+
+    test('the first Monday of each month matches', () {
+      const rule = RecurrenceRule(
+        frequency: RecurrenceFrequency.monthly,
+        ordinalWeekdays: [WeekdayOrdinal(weekday: DateTime.monday, ordinal: 1)],
+      );
+      expect(rule.occursOn(LocalDate.parse('2026-11-02'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-12-07'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-11-09'), november), isFalse);
+    });
+
+    test('the last Friday of each month matches', () {
+      const rule = RecurrenceRule(
+        frequency: RecurrenceFrequency.monthly,
+        ordinalWeekdays: [WeekdayOrdinal(weekday: DateTime.friday, ordinal: -1)],
+      );
+      expect(rule.occursOn(LocalDate.parse('2026-11-27'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-12-25'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-11-20'), november), isFalse);
+    });
+
+    test('a negative month day counts from the end', () {
+      const rule = RecurrenceRule(frequency: RecurrenceFrequency.monthly, monthDay: -1);
+      expect(rule.occursOn(LocalDate.parse('2026-11-30'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-12-31'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2027-02-28'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-11-29'), november), isFalse);
+    });
+
+    test('BYSETPOS picks the last weekday of the month', () {
+      const rule = RecurrenceRule(
+        frequency: RecurrenceFrequency.monthly,
+        weekdays: {1, 2, 3, 4, 5},
+        setPositions: [-1],
+      );
+      expect(rule.occursOn(LocalDate.parse('2026-11-30'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-12-31'), november), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-11-27'), november), isFalse);
+    });
+
+    test('skip dates remove single occurrences', () {
+      final rule = RecurrenceRule(frequency: RecurrenceFrequency.daily, skipDates: {LocalDate(2026, 11, 11)});
+      expect(rule.occursOn(LocalDate.parse('2026-11-10'), monday), isTrue);
+      expect(rule.occursOn(LocalDate.parse('2026-11-11'), monday), isFalse);
+      expect(rule.occursOn(LocalDate.parse('2026-11-12'), monday), isTrue);
+    });
+
+    test('advanced rules and exceptions survive JSON', () {
+      final rule = RecurrenceRule(
+        frequency: RecurrenceFrequency.monthly,
+        ordinalWeekdays: const [WeekdayOrdinal(weekday: DateTime.friday, ordinal: -1)],
+        skipDates: {LocalDate.parse('2026-12-25')},
+        overrides: [
+          RecurrenceOverride(
+            date: LocalDate.parse('2026-11-27'),
+            dateOverride: LocalDate.parse('2026-11-28'),
+            startMinute: 18 * 60,
+            endMinute: 20 * 60,
+            title: 'Moved dinner',
+          ),
+        ],
+      );
+      final restored = RecurrenceRule.fromJson(rule.toJson());
+      expect(restored.ordinalWeekdays.single.ordinal, -1);
+      expect(restored.skipDates, {LocalDate.parse('2026-12-25')});
+      expect(restored.overrides.single.effectiveDate, LocalDate.parse('2026-11-28'));
+      expect(restored.overrides.single.title, 'Moved dinner');
+    });
+  });
 }

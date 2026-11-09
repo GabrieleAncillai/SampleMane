@@ -403,8 +403,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importCalendarSpace => 'Import into';
 
   @override
-  String importCalendarDone(int imported, int skipped) {
-    return 'Imported $imported events. Skipped $skipped duplicates or unsupported events.';
+  String importCalendarDone(int imported, int updated, int skipped) {
+    return 'Imported $imported, updated $updated, skipped $skipped duplicates or unsupported events.';
   }
 
   @override
@@ -1047,4 +1047,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupRestoredReminders => 'Reminders have been rescheduled.';
+
+  @override
+  String get dayView => 'Day';
+
+  @override
+  String get shiftTags => 'Job tags';
+
+  @override
+  String get commuteOverride => 'Commute override';
+
+  @override
+  String get windDownOverride => 'Wind-down override';
+
+  @override
+  String get inheritSleepBuffers => 'Leave empty to use the sleep settings.';
+
+  @override
+  String get endDate => 'Ends on';
+
+  @override
+  String get multiDayHint => 'Leave the end date empty for a single day.';
+
+  @override
+  String get skipThisOccurrence => 'Skip this occurrence';
+
+  @override
+  String get skippedOccurrences => 'Skipped dates';
+
+  @override
+  String get recurrenceExceptions => 'Exceptions';
+
+  @override
+  String get exportCalendar => 'Export calendar (.ics)';
+
+  @override
+  String get exportCalendarSubtitle => 'Share a read-only calendar file. No account or network is used.';
+
+  @override
+  String calendarExported(String path) {
+    return 'Calendar exported to $path';
+  }
+
+  @override
+  String calendarExportFailed(String error) {
+    return 'Could not export the calendar: $error';
+  }
+
+  @override
+  String icsUpdated(int count) {
+    return '$count updated';
+  }
+
+  @override
+  String get onlyThisOccurrence => 'Only this occurrence';
+
+  @override
+  String get onlyThisOccurrenceSubtitle => 'Keep the series and change just this date.';
+
+  @override
+  String get singleDay => 'Single day';
 }

@@ -189,4 +189,111 @@ void main() {
     expect(occurrences.first.entry.id, 'a');
     expect(occurrences.last.entry.id, 'timed');
   });
+
+  test('a moved occurrence replaces the original date and time', () {
+    final entry = Entry(
+      id: 'dinner',
+      spaceId: 'personal',
+      title: 'Dinner',
+      date: monday,
+      startMinute: 9 * 60,
+      endMinute: 10 * 60,
+      timeZone: 'Europe/Madrid',
+      recurrence: RecurrenceRule(
+        frequency: RecurrenceFrequency.daily,
+        overrides: [
+          RecurrenceOverride(
+            date: monday.addDays(2),
+            dateOverride: monday.addDays(3),
+            startMinute: 18 * 60,
+            endMinute: 20 * 60,
+            title: 'Moved dinner',
+          ),
+        ],
+      ),
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    final occurrences = expandEntries(
+      entries: [entry],
+      start: monday,
+      end: monday.addDays(4),
+      viewerTimeZone: 'Europe/Madrid',
+    );
+
+    // The moved occurrence lands on the same day as the next daily occurrence.
+    expect(occurrences.map((item) => item.displayDate.iso), [
+      '2026-03-02',
+      '2026-03-03',
+      '2026-03-05',
+      '2026-03-05',
+      '2026-03-06',
+    ]);
+    final moved = occurrences.firstWhere((item) => item.entry.title == 'Moved dinner');
+    expect(moved.displayDate, LocalDate.parse('2026-03-05'));
+    expect(localDateTimeAt(moved.startAt!, 'Europe/Madrid').hour, 18);
+    expect(moved.date, LocalDate.parse('2026-03-04'));
+  });
+
+  test('a cancelled occurrence is skipped even when it moves', () {
+    final entry = Entry(
+      id: 'dinner',
+      spaceId: 'personal',
+      title: 'Dinner',
+      date: monday,
+      startMinute: 9 * 60,
+      endMinute: 10 * 60,
+      timeZone: 'Europe/Madrid',
+      recurrence: RecurrenceRule(frequency: RecurrenceFrequency.daily, skipDates: {monday.addDays(1)}),
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    final occurrences = expandEntries(
+      entries: [entry],
+      start: monday,
+      end: monday.addDays(2),
+      viewerTimeZone: 'Europe/Madrid',
+    );
+    expect(occurrences.map((item) => item.displayDate.iso), ['2026-03-02', '2026-03-04']);
+  });
+
+  test('a multi-day timed entry appears on every day and keeps its instants', () {
+    final trip = Entry(
+      id: 'trip',
+      spaceId: 'personal',
+      title: 'Trip',
+      kind: EntryKind.event,
+      date: LocalDate.parse('2026-03-02'),
+      endDate: LocalDate.parse('2026-03-04'),
+      startMinute: 22 * 60,
+      endMinute: 2 * 60,
+      timeZone: 'Europe/Madrid',
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    expect(trip.endAt, DateTime.utc(2026, 3, 4, 1));
+    final occurrences = expandEntries(
+      entries: [trip],
+      start: LocalDate.parse('2026-03-02'),
+      end: LocalDate.parse('2026-03-05'),
+      viewerTimeZone: 'Europe/Madrid',
+    );
+    expect(occurrences.map((item) => item.displayDate.iso), ['2026-03-02', '2026-03-03', '2026-03-04']);
+    expect(occurrences.every((item) => item.startAt == trip.startAt), isTrue);
+    expect(occurrences.every((item) => item.endAt == trip.endAt), isTrue);
+  });
+
+  test('an overnight timed entry shows its tail on the next day', () {
+    final shift = timed(timeZone: 'Europe/Madrid', startMinute: 22 * 60, endMinute: 26 * 60, id: 'overnight');
+    final occurrences = expandEntries(
+      entries: [shift],
+      start: monday,
+      end: monday.addDays(1),
+      viewerTimeZone: 'Europe/Madrid',
+    );
+    expect(occurrences.map((item) => item.displayDate.iso), ['2026-03-02', '2026-03-03']);
+  });
 }

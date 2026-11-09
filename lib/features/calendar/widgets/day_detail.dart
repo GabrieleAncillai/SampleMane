@@ -30,10 +30,6 @@ class CalendarDayDetail extends StatelessWidget {
     final c = context.mc;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final title = DateFormat.yMMMMEEEEd(locale).format(date.toDateTime());
-    final checklistShifts = <String, ShiftOccurrence>{};
-    for (final shift in shifts) {
-      checklistShifts.putIfAbsent('${shift.pattern.id}:${shift.date.key}', () => shift);
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,10 +45,14 @@ class CalendarDayDetail extends StatelessWidget {
         if (shifts.isNotEmpty) ...[
           const SizedBox(height: 10),
           for (final shift in shifts) ShiftTile(occurrence: shift),
-          for (final shift in checklistShifts.values)
+          for (final shift in shifts)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: ShiftChecklistSection(patternId: shift.pattern.id, date: shift.date),
+              child: ShiftChecklistSection(
+                patternId: shift.pattern.id,
+                date: shift.date,
+                slotKey: shift.slotKey,
+              ),
             ),
         ],
         if (entries.isEmpty && shifts.isEmpty)

@@ -64,6 +64,7 @@ void main() {
       );
 
       expect(pattern.slotsFor(monday).map((slot) => slot.label), ['Lunch', 'Dinner']);
+      expect(pattern.slotsFor(monday).map((slot) => slot.key).toSet(), hasLength(2));
       expect(pattern.findConflicts(), isEmpty);
     });
 

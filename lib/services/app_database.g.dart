@@ -3146,6 +3146,28 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _commuteMinutesMeta = const VerificationMeta(
+    'commuteMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> commuteMinutes = GeneratedColumn<int>(
+    'commute_minutes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _windDownMinutesMeta = const VerificationMeta(
+    'windDownMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> windDownMinutes = GeneratedColumn<int>(
+    'wind_down_minutes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _enabledMeta = const VerificationMeta(
     'enabled',
   );
@@ -3202,6 +3224,8 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
     timeZone,
     cycleDays,
     anchorDateKey,
+    commuteMinutes,
+    windDownMinutes,
     enabled,
     createdAt,
     updatedAt,
@@ -3265,6 +3289,24 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
     } else if (isInserting) {
       context.missing(_anchorDateKeyMeta);
     }
+    if (data.containsKey('commute_minutes')) {
+      context.handle(
+        _commuteMinutesMeta,
+        commuteMinutes.isAcceptableOrUnknown(
+          data['commute_minutes']!,
+          _commuteMinutesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('wind_down_minutes')) {
+      context.handle(
+        _windDownMinutesMeta,
+        windDownMinutes.isAcceptableOrUnknown(
+          data['wind_down_minutes']!,
+          _windDownMinutesMeta,
+        ),
+      );
+    }
     if (data.containsKey('enabled')) {
       context.handle(
         _enabledMeta,
@@ -3326,6 +3368,14 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
         DriftSqlType.int,
         data['${effectivePrefix}anchor_date_key'],
       )!,
+      commuteMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}commute_minutes'],
+      ),
+      windDownMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}wind_down_minutes'],
+      ),
       enabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}enabled'],
@@ -3360,6 +3410,10 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
   final String timeZone;
   final int cycleDays;
   final int anchorDateKey;
+
+  /// Per-pattern sleep overrides in minutes. Null uses the global buffer.
+  final int? commuteMinutes;
+  final int? windDownMinutes;
   final bool enabled;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -3371,6 +3425,8 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     required this.timeZone,
     required this.cycleDays,
     required this.anchorDateKey,
+    this.commuteMinutes,
+    this.windDownMinutes,
     required this.enabled,
     required this.createdAt,
     required this.updatedAt,
@@ -3385,6 +3441,12 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     map['time_zone'] = Variable<String>(timeZone);
     map['cycle_days'] = Variable<int>(cycleDays);
     map['anchor_date_key'] = Variable<int>(anchorDateKey);
+    if (!nullToAbsent || commuteMinutes != null) {
+      map['commute_minutes'] = Variable<int>(commuteMinutes);
+    }
+    if (!nullToAbsent || windDownMinutes != null) {
+      map['wind_down_minutes'] = Variable<int>(windDownMinutes);
+    }
     map['enabled'] = Variable<bool>(enabled);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -3402,6 +3464,12 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       timeZone: Value(timeZone),
       cycleDays: Value(cycleDays),
       anchorDateKey: Value(anchorDateKey),
+      commuteMinutes: commuteMinutes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(commuteMinutes),
+      windDownMinutes: windDownMinutes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(windDownMinutes),
       enabled: Value(enabled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -3423,6 +3491,8 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       timeZone: serializer.fromJson<String>(json['timeZone']),
       cycleDays: serializer.fromJson<int>(json['cycleDays']),
       anchorDateKey: serializer.fromJson<int>(json['anchorDateKey']),
+      commuteMinutes: serializer.fromJson<int?>(json['commuteMinutes']),
+      windDownMinutes: serializer.fromJson<int?>(json['windDownMinutes']),
       enabled: serializer.fromJson<bool>(json['enabled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -3439,6 +3509,8 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       'timeZone': serializer.toJson<String>(timeZone),
       'cycleDays': serializer.toJson<int>(cycleDays),
       'anchorDateKey': serializer.toJson<int>(anchorDateKey),
+      'commuteMinutes': serializer.toJson<int?>(commuteMinutes),
+      'windDownMinutes': serializer.toJson<int?>(windDownMinutes),
       'enabled': serializer.toJson<bool>(enabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -3453,6 +3525,8 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     String? timeZone,
     int? cycleDays,
     int? anchorDateKey,
+    Value<int?> commuteMinutes = const Value.absent(),
+    Value<int?> windDownMinutes = const Value.absent(),
     bool? enabled,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -3464,6 +3538,12 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     timeZone: timeZone ?? this.timeZone,
     cycleDays: cycleDays ?? this.cycleDays,
     anchorDateKey: anchorDateKey ?? this.anchorDateKey,
+    commuteMinutes: commuteMinutes.present
+        ? commuteMinutes.value
+        : this.commuteMinutes,
+    windDownMinutes: windDownMinutes.present
+        ? windDownMinutes.value
+        : this.windDownMinutes,
     enabled: enabled ?? this.enabled,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -3479,6 +3559,12 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       anchorDateKey: data.anchorDateKey.present
           ? data.anchorDateKey.value
           : this.anchorDateKey,
+      commuteMinutes: data.commuteMinutes.present
+          ? data.commuteMinutes.value
+          : this.commuteMinutes,
+      windDownMinutes: data.windDownMinutes.present
+          ? data.windDownMinutes.value
+          : this.windDownMinutes,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -3495,6 +3581,8 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
           ..write('timeZone: $timeZone, ')
           ..write('cycleDays: $cycleDays, ')
           ..write('anchorDateKey: $anchorDateKey, ')
+          ..write('commuteMinutes: $commuteMinutes, ')
+          ..write('windDownMinutes: $windDownMinutes, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -3511,6 +3599,8 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     timeZone,
     cycleDays,
     anchorDateKey,
+    commuteMinutes,
+    windDownMinutes,
     enabled,
     createdAt,
     updatedAt,
@@ -3526,6 +3616,8 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
           other.timeZone == this.timeZone &&
           other.cycleDays == this.cycleDays &&
           other.anchorDateKey == this.anchorDateKey &&
+          other.commuteMinutes == this.commuteMinutes &&
+          other.windDownMinutes == this.windDownMinutes &&
           other.enabled == this.enabled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -3539,6 +3631,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
   final Value<String> timeZone;
   final Value<int> cycleDays;
   final Value<int> anchorDateKey;
+  final Value<int?> commuteMinutes;
+  final Value<int?> windDownMinutes;
   final Value<bool> enabled;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -3551,6 +3645,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     this.timeZone = const Value.absent(),
     this.cycleDays = const Value.absent(),
     this.anchorDateKey = const Value.absent(),
+    this.commuteMinutes = const Value.absent(),
+    this.windDownMinutes = const Value.absent(),
     this.enabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -3564,6 +3660,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     this.timeZone = const Value.absent(),
     required int cycleDays,
     required int anchorDateKey,
+    this.commuteMinutes = const Value.absent(),
+    this.windDownMinutes = const Value.absent(),
     this.enabled = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -3583,6 +3681,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     Expression<String>? timeZone,
     Expression<int>? cycleDays,
     Expression<int>? anchorDateKey,
+    Expression<int>? commuteMinutes,
+    Expression<int>? windDownMinutes,
     Expression<bool>? enabled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -3596,6 +3696,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
       if (timeZone != null) 'time_zone': timeZone,
       if (cycleDays != null) 'cycle_days': cycleDays,
       if (anchorDateKey != null) 'anchor_date_key': anchorDateKey,
+      if (commuteMinutes != null) 'commute_minutes': commuteMinutes,
+      if (windDownMinutes != null) 'wind_down_minutes': windDownMinutes,
       if (enabled != null) 'enabled': enabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -3611,6 +3713,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     Value<String>? timeZone,
     Value<int>? cycleDays,
     Value<int>? anchorDateKey,
+    Value<int?>? commuteMinutes,
+    Value<int?>? windDownMinutes,
     Value<bool>? enabled,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -3624,6 +3728,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
       timeZone: timeZone ?? this.timeZone,
       cycleDays: cycleDays ?? this.cycleDays,
       anchorDateKey: anchorDateKey ?? this.anchorDateKey,
+      commuteMinutes: commuteMinutes ?? this.commuteMinutes,
+      windDownMinutes: windDownMinutes ?? this.windDownMinutes,
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -3653,6 +3759,12 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     if (anchorDateKey.present) {
       map['anchor_date_key'] = Variable<int>(anchorDateKey.value);
     }
+    if (commuteMinutes.present) {
+      map['commute_minutes'] = Variable<int>(commuteMinutes.value);
+    }
+    if (windDownMinutes.present) {
+      map['wind_down_minutes'] = Variable<int>(windDownMinutes.value);
+    }
     if (enabled.present) {
       map['enabled'] = Variable<bool>(enabled.value);
     }
@@ -3680,6 +3792,8 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
           ..write('timeZone: $timeZone, ')
           ..write('cycleDays: $cycleDays, ')
           ..write('anchorDateKey: $anchorDateKey, ')
+          ..write('commuteMinutes: $commuteMinutes, ')
+          ..write('windDownMinutes: $windDownMinutes, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -4089,6 +4203,230 @@ class ShiftSlotRecordsCompanion extends UpdateCompanion<ShiftSlotRow> {
           ..write('label: $label, ')
           ..write('startMinute: $startMinute, ')
           ..write('endMinute: $endMinute')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ShiftPatternTagRecordsTable extends ShiftPatternTagRecords
+    with TableInfo<$ShiftPatternTagRecordsTable, ShiftPatternTagRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShiftPatternTagRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _patternIdMeta = const VerificationMeta(
+    'patternId',
+  );
+  @override
+  late final GeneratedColumn<String> patternId = GeneratedColumn<String>(
+    'pattern_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shift_pattern_records (id)',
+    ),
+  );
+  static const VerificationMeta _tagIdMeta = const VerificationMeta('tagId');
+  @override
+  late final GeneratedColumn<String> tagId = GeneratedColumn<String>(
+    'tag_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES tag_records (id)',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [patternId, tagId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shift_pattern_tag_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShiftPatternTagRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('pattern_id')) {
+      context.handle(
+        _patternIdMeta,
+        patternId.isAcceptableOrUnknown(data['pattern_id']!, _patternIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_patternIdMeta);
+    }
+    if (data.containsKey('tag_id')) {
+      context.handle(
+        _tagIdMeta,
+        tagId.isAcceptableOrUnknown(data['tag_id']!, _tagIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tagIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {patternId, tagId};
+  @override
+  ShiftPatternTagRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShiftPatternTagRow(
+      patternId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pattern_id'],
+      )!,
+      tagId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag_id'],
+      )!,
+    );
+  }
+
+  @override
+  $ShiftPatternTagRecordsTable createAlias(String alias) {
+    return $ShiftPatternTagRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class ShiftPatternTagRow extends DataClass
+    implements Insertable<ShiftPatternTagRow> {
+  final String patternId;
+  final String tagId;
+  const ShiftPatternTagRow({required this.patternId, required this.tagId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['pattern_id'] = Variable<String>(patternId);
+    map['tag_id'] = Variable<String>(tagId);
+    return map;
+  }
+
+  ShiftPatternTagRecordsCompanion toCompanion(bool nullToAbsent) {
+    return ShiftPatternTagRecordsCompanion(
+      patternId: Value(patternId),
+      tagId: Value(tagId),
+    );
+  }
+
+  factory ShiftPatternTagRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShiftPatternTagRow(
+      patternId: serializer.fromJson<String>(json['patternId']),
+      tagId: serializer.fromJson<String>(json['tagId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'patternId': serializer.toJson<String>(patternId),
+      'tagId': serializer.toJson<String>(tagId),
+    };
+  }
+
+  ShiftPatternTagRow copyWith({String? patternId, String? tagId}) =>
+      ShiftPatternTagRow(
+        patternId: patternId ?? this.patternId,
+        tagId: tagId ?? this.tagId,
+      );
+  ShiftPatternTagRow copyWithCompanion(ShiftPatternTagRecordsCompanion data) {
+    return ShiftPatternTagRow(
+      patternId: data.patternId.present ? data.patternId.value : this.patternId,
+      tagId: data.tagId.present ? data.tagId.value : this.tagId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShiftPatternTagRow(')
+          ..write('patternId: $patternId, ')
+          ..write('tagId: $tagId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(patternId, tagId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShiftPatternTagRow &&
+          other.patternId == this.patternId &&
+          other.tagId == this.tagId);
+}
+
+class ShiftPatternTagRecordsCompanion
+    extends UpdateCompanion<ShiftPatternTagRow> {
+  final Value<String> patternId;
+  final Value<String> tagId;
+  final Value<int> rowid;
+  const ShiftPatternTagRecordsCompanion({
+    this.patternId = const Value.absent(),
+    this.tagId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ShiftPatternTagRecordsCompanion.insert({
+    required String patternId,
+    required String tagId,
+    this.rowid = const Value.absent(),
+  }) : patternId = Value(patternId),
+       tagId = Value(tagId);
+  static Insertable<ShiftPatternTagRow> custom({
+    Expression<String>? patternId,
+    Expression<String>? tagId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (patternId != null) 'pattern_id': patternId,
+      if (tagId != null) 'tag_id': tagId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ShiftPatternTagRecordsCompanion copyWith({
+    Value<String>? patternId,
+    Value<String>? tagId,
+    Value<int>? rowid,
+  }) {
+    return ShiftPatternTagRecordsCompanion(
+      patternId: patternId ?? this.patternId,
+      tagId: tagId ?? this.tagId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (patternId.present) {
+      map['pattern_id'] = Variable<String>(patternId.value);
+    }
+    if (tagId.present) {
+      map['tag_id'] = Variable<String>(tagId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShiftPatternTagRecordsCompanion(')
+          ..write('patternId: $patternId, ')
+          ..write('tagId: $tagId, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -4896,6 +5234,18 @@ class $ShiftChecklistCompletionRecordsTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _slotKeyMeta = const VerificationMeta(
+    'slotKey',
+  );
+  @override
+  late final GeneratedColumn<String> slotKey = GeneratedColumn<String>(
+    'slot_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4908,7 +5258,7 @@ class $ShiftChecklistCompletionRecordsTable
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [itemId, dateKey, createdAt];
+  List<GeneratedColumn> get $columns => [itemId, dateKey, slotKey, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -4937,6 +5287,12 @@ class $ShiftChecklistCompletionRecordsTable
     } else if (isInserting) {
       context.missing(_dateKeyMeta);
     }
+    if (data.containsKey('slot_key')) {
+      context.handle(
+        _slotKeyMeta,
+        slotKey.isAcceptableOrUnknown(data['slot_key']!, _slotKeyMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -4949,7 +5305,7 @@ class $ShiftChecklistCompletionRecordsTable
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {itemId, dateKey};
+  Set<GeneratedColumn> get $primaryKey => {itemId, dateKey, slotKey};
   @override
   ShiftChecklistCompletionRow map(
     Map<String, dynamic> data, {
@@ -4964,6 +5320,10 @@ class $ShiftChecklistCompletionRecordsTable
       dateKey: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}date_key'],
+      )!,
+      slotKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}slot_key'],
       )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -4982,10 +5342,15 @@ class ShiftChecklistCompletionRow extends DataClass
     implements Insertable<ShiftChecklistCompletionRow> {
   final String itemId;
   final int dateKey;
+
+  /// Identity of the shift slot inside the pattern. An empty value is the
+  /// legacy single-slot key and is backfilled during the v5 to v6 migration.
+  final String slotKey;
   final DateTime createdAt;
   const ShiftChecklistCompletionRow({
     required this.itemId,
     required this.dateKey,
+    required this.slotKey,
     required this.createdAt,
   });
   @override
@@ -4993,6 +5358,7 @@ class ShiftChecklistCompletionRow extends DataClass
     final map = <String, Expression>{};
     map['item_id'] = Variable<String>(itemId);
     map['date_key'] = Variable<int>(dateKey);
+    map['slot_key'] = Variable<String>(slotKey);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -5001,6 +5367,7 @@ class ShiftChecklistCompletionRow extends DataClass
     return ShiftChecklistCompletionRecordsCompanion(
       itemId: Value(itemId),
       dateKey: Value(dateKey),
+      slotKey: Value(slotKey),
       createdAt: Value(createdAt),
     );
   }
@@ -5013,6 +5380,7 @@ class ShiftChecklistCompletionRow extends DataClass
     return ShiftChecklistCompletionRow(
       itemId: serializer.fromJson<String>(json['itemId']),
       dateKey: serializer.fromJson<int>(json['dateKey']),
+      slotKey: serializer.fromJson<String>(json['slotKey']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -5022,6 +5390,7 @@ class ShiftChecklistCompletionRow extends DataClass
     return <String, dynamic>{
       'itemId': serializer.toJson<String>(itemId),
       'dateKey': serializer.toJson<int>(dateKey),
+      'slotKey': serializer.toJson<String>(slotKey),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -5029,10 +5398,12 @@ class ShiftChecklistCompletionRow extends DataClass
   ShiftChecklistCompletionRow copyWith({
     String? itemId,
     int? dateKey,
+    String? slotKey,
     DateTime? createdAt,
   }) => ShiftChecklistCompletionRow(
     itemId: itemId ?? this.itemId,
     dateKey: dateKey ?? this.dateKey,
+    slotKey: slotKey ?? this.slotKey,
     createdAt: createdAt ?? this.createdAt,
   );
   ShiftChecklistCompletionRow copyWithCompanion(
@@ -5041,6 +5412,7 @@ class ShiftChecklistCompletionRow extends DataClass
     return ShiftChecklistCompletionRow(
       itemId: data.itemId.present ? data.itemId.value : this.itemId,
       dateKey: data.dateKey.present ? data.dateKey.value : this.dateKey,
+      slotKey: data.slotKey.present ? data.slotKey.value : this.slotKey,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -5050,19 +5422,21 @@ class ShiftChecklistCompletionRow extends DataClass
     return (StringBuffer('ShiftChecklistCompletionRow(')
           ..write('itemId: $itemId, ')
           ..write('dateKey: $dateKey, ')
+          ..write('slotKey: $slotKey, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(itemId, dateKey, createdAt);
+  int get hashCode => Object.hash(itemId, dateKey, slotKey, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ShiftChecklistCompletionRow &&
           other.itemId == this.itemId &&
           other.dateKey == this.dateKey &&
+          other.slotKey == this.slotKey &&
           other.createdAt == this.createdAt);
 }
 
@@ -5070,17 +5444,20 @@ class ShiftChecklistCompletionRecordsCompanion
     extends UpdateCompanion<ShiftChecklistCompletionRow> {
   final Value<String> itemId;
   final Value<int> dateKey;
+  final Value<String> slotKey;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const ShiftChecklistCompletionRecordsCompanion({
     this.itemId = const Value.absent(),
     this.dateKey = const Value.absent(),
+    this.slotKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ShiftChecklistCompletionRecordsCompanion.insert({
     required String itemId,
     required int dateKey,
+    this.slotKey = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : itemId = Value(itemId),
@@ -5089,12 +5466,14 @@ class ShiftChecklistCompletionRecordsCompanion
   static Insertable<ShiftChecklistCompletionRow> custom({
     Expression<String>? itemId,
     Expression<int>? dateKey,
+    Expression<String>? slotKey,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (itemId != null) 'item_id': itemId,
       if (dateKey != null) 'date_key': dateKey,
+      if (slotKey != null) 'slot_key': slotKey,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -5103,12 +5482,14 @@ class ShiftChecklistCompletionRecordsCompanion
   ShiftChecklistCompletionRecordsCompanion copyWith({
     Value<String>? itemId,
     Value<int>? dateKey,
+    Value<String>? slotKey,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
     return ShiftChecklistCompletionRecordsCompanion(
       itemId: itemId ?? this.itemId,
       dateKey: dateKey ?? this.dateKey,
+      slotKey: slotKey ?? this.slotKey,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -5122,6 +5503,9 @@ class ShiftChecklistCompletionRecordsCompanion
     }
     if (dateKey.present) {
       map['date_key'] = Variable<int>(dateKey.value);
+    }
+    if (slotKey.present) {
+      map['slot_key'] = Variable<String>(slotKey.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -5137,6 +5521,7 @@ class ShiftChecklistCompletionRecordsCompanion
     return (StringBuffer('ShiftChecklistCompletionRecordsCompanion(')
           ..write('itemId: $itemId, ')
           ..write('dateKey: $dateKey, ')
+          ..write('slotKey: $slotKey, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -7956,6 +8341,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ShiftSlotRecordsTable shiftSlotRecords = $ShiftSlotRecordsTable(
     this,
   );
+  late final $ShiftPatternTagRecordsTable shiftPatternTagRecords =
+      $ShiftPatternTagRecordsTable(this);
   late final $ShiftExceptionRecordsTable shiftExceptionRecords =
       $ShiftExceptionRecordsTable(this);
   late final $ShiftChecklistItemRecordsTable shiftChecklistItemRecords =
@@ -7986,6 +8373,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     reminderRecords,
     shiftPatternRecords,
     shiftSlotRecords,
+    shiftPatternTagRecords,
     shiftExceptionRecords,
     shiftChecklistItemRecords,
     shiftChecklistCompletionRecords,
@@ -9590,6 +9978,34 @@ final class $$TagRecordsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $ShiftPatternTagRecordsTable,
+    List<ShiftPatternTagRow>
+  >
+  _shiftPatternTagRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.shiftPatternTagRecords,
+        aliasName: $_aliasNameGenerator(
+          db.tagRecords.id,
+          db.shiftPatternTagRecords.tagId,
+        ),
+      );
+
+  $$ShiftPatternTagRecordsTableProcessedTableManager
+  get shiftPatternTagRecordsRefs {
+    final manager = $$ShiftPatternTagRecordsTableTableManager(
+      $_db,
+      $_db.shiftPatternTagRecords,
+    ).filter((f) => f.tagId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _shiftPatternTagRecordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$TagRecordsTableFilterComposer
@@ -9681,6 +10097,32 @@ class $$TagRecordsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> shiftPatternTagRecordsRefs(
+    Expression<bool> Function($$ShiftPatternTagRecordsTableFilterComposer f) f,
+  ) {
+    final $$ShiftPatternTagRecordsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.shiftPatternTagRecords,
+          getReferencedColumn: (t) => t.tagId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternTagRecordsTableFilterComposer(
+                $db: $db,
+                $table: $db.shiftPatternTagRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 }
@@ -9830,6 +10272,32 @@ class $$TagRecordsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> shiftPatternTagRecordsRefs<T extends Object>(
+    Expression<T> Function($$ShiftPatternTagRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$ShiftPatternTagRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.shiftPatternTagRecords,
+          getReferencedColumn: (t) => t.tagId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternTagRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.shiftPatternTagRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$TagRecordsTableTableManager
@@ -9845,7 +10313,11 @@ class $$TagRecordsTableTableManager
           $$TagRecordsTableUpdateCompanionBuilder,
           (TagRow, $$TagRecordsTableReferences),
           TagRow,
-          PrefetchHooks Function({bool spaceId, bool entryTagRecordsRefs})
+          PrefetchHooks Function({
+            bool spaceId,
+            bool entryTagRecordsRefs,
+            bool shiftPatternTagRecordsRefs,
+          })
         > {
   $$TagRecordsTableTableManager(_$AppDatabase db, $TagRecordsTable table)
     : super(
@@ -9911,11 +10383,16 @@ class $$TagRecordsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({spaceId = false, entryTagRecordsRefs = false}) {
+              ({
+                spaceId = false,
+                entryTagRecordsRefs = false,
+                shiftPatternTagRecordsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (entryTagRecordsRefs) db.entryTagRecords,
+                    if (shiftPatternTagRecordsRefs) db.shiftPatternTagRecords,
                   ],
                   addJoins:
                       <
@@ -9973,6 +10450,27 @@ class $$TagRecordsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (shiftPatternTagRecordsRefs)
+                        await $_getPrefetchedData<
+                          TagRow,
+                          $TagRecordsTable,
+                          ShiftPatternTagRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TagRecordsTableReferences
+                              ._shiftPatternTagRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TagRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).shiftPatternTagRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.tagId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -9993,7 +10491,11 @@ typedef $$TagRecordsTableProcessedTableManager =
       $$TagRecordsTableUpdateCompanionBuilder,
       (TagRow, $$TagRecordsTableReferences),
       TagRow,
-      PrefetchHooks Function({bool spaceId, bool entryTagRecordsRefs})
+      PrefetchHooks Function({
+        bool spaceId,
+        bool entryTagRecordsRefs,
+        bool shiftPatternTagRecordsRefs,
+      })
     >;
 typedef $$EntryTagRecordsTableCreateCompanionBuilder =
     EntryTagRecordsCompanion Function({
@@ -10966,6 +11468,8 @@ typedef $$ShiftPatternRecordsTableCreateCompanionBuilder =
       Value<String> timeZone,
       required int cycleDays,
       required int anchorDateKey,
+      Value<int?> commuteMinutes,
+      Value<int?> windDownMinutes,
       Value<bool> enabled,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -10980,6 +11484,8 @@ typedef $$ShiftPatternRecordsTableUpdateCompanionBuilder =
       Value<String> timeZone,
       Value<int> cycleDays,
       Value<int> anchorDateKey,
+      Value<int?> commuteMinutes,
+      Value<int?> windDownMinutes,
       Value<bool> enabled,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -11039,6 +11545,34 @@ final class $$ShiftPatternRecordsTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _shiftSlotRecordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ShiftPatternTagRecordsTable,
+    List<ShiftPatternTagRow>
+  >
+  _shiftPatternTagRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.shiftPatternTagRecords,
+        aliasName: $_aliasNameGenerator(
+          db.shiftPatternRecords.id,
+          db.shiftPatternTagRecords.patternId,
+        ),
+      );
+
+  $$ShiftPatternTagRecordsTableProcessedTableManager
+  get shiftPatternTagRecordsRefs {
+    final manager = $$ShiftPatternTagRecordsTableTableManager(
+      $_db,
+      $_db.shiftPatternTagRecords,
+    ).filter((f) => f.patternId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _shiftPatternTagRecordsRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -11136,6 +11670,16 @@ class $$ShiftPatternRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get commuteMinutes => $composableBuilder(
+    column: $table.commuteMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get windDownMinutes => $composableBuilder(
+    column: $table.windDownMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get enabled => $composableBuilder(
     column: $table.enabled,
     builder: (column) => ColumnFilters(column),
@@ -11201,6 +11745,32 @@ class $$ShiftPatternRecordsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> shiftPatternTagRecordsRefs(
+    Expression<bool> Function($$ShiftPatternTagRecordsTableFilterComposer f) f,
+  ) {
+    final $$ShiftPatternTagRecordsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.shiftPatternTagRecords,
+          getReferencedColumn: (t) => t.patternId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternTagRecordsTableFilterComposer(
+                $db: $db,
+                $table: $db.shiftPatternTagRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 
@@ -11292,6 +11862,16 @@ class $$ShiftPatternRecordsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get commuteMinutes => $composableBuilder(
+    column: $table.commuteMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get windDownMinutes => $composableBuilder(
+    column: $table.windDownMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get enabled => $composableBuilder(
     column: $table.enabled,
     builder: (column) => ColumnOrderings(column),
@@ -11362,6 +11942,16 @@ class $$ShiftPatternRecordsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get commuteMinutes => $composableBuilder(
+    column: $table.commuteMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get windDownMinutes => $composableBuilder(
+    column: $table.windDownMinutes,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get enabled =>
       $composableBuilder(column: $table.enabled, builder: (column) => column);
 
@@ -11419,6 +12009,32 @@ class $$ShiftPatternRecordsTableAnnotationComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<T> shiftPatternTagRecordsRefs<T extends Object>(
+    Expression<T> Function($$ShiftPatternTagRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$ShiftPatternTagRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.shiftPatternTagRecords,
+          getReferencedColumn: (t) => t.patternId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternTagRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.shiftPatternTagRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 
@@ -11492,6 +12108,7 @@ class $$ShiftPatternRecordsTableTableManager
           PrefetchHooks Function({
             bool spaceId,
             bool shiftSlotRecordsRefs,
+            bool shiftPatternTagRecordsRefs,
             bool shiftExceptionRecordsRefs,
             bool shiftChecklistItemRecordsRefs,
           })
@@ -11523,6 +12140,8 @@ class $$ShiftPatternRecordsTableTableManager
                 Value<String> timeZone = const Value.absent(),
                 Value<int> cycleDays = const Value.absent(),
                 Value<int> anchorDateKey = const Value.absent(),
+                Value<int?> commuteMinutes = const Value.absent(),
+                Value<int?> windDownMinutes = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -11535,6 +12154,8 @@ class $$ShiftPatternRecordsTableTableManager
                 timeZone: timeZone,
                 cycleDays: cycleDays,
                 anchorDateKey: anchorDateKey,
+                commuteMinutes: commuteMinutes,
+                windDownMinutes: windDownMinutes,
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -11549,6 +12170,8 @@ class $$ShiftPatternRecordsTableTableManager
                 Value<String> timeZone = const Value.absent(),
                 required int cycleDays,
                 required int anchorDateKey,
+                Value<int?> commuteMinutes = const Value.absent(),
+                Value<int?> windDownMinutes = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -11561,6 +12184,8 @@ class $$ShiftPatternRecordsTableTableManager
                 timeZone: timeZone,
                 cycleDays: cycleDays,
                 anchorDateKey: anchorDateKey,
+                commuteMinutes: commuteMinutes,
+                windDownMinutes: windDownMinutes,
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -11579,6 +12204,7 @@ class $$ShiftPatternRecordsTableTableManager
               ({
                 spaceId = false,
                 shiftSlotRecordsRefs = false,
+                shiftPatternTagRecordsRefs = false,
                 shiftExceptionRecordsRefs = false,
                 shiftChecklistItemRecordsRefs = false,
               }) {
@@ -11586,6 +12212,7 @@ class $$ShiftPatternRecordsTableTableManager
                   db: db,
                   explicitlyWatchedTables: [
                     if (shiftSlotRecordsRefs) db.shiftSlotRecords,
+                    if (shiftPatternTagRecordsRefs) db.shiftPatternTagRecords,
                     if (shiftExceptionRecordsRefs) db.shiftExceptionRecords,
                     if (shiftChecklistItemRecordsRefs)
                       db.shiftChecklistItemRecords,
@@ -11641,6 +12268,27 @@ class $$ShiftPatternRecordsTableTableManager
                                 table,
                                 p0,
                               ).shiftSlotRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.patternId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (shiftPatternTagRecordsRefs)
+                        await $_getPrefetchedData<
+                          ShiftPatternRow,
+                          $ShiftPatternRecordsTable,
+                          ShiftPatternTagRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShiftPatternRecordsTableReferences
+                              ._shiftPatternTagRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShiftPatternRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).shiftPatternTagRecordsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.patternId == item.id,
@@ -11712,6 +12360,7 @@ typedef $$ShiftPatternRecordsTableProcessedTableManager =
       PrefetchHooks Function({
         bool spaceId,
         bool shiftSlotRecordsRefs,
+        bool shiftPatternTagRecordsRefs,
         bool shiftExceptionRecordsRefs,
         bool shiftChecklistItemRecordsRefs,
       })
@@ -12063,6 +12712,385 @@ typedef $$ShiftSlotRecordsTableProcessedTableManager =
       (ShiftSlotRow, $$ShiftSlotRecordsTableReferences),
       ShiftSlotRow,
       PrefetchHooks Function({bool patternId})
+    >;
+typedef $$ShiftPatternTagRecordsTableCreateCompanionBuilder =
+    ShiftPatternTagRecordsCompanion Function({
+      required String patternId,
+      required String tagId,
+      Value<int> rowid,
+    });
+typedef $$ShiftPatternTagRecordsTableUpdateCompanionBuilder =
+    ShiftPatternTagRecordsCompanion Function({
+      Value<String> patternId,
+      Value<String> tagId,
+      Value<int> rowid,
+    });
+
+final class $$ShiftPatternTagRecordsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ShiftPatternTagRecordsTable,
+          ShiftPatternTagRow
+        > {
+  $$ShiftPatternTagRecordsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShiftPatternRecordsTable _patternIdTable(_$AppDatabase db) =>
+      db.shiftPatternRecords.createAlias(
+        $_aliasNameGenerator(
+          db.shiftPatternTagRecords.patternId,
+          db.shiftPatternRecords.id,
+        ),
+      );
+
+  $$ShiftPatternRecordsTableProcessedTableManager get patternId {
+    final $_column = $_itemColumn<String>('pattern_id')!;
+
+    final manager = $$ShiftPatternRecordsTableTableManager(
+      $_db,
+      $_db.shiftPatternRecords,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_patternIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TagRecordsTable _tagIdTable(_$AppDatabase db) =>
+      db.tagRecords.createAlias(
+        $_aliasNameGenerator(db.shiftPatternTagRecords.tagId, db.tagRecords.id),
+      );
+
+  $$TagRecordsTableProcessedTableManager get tagId {
+    final $_column = $_itemColumn<String>('tag_id')!;
+
+    final manager = $$TagRecordsTableTableManager(
+      $_db,
+      $_db.tagRecords,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_tagIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ShiftPatternTagRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $ShiftPatternTagRecordsTable> {
+  $$ShiftPatternTagRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ShiftPatternRecordsTableFilterComposer get patternId {
+    final $$ShiftPatternRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.patternId,
+      referencedTable: $db.shiftPatternRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShiftPatternRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.shiftPatternRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TagRecordsTableFilterComposer get tagId {
+    final $$TagRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tagId,
+      referencedTable: $db.tagRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TagRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.tagRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShiftPatternTagRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ShiftPatternTagRecordsTable> {
+  $$ShiftPatternTagRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ShiftPatternRecordsTableOrderingComposer get patternId {
+    final $$ShiftPatternRecordsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.patternId,
+          referencedTable: $db.shiftPatternRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternRecordsTableOrderingComposer(
+                $db: $db,
+                $table: $db.shiftPatternRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$TagRecordsTableOrderingComposer get tagId {
+    final $$TagRecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tagId,
+      referencedTable: $db.tagRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TagRecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.tagRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShiftPatternTagRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ShiftPatternTagRecordsTable> {
+  $$ShiftPatternTagRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ShiftPatternRecordsTableAnnotationComposer get patternId {
+    final $$ShiftPatternRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.patternId,
+          referencedTable: $db.shiftPatternRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.shiftPatternRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$TagRecordsTableAnnotationComposer get tagId {
+    final $$TagRecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tagId,
+      referencedTable: $db.tagRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TagRecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tagRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShiftPatternTagRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ShiftPatternTagRecordsTable,
+          ShiftPatternTagRow,
+          $$ShiftPatternTagRecordsTableFilterComposer,
+          $$ShiftPatternTagRecordsTableOrderingComposer,
+          $$ShiftPatternTagRecordsTableAnnotationComposer,
+          $$ShiftPatternTagRecordsTableCreateCompanionBuilder,
+          $$ShiftPatternTagRecordsTableUpdateCompanionBuilder,
+          (ShiftPatternTagRow, $$ShiftPatternTagRecordsTableReferences),
+          ShiftPatternTagRow,
+          PrefetchHooks Function({bool patternId, bool tagId})
+        > {
+  $$ShiftPatternTagRecordsTableTableManager(
+    _$AppDatabase db,
+    $ShiftPatternTagRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShiftPatternTagRecordsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ShiftPatternTagRecordsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ShiftPatternTagRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> patternId = const Value.absent(),
+                Value<String> tagId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ShiftPatternTagRecordsCompanion(
+                patternId: patternId,
+                tagId: tagId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String patternId,
+                required String tagId,
+                Value<int> rowid = const Value.absent(),
+              }) => ShiftPatternTagRecordsCompanion.insert(
+                patternId: patternId,
+                tagId: tagId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ShiftPatternTagRecordsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({patternId = false, tagId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (patternId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.patternId,
+                                referencedTable:
+                                    $$ShiftPatternTagRecordsTableReferences
+                                        ._patternIdTable(db),
+                                referencedColumn:
+                                    $$ShiftPatternTagRecordsTableReferences
+                                        ._patternIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (tagId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.tagId,
+                                referencedTable:
+                                    $$ShiftPatternTagRecordsTableReferences
+                                        ._tagIdTable(db),
+                                referencedColumn:
+                                    $$ShiftPatternTagRecordsTableReferences
+                                        ._tagIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ShiftPatternTagRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ShiftPatternTagRecordsTable,
+      ShiftPatternTagRow,
+      $$ShiftPatternTagRecordsTableFilterComposer,
+      $$ShiftPatternTagRecordsTableOrderingComposer,
+      $$ShiftPatternTagRecordsTableAnnotationComposer,
+      $$ShiftPatternTagRecordsTableCreateCompanionBuilder,
+      $$ShiftPatternTagRecordsTableUpdateCompanionBuilder,
+      (ShiftPatternTagRow, $$ShiftPatternTagRecordsTableReferences),
+      ShiftPatternTagRow,
+      PrefetchHooks Function({bool patternId, bool tagId})
     >;
 typedef $$ShiftExceptionRecordsTableCreateCompanionBuilder =
     ShiftExceptionRecordsCompanion Function({
@@ -12899,6 +13927,7 @@ typedef $$ShiftChecklistCompletionRecordsTableCreateCompanionBuilder =
     ShiftChecklistCompletionRecordsCompanion Function({
       required String itemId,
       required int dateKey,
+      Value<String> slotKey,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -12906,6 +13935,7 @@ typedef $$ShiftChecklistCompletionRecordsTableUpdateCompanionBuilder =
     ShiftChecklistCompletionRecordsCompanion Function({
       Value<String> itemId,
       Value<int> dateKey,
+      Value<String> slotKey,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -12960,6 +13990,11 @@ class $$ShiftChecklistCompletionRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get slotKey => $composableBuilder(
+    column: $table.slotKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -13004,6 +14039,11 @@ class $$ShiftChecklistCompletionRecordsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get slotKey => $composableBuilder(
+    column: $table.slotKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -13045,6 +14085,9 @@ class $$ShiftChecklistCompletionRecordsTableAnnotationComposer
   });
   GeneratedColumn<int> get dateKey =>
       $composableBuilder(column: $table.dateKey, builder: (column) => column);
+
+  GeneratedColumn<String> get slotKey =>
+      $composableBuilder(column: $table.slotKey, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -13118,11 +14161,13 @@ class $$ShiftChecklistCompletionRecordsTableTableManager
               ({
                 Value<String> itemId = const Value.absent(),
                 Value<int> dateKey = const Value.absent(),
+                Value<String> slotKey = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ShiftChecklistCompletionRecordsCompanion(
                 itemId: itemId,
                 dateKey: dateKey,
+                slotKey: slotKey,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -13130,11 +14175,13 @@ class $$ShiftChecklistCompletionRecordsTableTableManager
               ({
                 required String itemId,
                 required int dateKey,
+                Value<String> slotKey = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => ShiftChecklistCompletionRecordsCompanion.insert(
                 itemId: itemId,
                 dateKey: dateKey,
+                slotKey: slotKey,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -14896,6 +15943,11 @@ class $AppDatabaseManager {
       $$ShiftPatternRecordsTableTableManager(_db, _db.shiftPatternRecords);
   $$ShiftSlotRecordsTableTableManager get shiftSlotRecords =>
       $$ShiftSlotRecordsTableTableManager(_db, _db.shiftSlotRecords);
+  $$ShiftPatternTagRecordsTableTableManager get shiftPatternTagRecords =>
+      $$ShiftPatternTagRecordsTableTableManager(
+        _db,
+        _db.shiftPatternTagRecords,
+      );
   $$ShiftExceptionRecordsTableTableManager get shiftExceptionRecords =>
       $$ShiftExceptionRecordsTableTableManager(_db, _db.shiftExceptionRecords);
   $$ShiftChecklistItemRecordsTableTableManager get shiftChecklistItemRecords =>

@@ -136,7 +136,7 @@ void main() {
     expect(columns.map((row) => row.data['name']), contains('time_zone'));
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 5);
+    expect(version.data.values.single, 6);
   });
 
   test('migrates real v2 data and keeps tags usable', () async {
@@ -198,7 +198,7 @@ void main() {
     expect((await database.watchTags().first).single.name, 'Tax');
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 5);
+    expect(version.data.values.single, 6);
   });
 
   test('migrates real v3 data and exposes the v0.3 tables', () async {
@@ -252,7 +252,7 @@ void main() {
 
     await database.saveShiftChecklistItems('missing-pattern', const []);
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 5);
+    expect(version.data.values.single, 6);
   });
 
   test('migrates real v4 data and creates the pairing tables', () async {
@@ -356,7 +356,14 @@ void main() {
     expect((await database.watchHomeItems().first).single.isLowStock, isTrue);
     expect((await database.watchShoppingItems().first).single.homeItemId, 'coffee');
     expect((await database.readShiftChecklistItems('bar')).single.label, 'Count the drawer');
-    expect(await database.readShiftChecklistCompletions('bar', LocalDate.parse('2026-11-09')), {'count'});
+    expect(
+      await database.readShiftChecklistCompletions(
+        'bar',
+        LocalDate.parse('2026-11-09'),
+        slotKey: '0:960:1320:Open',
+      ),
+      {'count'},
+    );
     expect(await database.readIdentity(), isNull);
     expect(await database.readPairedDevices(), isEmpty);
 
@@ -399,6 +406,76 @@ void main() {
     expect(paired.port, 8766);
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 5);
+    expect(version.data.values.single, 6);
+  });
+
+  test('migrates real v5 checklist rows to per-slot keys', () async {
+    final directory = await Directory.systemTemp.createTemp('mane-migration-v5');
+    final path = '${directory.path}/mane.sqlite';
+    final createdAt = DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000;
+
+    final raw = sqlite3.open(path);
+    raw.execute(File('test/fixtures/schema_v5.sql').readAsStringSync());
+    raw.execute(
+      'INSERT INTO space_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['work', 'Work', 0xFF4A6FA5, 0, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO tag_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['pizzeria', 'Pizzeria', 0xFF4A6FA5, 0, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shift_pattern_records '
+      '(id, space_id, name, time_zone, cycle_days, anchor_date_key, enabled, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['bar', 'work', 'Bar', 'Europe/Madrid', 7, 20261109, 1, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shift_slot_records (pattern_id, day_index, label, start_minute, end_minute) '
+      'VALUES (?, ?, ?, ?, ?)',
+      ['bar', 0, 'Lunch', 720, 960],
+    );
+    raw.execute(
+      'INSERT INTO shift_slot_records (pattern_id, day_index, label, start_minute, end_minute) '
+      'VALUES (?, ?, ?, ?, ?)',
+      ['bar', 0, 'Dinner', 1140, 1380],
+    );
+    raw.execute(
+      'INSERT INTO shift_checklist_item_records (id, pattern_id, label, position) VALUES (?, ?, ?, ?)',
+      ['count', 'bar', 'Count the drawer', 0],
+    );
+    raw.execute(
+      'INSERT INTO shift_checklist_completion_records (item_id, date_key, created_at) VALUES (?, ?, ?)',
+      ['count', 20261109, createdAt],
+    );
+    raw.dispose();
+
+    final database = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(() async {
+      await database.close();
+      await directory.delete(recursive: true);
+    });
+
+    final pattern = (await database.watchShiftPatterns().first).single;
+    final monday = LocalDate.parse('2026-11-09');
+    final slots = pattern.slotsFor(monday);
+    expect(slots.map((slot) => slot.label), ['Lunch', 'Dinner']);
+
+    // The legacy tick belongs to the first slot of that date, not both.
+    expect(await database.readShiftChecklistCompletions('bar', monday, slotKey: slots.first.key), {'count'});
+    expect(await database.readShiftChecklistCompletions('bar', monday, slotKey: slots.last.key), isEmpty);
+
+    await database.saveShiftPattern(
+      pattern.copyWith(tagIds: {'pizzeria'}, commuteMinutes: 45, windDownMinutes: 20),
+    );
+    final saved = (await database.watchShiftPatterns().first).single;
+    expect(saved.tagIds, {'pizzeria'});
+    expect(saved.commuteMinutes, 45);
+    expect(saved.windDownMinutes, 20);
+
+    final version = await database.customSelect('PRAGMA user_version').getSingle();
+    expect(version.data.values.single, 6);
   });
 }

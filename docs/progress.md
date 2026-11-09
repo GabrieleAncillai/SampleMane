@@ -4,10 +4,11 @@ Keep this file current. A fresh context window should be able to resume from it.
 
 ## Current milestone
 
-v0.6 is complete. The active program is v0.7 → v1.0, tracked in
-`docs/completion-plan.md`. The next slice is v0.7: day timeline, multi-day
-entries, recurrence exceptions, tagged shifts, per-slot checklists, ICS export
-and ICS hardening. The constraint audit is in `docs/compliance-audit.md`.
+v0.7 is complete. The active program is v0.8 → v1.0, tracked in
+`docs/completion-plan.md`. The next slice is v0.8: GymMane schedule import,
+automatic local backups with rotation, older backup schemas, CSV interchange,
+home tracking views and the optional app lock. The constraint audit is in
+`docs/compliance-audit.md`.
 
 ## Reference notes
 
@@ -214,6 +215,36 @@ and ICS hardening. The constraint audit is in `docs/compliance-audit.md`.
 - Validation: format clean, analyze clean, 90 app tests and 71 core tests pass,
   Linux debug and Android debug APK build.
 
+### v0.7
+
+- Day timeline: 24-hour view in Calendar's Day mode, shifts drawn behind
+  entries, all-day chips above it, a now line and per-shift checklists. The
+  screenshot is `docs/screenshots/v0.7-calendar-day-light.png`.
+- Multi-day timed entries: `endDate` is now valid for timed rows, end instants
+  resolve on the end date, and the expander emits each displayed day (including
+  overnight tails).
+- Recurrence: `skipDates`, `RecurrenceOverride` (moved or time-changed
+  occurrences), ordinal weekdays (`1MO`, `-1FR`), negative `BYMONTHDAY` and
+  `BYSETPOS`, with JSON round-trip and DST-safe expansion.
+- Entry editor: optional end date, skip-this-occurrence toggle and an
+  only-this-occurrence mode that writes a recurrence override.
+- Shift patterns carry tags and optional commute/wind-down minutes. The global
+  tag filter now filters shifts as well as entries. The editor exposes both.
+- Per-slot checklists: schema v6 adds `slot_key` to completions, the real v5
+  fixture is migrated by assigning legacy ticks to the first slot, and two slots
+  on one date keep independent ticks.
+- ICS export in `features/export`: read-only VCALENDAR for entries (with RRULE,
+  EXDATE and RECURRENCE-ID), multi-day dates and concrete shift blocks.
+- ICS import hardening: `EXDATE`, `RECURRENCE-ID` cancellations and moves,
+  Windows TZID aliases, vendor-prefixed TZIDs, multi-day timed events and
+  update-on-reimport.
+- Schema v6 adds `shift_pattern_tag_records`, `commute_minutes`,
+  `wind_down_minutes` and the per-slot key. Backup schema 6 exports the new
+  fields and table.
+- Tests: 98 app/database/widget tests and 82 core tests.
+- Validation: format clean, analyze clean, both suites pass, Linux debug and
+  Android debug APK build.
+
 ## Known limitations
 
 - Real-device notification delivery, reboot rescheduling, battery optimization
@@ -226,23 +257,21 @@ and ICS hardening. The constraint audit is in `docs/compliance-audit.md`.
   resume and after the device zone is re-read.
 - The notification channel name is English at the OS level; in-app strings are
   localized.
-- Backup import accepts schema version 5 only. A future schema will need an
-  explicit upgrade path.
+- Backup import accepts schema version 6 only. v0.8 adds the older-schema
+  upgrade path and automatic backups.
 - Linux file export depends on zenity/kdialog through `file_picker`.
-- ICS import does not support `EXDATE`, `RECURRENCE-ID`, ordinal `BYDAY`,
-  `BYSETPOS`, `BYHOUR`/`BYMINUTE`, multi-day timed events or non-IANA zones.
-  Unsupported events are reported as skipped. Re-import deduplicates but does
-  not update changed events.
-- Shift checklist completions are shared by two slots of the same pattern on
-  the same date; the roadmap keys completion by pattern, date and item. v0.7
-  adds the slot key and a migration.
-- Multi-day recurring entries remain unsupported; multi-day all-day events are
-  shown per day. v0.7 adds multi-day editing.
-- The visual layer is stock Material 3: `ManeColors` is used only by the theme,
-  the shell uses `AppBar`/`NavigationBar`/FAB and there is no bundled font or
-  motion layer. v0.6 ports the reference component language.
-- There is no read-only ICS export or GymMane schedule import yet. v0.7 and
-  v0.8 add them.
+- ICS import still does not support `BYHOUR`/`BYMINUTE`, multiple
+  `BYMONTHDAY` values, `EXRULE`, floating time without a TZID default that the
+  user can control, or non-IANA zones outside the built-in Windows alias table.
+  Unsupported events are reported as skipped.
+- Multi-day recurring timed entries have a single end offset; moving one
+  occurrence with `RECURRENCE-ID` carries the moved date but not a changed end
+  date.
+- Shift checklist completions are now keyed by pattern, date and slot. Legacy
+  pre-v6 ticks are assigned to the first slot of that date.
+- The visual layer follows the references: Nunito, tokens, component themes,
+  the shared kit and the floating shell.
+- ICS export is shipped. GymMane schedule import is still v0.8 work.
 - MCP is loopback-only and implements the core tools JSON-RPC surface, not
   SSE/streamable sessions. v0.9 expands the tools and session handling.
 - LAN snapshots are in memory and are not persisted or merged. v0.9 persists
@@ -261,14 +290,13 @@ and ICS hardening. The constraint audit is in `docs/compliance-audit.md`.
 
 ## Next three steps
 
-1. Deliver v0.6: theme tokens and fonts, component themes, the shared UI kit,
-   the reference-style shell and the screen sweep, with screenshots or golden
-   tests.
-2. Deliver v0.7: day timeline, multi-day entries, recurrence exceptions,
-   tagged shifts, per-slot checklist keys, per-pattern sleep buffers, ICS export
-   and ICS hardening.
-3. Continue through v0.8 and v0.9, then run the full real-device checklist and
-   tag v1.0 only when every scenario in `docs/completion-plan.md` passes.
+1. Deliver v0.8: GymMane schedule import, automatic local backups with rotation
+   and older-schema upgrades, CSV interchange, home-tracking views and the
+   optional app lock.
+2. Deliver v0.9: full MCP tools and sessions, persistent LAN snapshots,
+   work-hours/quiet-hours rules, custom reminder times and notification actions.
+3. Run the full real-device checklist and tag v1.0 only when every scenario in
+   `docs/completion-plan.md` passes.
 
 ## Commands and results
 

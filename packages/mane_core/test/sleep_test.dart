@@ -46,4 +46,30 @@ void main() {
     expect(empty.wakeTime, isNull);
     expect(empty.warning, isFalse);
   });
+
+  test('per-commitment buffers use the last end and first start', () {
+    final window = computeSleepWindowFromCommitments(
+      lastEndsToday: [
+        SleepCommitment(
+          at: DateTime.utc(2026, 11, 9, 20),
+          commute: const Duration(minutes: 60),
+          windDown: const Duration(minutes: 30),
+        ),
+        SleepCommitment(
+          at: DateTime.utc(2026, 11, 9, 22),
+          commute: const Duration(minutes: 15),
+          windDown: const Duration(minutes: 45),
+        ),
+      ],
+      firstStartsTomorrow: [
+        SleepCommitment(at: DateTime.utc(2026, 11, 10, 9), commute: const Duration(minutes: 60)),
+        SleepCommitment(at: DateTime.utc(2026, 11, 10, 8), commute: const Duration(minutes: 10)),
+      ],
+      wakeBuffer: const Duration(minutes: 30),
+    );
+
+    expect(window.bedtime, DateTime.utc(2026, 11, 9, 23));
+    expect(window.wakeTime, DateTime.utc(2026, 11, 10, 7, 20));
+    expect(window.warning, isFalse);
+  });
 }

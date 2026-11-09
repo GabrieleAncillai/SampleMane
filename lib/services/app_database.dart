@@ -70,10 +70,14 @@ class ShiftChecklistItemRecords extends Table {
 class ShiftChecklistCompletionRecords extends Table {
   TextColumn get itemId => text().references(ShiftChecklistItemRecords, #id)();
   IntColumn get dateKey => integer()();
+
+  /// Identity of the shift slot inside the pattern. An empty value is the
+  /// legacy single-slot key and is backfilled during the v5 to v6 migration.
+  TextColumn get slotKey => text().withDefault(const Constant(''))();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
-  Set<Column<Object>> get primaryKey => {itemId, dateKey};
+  Set<Column<Object>> get primaryKey => {itemId, dateKey, slotKey};
 }
 
 @DataClassName('HomeItemRow')
@@ -225,6 +229,10 @@ class ShiftPatternRecords extends Table {
 
   IntColumn get cycleDays => integer()();
   IntColumn get anchorDateKey => integer()();
+
+  /// Per-pattern sleep overrides in minutes. Null uses the global buffer.
+  IntColumn get commuteMinutes => integer().nullable()();
+  IntColumn get windDownMinutes => integer().nullable()();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -242,6 +250,15 @@ class ShiftSlotRecords extends Table {
   TextColumn get label => text().withDefault(const Constant(''))();
   IntColumn get startMinute => integer()();
   IntColumn get endMinute => integer()();
+}
+
+@DataClassName('ShiftPatternTagRow')
+class ShiftPatternTagRecords extends Table {
+  TextColumn get patternId => text().references(ShiftPatternRecords, #id)();
+  TextColumn get tagId => text().references(TagRecords, #id)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {patternId, tagId};
 }
 
 @DataClassName('ShiftExceptionRow')
@@ -286,6 +303,7 @@ class SettingRecords extends Table {
     ReminderRecords,
     ShiftPatternRecords,
     ShiftSlotRecords,
+    ShiftPatternTagRecords,
     ShiftExceptionRecords,
     ShiftChecklistItemRecords,
     ShiftChecklistCompletionRecords,
@@ -305,7 +323,7 @@ class AppDatabase extends _$AppDatabase {
   final String defaultTimeZone;
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -318,6 +336,7 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) await _migrateToV3(m);
       if (from < 4) await _migrateToV4(m);
       if (from < 5) await _migrateToV5(m);
+      if (from < 6) await _migrateToV6(m);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -429,6 +448,10 @@ class AppDatabase extends _$AppDatabase {
     final query = select(shiftPatternRecords).join([
       leftOuterJoin(shiftSlotRecords, shiftSlotRecords.patternId.equalsExp(shiftPatternRecords.id)),
       leftOuterJoin(shiftExceptionRecords, shiftExceptionRecords.patternId.equalsExp(shiftPatternRecords.id)),
+      leftOuterJoin(
+        shiftPatternTagRecords,
+        shiftPatternTagRecords.patternId.equalsExp(shiftPatternRecords.id),
+      ),
     ])..where(shiftPatternRecords.deletedAt.isNull() & shiftPatternRecords.enabled.equals(true));
 
     return query.watch().map((rows) {
@@ -459,6 +482,10 @@ class AppDatabase extends _$AppDatabase {
     final query = select(shiftPatternRecords).join([
       leftOuterJoin(shiftSlotRecords, shiftSlotRecords.patternId.equalsExp(shiftPatternRecords.id)),
       leftOuterJoin(shiftExceptionRecords, shiftExceptionRecords.patternId.equalsExp(shiftPatternRecords.id)),
+      leftOuterJoin(
+        shiftPatternTagRecords,
+        shiftPatternTagRecords.patternId.equalsExp(shiftPatternRecords.id),
+      ),
     ])..where(shiftPatternRecords.deletedAt.isNull());
 
     return query.watch().map((rows) {
@@ -682,32 +709,51 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  Future<Set<String>> readShiftChecklistCompletions(String patternId, LocalDate date) async {
+  Future<Set<String>> readShiftChecklistCompletions(
+    String patternId,
+    LocalDate date, {
+    required String slotKey,
+  }) async {
     final itemRows = await (select(
       shiftChecklistItemRecords,
     )..where((row) => row.patternId.equals(patternId))).get();
     final itemIds = itemRows.map((row) => row.id).toList();
     if (itemIds.isEmpty) return <String>{};
-    final rows = await (select(
-      shiftChecklistCompletionRecords,
-    )..where((row) => row.dateKey.equals(date.key) & row.itemId.isIn(itemIds))).get();
+    final rows =
+        await (select(shiftChecklistCompletionRecords)..where(
+              (row) =>
+                  row.dateKey.equals(date.key) &
+                  row.itemId.isIn(itemIds) &
+                  (row.slotKey.equals(slotKey) | row.slotKey.equals('')),
+            ))
+            .get();
     return {for (final row in rows) row.itemId};
   }
 
-  Future<void> setShiftChecklistCompleted(String itemId, LocalDate date, {required bool completed}) async {
+  Future<void> setShiftChecklistCompleted(
+    String itemId,
+    LocalDate date, {
+    required bool completed,
+    required String slotKey,
+  }) async {
     if (completed) {
       await into(shiftChecklistCompletionRecords).insertOnConflictUpdate(
         ShiftChecklistCompletionRecordsCompanion.insert(
           itemId: itemId,
           dateKey: date.key,
+          slotKey: Value(slotKey),
           createdAt: DateTime.now(),
         ),
       );
       return;
     }
-    await (delete(
-      shiftChecklistCompletionRecords,
-    )..where((row) => row.itemId.equals(itemId) & row.dateKey.equals(date.key))).go();
+    await (delete(shiftChecklistCompletionRecords)..where(
+          (row) =>
+              row.itemId.equals(itemId) &
+              row.dateKey.equals(date.key) &
+              (row.slotKey.equals(slotKey) | row.slotKey.equals('')),
+        ))
+        .go();
   }
 
   Future<LocalIdentity?> readIdentity() async {
@@ -847,6 +893,15 @@ class AppDatabase extends _$AppDatabase {
     return row != null;
   }
 
+  Future<Entry?> readImportedEntry(String source, String externalId) async {
+    final row = await (select(
+      entryRecords,
+    )..where((row) => row.source.equals(source) & row.externalId.equals(externalId))).getSingleOrNull();
+    if (row == null) return null;
+    final tags = await (select(entryTagRecords)..where((tag) => tag.entryId.equals(row.id))).get();
+    return _entryFromRow(row, tagIds: {for (final tag in tags) tag.tagId});
+  }
+
   /// Completes a maintenance task and moves its date forward from the day it
   /// was actually completed. Records the completion as history.
   Future<LocalDate?> completeMaintenanceEntry(String id, LocalDate completionDate) async {
@@ -970,6 +1025,8 @@ class AppDatabase extends _$AppDatabase {
           timeZone: Value(pattern.timeZone),
           cycleDays: Value(pattern.cycleDays),
           anchorDateKey: Value(pattern.anchorDate.key),
+          commuteMinutes: Value(pattern.commuteMinutes),
+          windDownMinutes: Value(pattern.windDownMinutes),
           enabled: Value(pattern.enabled),
           createdAt: Value(existing?.createdAt ?? now),
           updatedAt: Value(now),
@@ -978,6 +1035,14 @@ class AppDatabase extends _$AppDatabase {
 
       await (delete(shiftSlotRecords)..where((row) => row.patternId.equals(pattern.id))).go();
       await (delete(shiftExceptionRecords)..where((row) => row.patternId.equals(pattern.id))).go();
+      await (delete(shiftPatternTagRecords)..where((row) => row.patternId.equals(pattern.id))).go();
+
+      for (final tagId in pattern.tagIds) {
+        await into(shiftPatternTagRecords).insert(
+          ShiftPatternTagRecordsCompanion.insert(patternId: pattern.id, tagId: tagId),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
 
       for (final slot in pattern.slots) {
         await into(shiftSlotRecords).insert(
@@ -1017,10 +1082,16 @@ class AppDatabase extends _$AppDatabase {
     final patternRows = <String, ShiftPatternRow>{};
     final slots = <String, Map<int, ShiftSlot>>{};
     final exceptions = <String, Map<int, ShiftException>>{};
+    final tagIds = <String, Set<String>>{};
 
     for (final row in rows) {
       final patternRow = row.readTable(shiftPatternRecords);
       patternRows[patternRow.id] = patternRow;
+
+      final tagRow = row.readTableOrNull(shiftPatternTagRecords);
+      if (tagRow != null) {
+        (tagIds[patternRow.id] ??= <String>{}).add(tagRow.tagId);
+      }
 
       final slotRow = row.readTableOrNull(shiftSlotRecords);
       if (slotRow != null) {
@@ -1050,6 +1121,7 @@ class AppDatabase extends _$AppDatabase {
           row,
           slots[row.id]?.values.toList() ?? const <ShiftSlot>[],
           exceptions[row.id]?.values.toList() ?? const <ShiftException>[],
+          tagIds[row.id] ?? const <String>{},
         ),
     ];
   }
@@ -1065,9 +1137,12 @@ class AppDatabase extends _$AppDatabase {
     await m.addColumn(entryRecords, entryRecords.endAt);
     await m.createTable(shiftSlotRecords);
     await m.createTable(shiftExceptionRecords);
-    await m.alterTable(TableMigration(shiftPatternRecords, newColumns: [shiftPatternRecords.timeZone]));
+    await m.addColumn(shiftPatternRecords, shiftPatternRecords.timeZone);
 
     await update(shiftPatternRecords).write(ShiftPatternRecordsCompanion(timeZone: Value(safeZone)));
+
+    final patternColumns = await customSelect('PRAGMA table_info(shift_pattern_records)').get();
+    final hasLegacySlots = patternColumns.any((row) => row.read<String>('name') == 'slots_json');
 
     for (final row in legacyPatterns) {
       final patternId = row.read<String>('id');
@@ -1095,6 +1170,10 @@ class AppDatabase extends _$AppDatabase {
           ),
         );
       }
+    }
+
+    if (hasLegacySlots) {
+      await customStatement('ALTER TABLE shift_pattern_records DROP COLUMN slots_json');
     }
 
     final legacyEntries = await select(entryRecords).get();
@@ -1161,6 +1240,117 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _migrateToV5(Migrator m) async {
     await m.createTable(identityRecords);
     await m.createTable(pairedDeviceRecords);
+  }
+
+  Future<void> _migrateToV6(Migrator m) async {
+    final patternColumns = await customSelect('PRAGMA table_info(shift_pattern_records)').get();
+    final patternNames = patternColumns.map((row) => row.read<String>('name')).toSet();
+    if (!patternNames.contains('commute_minutes')) {
+      await m.addColumn(shiftPatternRecords, shiftPatternRecords.commuteMinutes);
+    }
+    if (!patternNames.contains('wind_down_minutes')) {
+      await m.addColumn(shiftPatternRecords, shiftPatternRecords.windDownMinutes);
+    }
+
+    final tables = await customSelect('SELECT name FROM sqlite_master WHERE type = \'table\'').get();
+    final tableNames = tables.map((row) => row.read<String>('name')).toSet();
+    if (!tableNames.contains('shift_pattern_tag_records')) {
+      await m.createTable(shiftPatternTagRecords);
+    }
+
+    final completionColumns = await customSelect(
+      'PRAGMA table_info(shift_checklist_completion_records)',
+    ).get();
+    final completionNames = completionColumns.map((row) => row.read<String>('name')).toSet();
+    if (!completionNames.contains('slot_key')) {
+      await customStatement('ALTER TABLE shift_checklist_completion_records RENAME TO _completion_v5');
+      await customStatement('''
+        CREATE TABLE "shift_checklist_completion_records" (
+          "item_id" TEXT NOT NULL REFERENCES shift_checklist_item_records (id),
+          "date_key" INTEGER NOT NULL,
+          "slot_key" TEXT NOT NULL DEFAULT '',
+          "created_at" INTEGER NOT NULL,
+          PRIMARY KEY ("item_id", "date_key", "slot_key")
+        )
+      ''');
+      await customStatement('''
+        INSERT INTO shift_checklist_completion_records (item_id, date_key, slot_key, created_at)
+        SELECT item_id, date_key, '', created_at FROM _completion_v5
+      ''');
+      await customStatement('DROP TABLE _completion_v5');
+    }
+
+    await _backfillShiftChecklistSlotKeys();
+  }
+
+  /// Existing completions were keyed by pattern + date. Assign them to the
+  /// first slot of that date so a single-slot history survives the v6 key.
+  Future<void> _backfillShiftChecklistSlotKeys() async {
+    final legacy = await customSelect(
+      "SELECT item_id, date_key FROM shift_checklist_completion_records WHERE slot_key = ''",
+    ).get();
+    if (legacy.isEmpty) return;
+
+    final patterns = <String, ShiftPattern?>{};
+    for (final row in legacy) {
+      final itemId = row.read<String>('item_id');
+      final dateKey = row.read<int>('date_key');
+      final item = await (select(
+        shiftChecklistItemRecords,
+      )..where((table) => table.id.equals(itemId))).getSingleOrNull();
+      if (item == null) continue;
+      final pattern = patterns.putIfAbsent(item.patternId, () => null);
+      if (pattern == null && !patterns.containsKey(item.patternId)) {
+        patterns[item.patternId] = await _loadPattern(item.patternId);
+      }
+      final resolved = patterns[item.patternId] ?? await _loadPattern(item.patternId);
+      patterns[item.patternId] = resolved;
+      if (resolved == null) continue;
+      final slots = resolved.slotsFor(LocalDate.fromKey(dateKey));
+      if (slots.isEmpty) continue;
+      await customUpdate(
+        'UPDATE shift_checklist_completion_records SET slot_key = ? '
+        'WHERE item_id = ? AND date_key = ? AND slot_key = \'\'',
+        variables: [
+          Variable.withString(slots.first.key),
+          Variable.withString(itemId),
+          Variable.withInt(dateKey),
+        ],
+        updates: {shiftChecklistCompletionRecords},
+      );
+    }
+  }
+
+  Future<ShiftPattern?> _loadPattern(String id) async {
+    final row = await (select(shiftPatternRecords)..where((table) => table.id.equals(id))).getSingleOrNull();
+    if (row == null) return null;
+    final slotRows = await (select(shiftSlotRecords)..where((table) => table.patternId.equals(id))).get();
+    final exceptionRows = await (select(
+      shiftExceptionRecords,
+    )..where((table) => table.patternId.equals(id))).get();
+    return _patternFromRow(
+      row,
+      [
+        for (final slot in slotRows)
+          ShiftSlot(
+            dayIndex: slot.dayIndex,
+            label: slot.label,
+            startMinute: slot.startMinute,
+            endMinute: slot.endMinute,
+          ),
+      ],
+      [
+        for (final exception in exceptionRows)
+          ShiftException(
+            date: LocalDate.fromKey(exception.dateKey),
+            type: ShiftExceptionType.values.byName(exception.type),
+            startMinute: exception.startMinute,
+            endMinute: exception.endMinute,
+            note: exception.note,
+          ),
+      ],
+      const <String>{},
+    );
   }
 
   Future<void> _addV4EntryColumns(Migrator m) async {
@@ -1301,15 +1491,22 @@ EntryRecordsCompanion _entryCompanion(Entry entry) => EntryRecordsCompanion(
   deletedAt: Value(entry.deletedAt),
 );
 
-ShiftPattern _patternFromRow(ShiftPatternRow row, List<ShiftSlot> slots, List<ShiftException> exceptions) =>
-    ShiftPattern(
-      id: row.id,
-      spaceId: row.spaceId,
-      name: row.name,
-      timeZone: row.timeZone,
-      cycleDays: row.cycleDays,
-      anchorDate: LocalDate.fromKey(row.anchorDateKey),
-      slots: slots,
-      exceptions: exceptions,
-      enabled: row.enabled,
-    );
+ShiftPattern _patternFromRow(
+  ShiftPatternRow row,
+  List<ShiftSlot> slots,
+  List<ShiftException> exceptions,
+  Set<String> tagIds,
+) => ShiftPattern(
+  id: row.id,
+  spaceId: row.spaceId,
+  name: row.name,
+  timeZone: row.timeZone,
+  cycleDays: row.cycleDays,
+  anchorDate: LocalDate.fromKey(row.anchorDateKey),
+  slots: slots,
+  exceptions: exceptions,
+  tagIds: tagIds,
+  commuteMinutes: row.commuteMinutes,
+  windDownMinutes: row.windDownMinutes,
+  enabled: row.enabled,
+);

@@ -11,6 +11,7 @@ import '../../../state/settings_controller.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_typography.dart';
 import '../widgets/day_detail.dart';
+import '../widgets/day_timeline.dart';
 import '../widgets/month_grid.dart';
 import '../widgets/week_strip.dart';
 
@@ -21,10 +22,12 @@ class CalendarPage extends ConsumerStatefulWidget {
   ConsumerState<CalendarPage> createState() => _CalendarPageState();
 }
 
+enum _CalendarMode { month, week, day }
+
 class _CalendarPageState extends ConsumerState<CalendarPage> {
   late LocalDate _selected;
   late LocalDate _visibleMonth;
-  bool _monthMode = true;
+  _CalendarMode _mode = _CalendarMode.month;
 
   @override
   void initState() {
@@ -40,8 +43,16 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
     final today = localDateAt(ref.watch(nowProvider), ref.watch(deviceTimeZoneProvider));
     final weekStart = settings.weekStart;
-    final rangeStart = _monthMode ? _visibleMonth.startOfWeek(weekStart) : _selected.startOfWeek(weekStart);
-    final rangeEnd = _monthMode ? rangeStart.addDays(41) : rangeStart.addDays(6);
+    final rangeStart = switch (_mode) {
+      _CalendarMode.month => _visibleMonth.startOfWeek(weekStart),
+      _CalendarMode.week => _selected.startOfWeek(weekStart),
+      _CalendarMode.day => _selected.addDays(-1),
+    };
+    final rangeEnd = switch (_mode) {
+      _CalendarMode.month => rangeStart.addDays(41),
+      _CalendarMode.week => rangeStart.addDays(6),
+      _CalendarMode.day => _selected.addDays(1),
+    };
     final range = (start: rangeStart, end: rangeEnd);
     final entriesState = ref.watch(entriesProvider(range));
     final shiftsState = ref.watch(shiftsProvider(range));
@@ -68,58 +79,74 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       children: [
         _CalendarHeader(
           title: _title(),
-          monthMode: _monthMode,
+          mode: _mode,
           onPrevious: () => _shift(-1),
           onNext: () => _shift(1),
           onToday: _goToToday,
           onModeChanged: (value) => setState(() {
-            _monthMode = value;
+            _mode = value;
             _visibleMonth = LocalDate(_selected.year, _selected.month, 1);
           }),
         ),
         const SizedBox(height: 14),
         if (entriesState.hasError) ManeNotice(text: context.l10n.couldNotLoadDay('${entriesState.error}')),
         if (shiftsState.hasError) ManeNotice(text: context.l10n.couldNotLoadShifts('${shiftsState.error}')),
-        SoftCard(
-          padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-          child: _monthMode
-              ? MonthGrid(
-                  month: _visibleMonth,
-                  selected: _selected,
-                  today: today,
-                  weekStart: weekStart,
-                  markers: markers,
-                  shiftDays: shiftDays,
-                  onSelected: _select,
-                )
-              : WeekStrip(
-                  selected: _selected,
-                  today: today,
-                  weekStart: weekStart,
-                  markers: markers,
-                  shiftDays: shiftDays,
-                  onSelected: _select,
-                ),
-        ),
-        const SizedBox(height: 12),
-        SoftCard(
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-          child: CalendarDayDetail(
-            date: _selected,
-            entries: selectedEntries,
-            shifts: selectedShifts,
-            spaces: spaces,
-            onAdd: () => showEntryEditor(context, initialDate: _selected, spaces: spaces),
+        if (_mode == _CalendarMode.day)
+          SoftCard(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            child: DayTimeline(
+              day: _selected,
+              entries: selectedEntries,
+              shifts: selectedShifts,
+              spaces: spaces,
+              onAdd: () => showEntryEditor(context, initialDate: _selected, spaces: spaces),
+            ),
+          )
+        else ...[
+          SoftCard(
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+            child: _mode == _CalendarMode.month
+                ? MonthGrid(
+                    month: _visibleMonth,
+                    selected: _selected,
+                    today: today,
+                    weekStart: weekStart,
+                    markers: markers,
+                    shiftDays: shiftDays,
+                    onSelected: _select,
+                  )
+                : WeekStrip(
+                    selected: _selected,
+                    today: today,
+                    weekStart: weekStart,
+                    markers: markers,
+                    shiftDays: shiftDays,
+                    onSelected: _select,
+                  ),
           ),
-        ),
+          const SizedBox(height: 12),
+          SoftCard(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            child: CalendarDayDetail(
+              date: _selected,
+              entries: selectedEntries,
+              shifts: selectedShifts,
+              spaces: spaces,
+              onAdd: () => showEntryEditor(context, initialDate: _selected, spaces: spaces),
+            ),
+          ),
+        ],
       ],
     );
   }
 
   String _title() {
     final locale = Localizations.localeOf(context).toLanguageTag();
-    if (_monthMode) {
+    if (_mode == _CalendarMode.month) {
       return DateFormat.yMMMM(locale).format(_visibleMonth.toDateTime());
+    }
+    if (_mode == _CalendarMode.day) {
+      return DateFormat.yMMMMEEEEd(locale).format(_selected.toDateTime());
     }
     final start = _selected.startOfWeek(ref.read(settingsProvider).weekStart);
     final end = start.addDays(6);
@@ -138,13 +165,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   void _shift(int by) {
     setState(() {
-      if (_monthMode) {
-        _visibleMonth = _shiftedMonth(_visibleMonth, by);
-        final day = _selected.day.clamp(1, _visibleMonth.daysInMonth);
-        _selected = LocalDate(_visibleMonth.year, _visibleMonth.month, day);
-      } else {
-        _selected = _selected.addDays(7 * by);
-        _visibleMonth = LocalDate(_selected.year, _selected.month, 1);
+      switch (_mode) {
+        case _CalendarMode.month:
+          _visibleMonth = _shiftedMonth(_visibleMonth, by);
+          final day = _selected.day.clamp(1, _visibleMonth.daysInMonth);
+          _selected = LocalDate(_visibleMonth.year, _visibleMonth.month, day);
+        case _CalendarMode.week:
+          _selected = _selected.addDays(7 * by);
+          _visibleMonth = LocalDate(_selected.year, _selected.month, 1);
+        case _CalendarMode.day:
+          _selected = _selected.addDays(by);
+          _visibleMonth = LocalDate(_selected.year, _selected.month, 1);
       }
     });
   }
@@ -166,7 +197,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 class _CalendarHeader extends StatelessWidget {
   const _CalendarHeader({
     required this.title,
-    required this.monthMode,
+    required this.mode,
     required this.onPrevious,
     required this.onNext,
     required this.onToday,
@@ -174,11 +205,11 @@ class _CalendarHeader extends StatelessWidget {
   });
 
   final String title;
-  final bool monthMode;
+  final _CalendarMode mode;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final VoidCallback onToday;
-  final ValueChanged<bool> onModeChanged;
+  final ValueChanged<_CalendarMode> onModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +225,7 @@ class _CalendarHeader extends StatelessWidget {
             ),
             GlassIconButton(
               icon: Icons.chevron_left,
-              tooltip: monthMode ? context.l10n.previousMonth : context.l10n.previousWeek,
+              tooltip: mode == _CalendarMode.month ? context.l10n.previousMonth : context.l10n.previousWeek,
               size: 36,
               onTap: onPrevious,
             ),
@@ -208,19 +239,20 @@ class _CalendarHeader extends StatelessWidget {
             const SizedBox(width: 8),
             GlassIconButton(
               icon: Icons.chevron_right,
-              tooltip: monthMode ? context.l10n.nextMonth : context.l10n.nextWeek,
+              tooltip: mode == _CalendarMode.month ? context.l10n.nextMonth : context.l10n.nextWeek,
               size: 36,
               onTap: onNext,
             ),
           ],
         ),
         const SizedBox(height: 10),
-        ManeSegmented<bool>(
+        ManeSegmented<_CalendarMode>(
           segments: [
-            ManeSegment(value: true, label: context.l10n.monthView),
-            ManeSegment(value: false, label: context.l10n.weekView),
+            ManeSegment(value: _CalendarMode.month, label: context.l10n.monthView),
+            ManeSegment(value: _CalendarMode.week, label: context.l10n.weekView),
+            ManeSegment(value: _CalendarMode.day, label: context.l10n.dayView),
           ],
-          selected: monthMode,
+          selected: mode,
           onChanged: onModeChanged,
           compact: true,
         ),

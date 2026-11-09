@@ -1,5 +1,6 @@
 import 'entry.dart';
 import 'local_date.dart';
+import 'recurrence.dart';
 import 'time.dart';
 
 /// Completion dates keyed by entry id.
@@ -15,6 +16,11 @@ typedef EntryCompletions = Map<String, Set<LocalDate>>;
 /// group it by its date in [viewerTimeZone]. That is what makes a 09:00 shift
 /// move when the device travels and a birthday stay put.
 ///
+/// Multi-day entries produce one occurrence per displayed day. Overnight timed
+/// entries also produce the tail day, so a 22:00–02:00 block is visible on both
+/// days. Recurrence skip dates are removed and modified occurrences are moved
+/// to their replacement date/time before placement.
+///
 /// The caller pads recurrence expansion by two days in each direction, so an
 /// occurrence whose viewer date lands inside the range is still found.
 List<EntryOccurrence> expandEntries({
@@ -27,6 +33,9 @@ List<EntryOccurrence> expandEntries({
   if (start.isAfter(end)) return const <EntryOccurrence>[];
 
   final result = <EntryOccurrence>[];
+  final paddedStart = start.addDays(-2);
+  final paddedEnd = end.addDays(2);
+
   for (final entry in entries) {
     if (entry.deletedAt != null || entry.status == EntryStatus.cancelled) {
       continue;
@@ -34,75 +43,91 @@ List<EntryOccurrence> expandEntries({
     final anchor = entry.date;
     if (anchor == null) continue;
     final doneDates = completions[entry.id] ?? const <LocalDate>{};
+    final rule = entry.recurrence;
 
-    if (entry.allDay) {
-      final rule = entry.recurrence;
-      if (rule != null) {
-        for (final date in rule.occurrencesBetween(start, end, anchor)) {
-          result.add(
-            EntryOccurrence(
-              date: date,
-              displayDate: date,
-              entry: entry,
-              completed: entry.status == EntryStatus.done || doneDates.contains(date),
-            ),
-          );
+    final overrides = <LocalDate, RecurrenceOverride>{
+      for (final override in rule?.overrides ?? const <RecurrenceOverride>[]) override.date: override,
+    };
+
+    final dates = <LocalDate>{};
+    if (rule == null) {
+      dates.add(anchor);
+    } else {
+      dates.addAll(rule.occurrencesBetween(paddedStart, paddedEnd, anchor));
+      for (final override in rule.overrides) {
+        if (!rule.skipDates.contains(override.date) &&
+            _inRange(override.effectiveDate, paddedStart, paddedEnd)) {
+          dates.add(override.date);
+        }
+      }
+    }
+
+    for (final date in dates) {
+      final override = overrides[date];
+      final effectiveDate = override?.dateOverride ?? date;
+      final occurrenceEntry = override == null
+          ? entry
+          : entry.copyWith(title: override.title, notes: override.notes);
+
+      if (entry.allDay || (override?.allDay ?? false)) {
+        final last = entry.endDate;
+        final span = last == null ? 0 : last.differenceInDays(anchor);
+        var cursor = effectiveDate;
+        final lastDay = effectiveDate.addDays(span);
+        while (cursor.isOnOrBefore(lastDay)) {
+          if (_inRange(cursor, start, end)) {
+            result.add(
+              EntryOccurrence(
+                date: cursor,
+                displayDate: cursor,
+                entry: occurrenceEntry,
+                completed: entry.status == EntryStatus.done || doneDates.contains(cursor),
+              ),
+            );
+          }
+          cursor = cursor.addDays(1);
         }
         continue;
       }
 
-      final last = entry.endDate ?? anchor;
-      final from = LocalDate.max(start, anchor);
-      final to = LocalDate.min(end, last);
-      if (from.isAfter(to)) continue;
-      var cursor = from;
-      while (cursor.isOnOrBefore(to)) {
-        result.add(
-          EntryOccurrence(
-            date: cursor,
-            displayDate: cursor,
-            entry: entry,
-            completed: entry.status == EntryStatus.done || doneDates.contains(cursor),
-          ),
-        );
-        cursor = cursor.addDays(1);
+      final timeZone = entry.timeZone;
+      final startMinute = override?.startMinute ?? entry.startMinute;
+      final baseEndMinute = override?.endMinute ?? entry.endMinute;
+      if (timeZone == null || startMinute == null || baseEndMinute == null) continue;
+
+      final startAt = instantAt(effectiveDate, startMinute, timeZone);
+      final endAt = entry.endDate == null
+          ? instantAt(effectiveDate, baseEndMinute, timeZone)
+          : instantAt(effectiveDate.addDays(entry.endDayOffset), baseEndMinute, timeZone);
+      if (!endAt.isAfter(startAt)) continue;
+
+      final firstDisplay = localDateAt(startAt, viewerTimeZone);
+      final lastDisplay = localDateAt(endAt.subtract(const Duration(seconds: 1)), viewerTimeZone);
+      var display = firstDisplay;
+      while (display.isOnOrBefore(lastDisplay)) {
+        if (_inRange(display, start, end)) {
+          result.add(
+            EntryOccurrence(
+              date: date,
+              displayDate: display,
+              entry: occurrenceEntry,
+              completed: rule == null ? entry.status == EntryStatus.done : doneDates.contains(date),
+              startAt: startAt,
+              endAt: endAt,
+            ),
+          );
+        }
+        display = display.addDays(1);
       }
-      continue;
-    }
-
-    final timeZone = entry.timeZone;
-    final startMinute = entry.startMinute;
-    final endMinute = entry.endMinute;
-    if (timeZone == null || startMinute == null || endMinute == null) continue;
-
-    final paddedStart = start.addDays(-2);
-    final paddedEnd = end.addDays(2);
-    final rule = entry.recurrence;
-    final dates = rule == null
-        ? <LocalDate>[anchor]
-        : rule.occurrencesBetween(paddedStart, paddedEnd, anchor);
-
-    for (final date in dates) {
-      final startAt = instantAt(date, startMinute, timeZone);
-      final endAt = instantAt(date, endMinute, timeZone);
-      final displayDate = localDateAt(startAt, viewerTimeZone);
-      if (displayDate.isBefore(start) || displayDate.isAfter(end)) continue;
-      result.add(
-        EntryOccurrence(
-          date: date,
-          displayDate: displayDate,
-          entry: entry,
-          completed: rule == null ? entry.status == EntryStatus.done : doneDates.contains(date),
-          startAt: startAt,
-          endAt: endAt,
-        ),
-      );
     }
   }
 
   result.sort(compareEntryOccurrences);
   return result;
 }
+
+bool _inRange(LocalDate date, LocalDate start, LocalDate end) =>
+    date.isOnOrAfter(start) && date.isOnOrBefore(end);
 
 /// All-day items first, then timed items by instant, then title.
 int compareEntryOccurrences(EntryOccurrence a, EntryOccurrence b) {

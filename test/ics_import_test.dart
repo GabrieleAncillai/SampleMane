@@ -37,9 +37,10 @@ void main() {
       defaultTimeZone: 'Europe/Madrid',
       fallbackTitle: 'Imported calendar event',
     );
-    expect(report.imported, 5);
+    expect(report.imported, 6);
+    expect(report.updated, 0);
     expect(report.duplicates, 0);
-    expect(report.skipped, hasLength(2));
+    expect(report.skipped, hasLength(1));
 
     final standup =
         (await database
@@ -101,7 +102,7 @@ void main() {
       defaultTimeZone: 'Europe/Madrid',
       fallbackTitle: 'Imported calendar event',
     );
-    expect(first.imported, 5);
+    expect(first.imported, 6);
 
     final second = await importer.importText(
       source,
@@ -110,12 +111,59 @@ void main() {
       fallbackTitle: 'Imported calendar event',
     );
     expect(second.imported, 0);
-    expect(second.duplicates, 5);
+    expect(second.updated, 0);
+    expect(second.duplicates, 6);
 
     final all = await database
         .watchEntriesBetween(LocalDate.parse('2026-01-01'), LocalDate.parse('2027-12-31'), 'Europe/Madrid')
         .first;
-    expect(all.map((item) => item.entry.id).toSet(), hasLength(5));
+    expect(all.map((item) => item.entry.id).toSet(), hasLength(6));
+  });
+
+  test('re-importing a changed event updates it in place', () async {
+    await importer.importText(
+      source,
+      spaceId: 'personal',
+      defaultTimeZone: 'Europe/Madrid',
+      fallbackTitle: 'Imported calendar event',
+    );
+    final before =
+        (await database
+                .watchEntriesBetween(
+                  LocalDate.parse('2026-11-09'),
+                  LocalDate.parse('2026-11-09'),
+                  'Europe/Madrid',
+                )
+                .first)
+            .singleWhere((item) => item.entry.title == 'Standup')
+            .entry;
+
+    final changed = source
+        .replaceFirst('SUMMARY:Standup', 'SUMMARY:Standup moved')
+        .replaceFirst('20261109T090000', '20261109T100000')
+        .replaceFirst('20261109T093000', '20261109T103000');
+    final report = await importer.importText(
+      changed,
+      spaceId: 'personal',
+      defaultTimeZone: 'Europe/Madrid',
+      fallbackTitle: 'Imported calendar event',
+    );
+    expect(report.imported, 0);
+    expect(report.updated, 1);
+    expect(report.duplicates, 5);
+
+    final after =
+        (await database
+                .watchEntriesBetween(
+                  LocalDate.parse('2026-11-09'),
+                  LocalDate.parse('2026-11-09'),
+                  'Europe/Madrid',
+                )
+                .first)
+            .singleWhere((item) => item.entry.id == before.id)
+            .entry;
+    expect(after.title, 'Standup moved');
+    expect(after.startMinute, 10 * 60);
   });
 
   test('an empty file reports nothing to import', () async {

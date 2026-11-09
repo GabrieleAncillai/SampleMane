@@ -426,20 +426,58 @@ void main() {
       ShiftChecklistItem(id: 'clean', patternId: 'bar', label: 'Clean the bar'),
     ]);
 
-    await database.setShiftChecklistCompleted('count', monday, completed: true);
-    expect(await database.readShiftChecklistCompletions('bar', monday), {'count'});
-    expect(await database.readShiftChecklistCompletions('bar', monday.addDays(1)), isEmpty);
+    await database.setShiftChecklistCompleted('count', monday, completed: true, slotKey: '0:540:600:A');
+    expect(await database.readShiftChecklistCompletions('bar', monday, slotKey: '0:540:600:A'), {'count'});
+    expect(
+      await database.readShiftChecklistCompletions('bar', monday.addDays(1), slotKey: '0:540:600:A'),
+      isEmpty,
+    );
 
     // Renaming an item keeps its id, so the tick survives an edit.
     await database.saveShiftChecklistItems('bar', const [
       ShiftChecklistItem(id: 'count', patternId: 'bar', label: 'Count the till'),
       ShiftChecklistItem(id: 'clean', patternId: 'bar', label: 'Clean the bar'),
     ]);
-    expect(await database.readShiftChecklistCompletions('bar', monday), {'count'});
+    expect(await database.readShiftChecklistCompletions('bar', monday, slotKey: '0:540:600:A'), {'count'});
     expect((await database.readShiftChecklistItems('bar')).first.label, 'Count the till');
 
-    await database.setShiftChecklistCompleted('count', monday, completed: false);
-    expect(await database.readShiftChecklistCompletions('bar', monday), isEmpty);
+    await database.setShiftChecklistCompleted('count', monday, completed: false, slotKey: '0:540:600:A');
+    expect(await database.readShiftChecklistCompletions('bar', monday, slotKey: '0:540:600:A'), isEmpty);
+  });
+
+  test('two slots on the same date keep independent checklist completions', () async {
+    await database.seedDefaults();
+    final monday = LocalDate.parse('2026-11-09');
+    final pattern = ShiftPattern(
+      id: 'double',
+      spaceId: 'work',
+      name: 'Double shift',
+      timeZone: 'Europe/Madrid',
+      cycleDays: 7,
+      anchorDate: monday,
+      slots: const [
+        ShiftSlot(dayIndex: 0, label: 'Lunch', startMinute: 720, endMinute: 960),
+        ShiftSlot(dayIndex: 0, label: 'Dinner', startMinute: 1140, endMinute: 1380),
+      ],
+    );
+    await database.saveShiftPattern(pattern);
+    await database.saveShiftChecklistItems('double', const [
+      ShiftChecklistItem(id: 'count', patternId: 'double', label: 'Count the drawer'),
+    ]);
+
+    final slots = pattern.slotsFor(monday);
+    expect(slots, hasLength(2));
+    await database.setShiftChecklistCompleted('count', monday, completed: true, slotKey: slots.first.key);
+
+    expect(await database.readShiftChecklistCompletions('double', monday, slotKey: slots.first.key), {
+      'count',
+    });
+    expect(await database.readShiftChecklistCompletions('double', monday, slotKey: slots.last.key), isEmpty);
+
+    await database.setShiftChecklistCompleted('count', monday, completed: true, slotKey: slots.last.key);
+    expect(await database.readShiftChecklistCompletions('double', monday, slotKey: slots.last.key), {
+      'count',
+    });
   });
 
   test('checking a linked shopping item updates and reverses the inventory quantity', () async {

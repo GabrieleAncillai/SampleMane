@@ -11,10 +11,16 @@ import '../../../state/providers.dart';
 /// The checklist for one shift date. Completions are keyed by item and date,
 /// so ticking an item on one shift never changes another shift's checklist.
 class ShiftChecklistSection extends ConsumerStatefulWidget {
-  const ShiftChecklistSection({super.key, required this.patternId, required this.date});
+  const ShiftChecklistSection({
+    super.key,
+    required this.patternId,
+    required this.date,
+    required this.slotKey,
+  });
 
   final String patternId;
   final LocalDate date;
+  final String slotKey;
 
   @override
   ConsumerState<ShiftChecklistSection> createState() => _ShiftChecklistSectionState();
@@ -33,13 +39,19 @@ class _ShiftChecklistSectionState extends ConsumerState<ShiftChecklistSection> {
     final repository = ref.read(repositoryProvider);
     final items = await repository.readShiftChecklistItems(widget.patternId);
     if (items.isEmpty) return (items, <String>{});
-    final done = await repository.readShiftChecklistCompletions(widget.patternId, widget.date);
+    final done = await repository.readShiftChecklistCompletions(
+      widget.patternId,
+      widget.date,
+      slotKey: widget.slotKey,
+    );
     return (items, done);
   }
 
   Future<void> _toggle(ShiftChecklistItem item, bool completed) async {
     try {
-      await ref.read(repositoryProvider).setShiftChecklistCompleted(item.id, widget.date, completed);
+      await ref
+          .read(repositoryProvider)
+          .setShiftChecklistCompleted(item.id, widget.date, completed: completed, slotKey: widget.slotKey);
       if (!mounted) return;
       setState(() => _future = _load());
     } catch (error) {

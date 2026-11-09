@@ -404,8 +404,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get importCalendarSpace => 'Importar en';
 
   @override
-  String importCalendarDone(int imported, int skipped) {
-    return '$imported eventos importados. $skipped duplicados o no compatibles omitidos.';
+  String importCalendarDone(int imported, int updated, int skipped) {
+    return '$imported importados, $updated actualizados y $skipped duplicados o no compatibles omitidos.';
   }
 
   @override
@@ -1053,4 +1053,64 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get backupRestoredReminders => 'Los recordatorios se han vuelto a programar.';
+
+  @override
+  String get dayView => 'Día';
+
+  @override
+  String get shiftTags => 'Etiquetas del trabajo';
+
+  @override
+  String get commuteOverride => 'Tiempo de viaje propio';
+
+  @override
+  String get windDownOverride => 'Desconexión propia';
+
+  @override
+  String get inheritSleepBuffers => 'Déjalo vacío para usar los ajustes de sueño.';
+
+  @override
+  String get endDate => 'Termina el';
+
+  @override
+  String get multiDayHint => 'Deja la fecha final vacía para un solo día.';
+
+  @override
+  String get skipThisOccurrence => 'Omitir esta repetición';
+
+  @override
+  String get skippedOccurrences => 'Fechas omitidas';
+
+  @override
+  String get recurrenceExceptions => 'Excepciones';
+
+  @override
+  String get exportCalendar => 'Exportar calendario (.ics)';
+
+  @override
+  String get exportCalendarSubtitle => 'Comparte un archivo de solo lectura. Sin cuenta ni red.';
+
+  @override
+  String calendarExported(String path) {
+    return 'Calendario exportado a $path';
+  }
+
+  @override
+  String calendarExportFailed(String error) {
+    return 'No se pudo exportar el calendario: $error';
+  }
+
+  @override
+  String icsUpdated(int count) {
+    return '$count actualizadas';
+  }
+
+  @override
+  String get onlyThisOccurrence => 'Solo esta repetición';
+
+  @override
+  String get onlyThisOccurrenceSubtitle => 'Mantén la serie y cambia solo esta fecha.';
+
+  @override
+  String get singleDay => 'Un solo día';
 }

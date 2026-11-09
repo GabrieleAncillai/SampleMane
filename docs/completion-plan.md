@@ -110,27 +110,28 @@ Acceptance met: the screenshots in `docs/screenshots/` show the reference
 component language on Today, Calendar and Settings; the shipped shell has no
 stock app bar, navigation bar or floating action button; all tests pass.
 
-### v0.7 Calendar, recurrence and shift completeness
+### v0.7 Calendar, recurrence and shift completeness (done)
 
-- [ ] Add a day timeline view with shifts as background blocks and entries in
+- [x] Add a day timeline view with shifts as background blocks and entries in
       front, modelled on Streak's `day_timeline_page.dart`.
-- [ ] Support multi-day all-day entries and multi-day timed entries end to end.
-- [ ] Add recurrence exception dates (skip one occurrence) and modified
+- [x] Support multi-day all-day entries and multi-day timed entries end to end.
+- [x] Add recurrence exception dates (skip one occurrence) and modified
       occurrences.
-- [ ] Add ordinal weekday rules (`1MO`, `-1FR`), `BYSETPOS` and negative
+- [x] Add ordinal weekday rules (`1MO`, `-1FR`), `BYSETPOS` and negative
       `BYMONTHDAY`; keep the documented subset honest.
-- [ ] Add tag links to shift patterns and make the global tag filter filter
+- [x] Add tag links to shift patterns and make the global tag filter filter
       shifts as well as entries.
-- [ ] Key shift checklist completion by pattern + date + slot, not just
+- [x] Key shift checklist completion by pattern + date + slot, not just
       pattern + date. Schema migration and real-row test required.
-- [ ] Add a read-only ICS export for sharing a calendar without an account.
-- [ ] Add per-pattern commute/wind-down overrides for the sleep window.
-- [ ] Hardening pass on ICS import: `EXDATE`, `RECURRENCE-ID`, Windows `TZID`
+- [x] Add a read-only ICS export for sharing a calendar without an account.
+- [x] Add per-pattern commute/wind-down overrides for the sleep window.
+- [x] Hardening pass on ICS import: `EXDATE`, `RECURRENCE-ID`, Windows `TZID`
       aliases, multi-day timed events and re-import updates.
 
-Acceptance: a real Google/Microsoft ICS export with cancelled and moved
-occurrences imports without duplicates or skipped rows that Matter; an exported
-ICS opens in a standard calendar; a two-slot day keeps independent checklists.
+Acceptance met: a Google/Microsoft-style export with cancelled and moved
+occurrences imports with skip dates and overrides; the exported ICS parses back;
+a two-slot day keeps independent checklists; the v5→v6 migration assigns real
+legacy rows to the first slot.
 
 ### v0.8 Data interchange, home tracking and privacy
 

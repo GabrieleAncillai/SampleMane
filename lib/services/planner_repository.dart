@@ -47,14 +47,24 @@ class PlannerRepository {
   Future<void> saveShiftChecklistItems(String patternId, List<ShiftChecklistItem> items) =>
       _database.saveShiftChecklistItems(patternId, items);
 
-  Future<Set<String>> readShiftChecklistCompletions(String patternId, LocalDate date) =>
-      _database.readShiftChecklistCompletions(patternId, date);
+  Future<Set<String>> readShiftChecklistCompletions(
+    String patternId,
+    LocalDate date, {
+    required String slotKey,
+  }) => _database.readShiftChecklistCompletions(patternId, date, slotKey: slotKey);
 
-  Future<void> setShiftChecklistCompleted(String itemId, LocalDate date, bool completed) =>
-      _database.setShiftChecklistCompleted(itemId, date, completed: completed);
+  Future<void> setShiftChecklistCompleted(
+    String itemId,
+    LocalDate date, {
+    required bool completed,
+    required String slotKey,
+  }) => _database.setShiftChecklistCompleted(itemId, date, completed: completed, slotKey: slotKey);
 
   Future<bool> hasImportedEntry(String source, String externalId) =>
       _database.hasImportedEntry(source, externalId);
+
+  Future<Entry?> readImportedEntry(String source, String externalId) =>
+      _database.readImportedEntry(source, externalId);
 
   Future<LocalDate?> completeMaintenanceEntry(String id, LocalDate completionDate) =>
       _database.completeMaintenanceEntry(id, completionDate);

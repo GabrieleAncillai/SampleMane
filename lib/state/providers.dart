@@ -118,7 +118,13 @@ final entriesProvider = StreamProvider.family<List<EntryOccurrence>, DateRange>(
 
 final shiftsProvider = StreamProvider.family<List<ShiftOccurrence>, DateRange>((ref, range) {
   final timeZone = ref.watch(deviceTimeZoneProvider);
-  return ref.watch(repositoryProvider).watchShifts(range.start, range.end, timeZone);
+  final filter = ref.watch(tagFilterProvider);
+  final knownTags = ref.watch(tagsProvider).value;
+  return ref.watch(repositoryProvider).watchShifts(range.start, range.end, timeZone).map((items) {
+    final active = knownTags == null ? filter : filter.intersection(knownTags.map((tag) => tag.id).toSet());
+    if (active.isEmpty) return items;
+    return items.where((item) => item.pattern.tagIds.any(active.contains)).toList();
+  });
 });
 
 final shiftPatternsProvider = StreamProvider<List<ShiftPattern>>(

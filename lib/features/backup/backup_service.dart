@@ -31,7 +31,7 @@ class BackupService {
   BackupService(this._database);
 
   static const appTag = 'mane';
-  static const currentSchemaVersion = 5;
+  static const currentSchemaVersion = 6;
 
   final AppDatabase _database;
 
@@ -45,6 +45,7 @@ class BackupService {
     final patterns = await _database.select(_database.shiftPatternRecords).get();
     final slots = await _database.select(_database.shiftSlotRecords).get();
     final exceptions = await _database.select(_database.shiftExceptionRecords).get();
+    final patternTags = await _database.select(_database.shiftPatternTagRecords).get();
     final checklistItems = await _database.select(_database.shiftChecklistItemRecords).get();
     final checklistCompletions = await _database.select(_database.shiftChecklistCompletionRecords).get();
     final homeItems = await _database.select(_database.homeItemRecords).get();
@@ -69,6 +70,10 @@ class BackupService {
     patterns.sort((a, b) => a.id.compareTo(b.id));
     slots.sort((a, b) => a.id.compareTo(b.id));
     exceptions.sort((a, b) => a.id.compareTo(b.id));
+    patternTags.sort((a, b) {
+      final byPattern = a.patternId.compareTo(b.patternId);
+      return byPattern != 0 ? byPattern : a.tagId.compareTo(b.tagId);
+    });
     checklistItems.sort((a, b) {
       final byPattern = a.patternId.compareTo(b.patternId);
       return byPattern != 0 ? byPattern : a.position.compareTo(b.position);
@@ -158,6 +163,8 @@ class BackupService {
             'timeZone': row.timeZone,
             'cycleDays': row.cycleDays,
             'anchorDateKey': row.anchorDateKey,
+            'commuteMinutes': row.commuteMinutes,
+            'windDownMinutes': row.windDownMinutes,
             'enabled': row.enabled,
             'createdAt': _date(row.createdAt),
             'updatedAt': _date(row.updatedAt),
@@ -187,13 +194,21 @@ class BackupService {
             'note': row.note,
           },
       ],
+      'shiftPatternTags': [
+        for (final row in patternTags) {'patternId': row.patternId, 'tagId': row.tagId},
+      ],
       'shiftChecklistItems': [
         for (final row in checklistItems)
           {'id': row.id, 'patternId': row.patternId, 'label': row.label, 'position': row.position},
       ],
       'shiftChecklistCompletions': [
         for (final row in checklistCompletions)
-          {'itemId': row.itemId, 'dateKey': row.dateKey, 'createdAt': _date(row.createdAt)},
+          {
+            'itemId': row.itemId,
+            'dateKey': row.dateKey,
+            'slotKey': row.slotKey,
+            'createdAt': _date(row.createdAt),
+          },
       ],
       'homeItems': [
         for (final row in homeItems)
@@ -260,6 +275,7 @@ class BackupService {
     final patterns = _maps(payload, 'shiftPatterns');
     final slots = _maps(payload, 'shiftSlots');
     final exceptions = _maps(payload, 'shiftExceptions');
+    final patternTags = _maps(payload, 'shiftPatternTags');
     final checklistItems = _maps(payload, 'shiftChecklistItems');
     final checklistCompletions = _maps(payload, 'shiftChecklistCompletions');
     final homeItems = _maps(payload, 'homeItems');
@@ -275,6 +291,7 @@ class BackupService {
       await _database.delete(_database.completionRecords).go();
       await _database.delete(_database.reminderRecords).go();
       await _database.delete(_database.shiftSlotRecords).go();
+      await _database.delete(_database.shiftPatternTagRecords).go();
       await _database.delete(_database.shiftExceptionRecords).go();
       await _database.delete(_database.entryRecords).go();
       await _database.delete(_database.shiftPatternRecords).go();
@@ -432,6 +449,8 @@ class BackupService {
                 timeZone: Value(_string(row, 'timeZone')),
                 cycleDays: Value(_integer(row, 'cycleDays')),
                 anchorDateKey: Value(_integer(row, 'anchorDateKey')),
+                commuteMinutes: Value(_optionalInteger(row, 'commuteMinutes')),
+                windDownMinutes: Value(_optionalInteger(row, 'windDownMinutes')),
                 enabled: Value(_boolean(row, 'enabled')),
                 createdAt: Value(_dateTime(row, 'createdAt')),
                 updatedAt: Value(_dateTime(row, 'updatedAt')),
@@ -471,6 +490,18 @@ class BackupService {
             );
       }
 
+      for (final row in patternTags) {
+        await _database
+            .into(_database.shiftPatternTagRecords)
+            .insert(
+              ShiftPatternTagRecordsCompanion.insert(
+                patternId: _string(row, 'patternId'),
+                tagId: _string(row, 'tagId'),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
+      }
+
       for (final row in checklistItems) {
         await _database
             .into(_database.shiftChecklistItemRecords)
@@ -491,6 +522,7 @@ class BackupService {
               ShiftChecklistCompletionRecordsCompanion.insert(
                 itemId: _string(row, 'itemId'),
                 dateKey: _integer(row, 'dateKey'),
+                slotKey: Value(_optionalString(row, 'slotKey') ?? ''),
                 createdAt: _dateTime(row, 'createdAt'),
               ),
             );

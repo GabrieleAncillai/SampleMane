@@ -76,20 +76,16 @@ themes; `lib/core/widgets` kit; floating shell and background; screen sweep;
 widget tests and `docs/screenshots/`. The deviation is recorded in
 `docs/full-docs.md` and `docs/reference-map.md`.
 
-### P1 — Real calendar files exceed the ICS subset
+### P1 — Real calendar files exceeded the ICS subset (fixed v0.7)
 
-**Evidence:** `lib/features/import/ics_parser.dart` rejects `EXDATE`,
+**Evidence:** `lib/features/import/ics_parser.dart` rejected `EXDATE`,
 `RECURRENCE-ID`, ordinal `BYDAY`, `BYSETPOS`, negative `BYMONTHDAY`, timed events
-over 24 hours and non-IANA `TZID` values. Re-import only deduplicates; it does not
-update changed events.
+over 24 hours and non-IANA `TZID` values. Re-import only deduplicated.
 
-**Impact:** Google/Microsoft calendar exports commonly use cancelled occurrences,
-moved occurrences and Windows timezone identifiers. The user can lose the exact
-events the planner exists to catch.
-
-**Remediation (v0.7):** support exceptions, ordinal rules, alias mapping,
-multi-day timed events and update-on-reimport; keep a documented subset and
-report skips.
+**Remediation (done):** skip dates, cancelled and moved occurrences, ordinal
+weekdays, `BYSETPOS`, negative month days, Windows/vendor TZID aliases, multi-day
+timed events and update-on-reimport are implemented and tested. Unsupported
+parts are still reported, not guessed.
 
 ### P1 — GymMane read-only schedule integration is not shipped
 
@@ -103,16 +99,13 @@ companion-import promise is only partially met.
 **Remediation (v0.8):** add a GymMane backup JSON adapter with dedupe, read-only
 entries and documented behavior when the backup has no time of day.
 
-### P2 — Per-shift checklist is keyed by pattern + date, not slot
+### P2 — Per-shift checklist was keyed by pattern + date, not slot (fixed v0.7)
 
-**Evidence:** `ShiftChecklistCompletionRecords` primary key is
-`{itemId, dateKey}`. Two slots of the same pattern on one date share completions.
+**Evidence:** `ShiftChecklistCompletionRecords` primary key was
+`{itemId, dateKey}`.
 
-**Impact:** a double shift cannot track two independent checklist runs. This
-contradicts the scenario's "per shift, not per day" requirement.
-
-**Remediation (v0.7):** add a slot/occurrence key, migrate existing rows as the
-single-slot default, and add a two-slot independence test.
+**Remediation (done):** schema v6 keys completions by item, date and stable slot
+key, migrates real v5 rows to the first slot and tests two-slot independence.
 
 ### P2 — Work-hours visibility is only "hide the whole Work space"
 
@@ -148,26 +141,20 @@ which is one of the stated product goals.
 **Remediation (v0.9):** full tool set, gated writes, streamable HTTP session
 handling and tests.
 
-### P2 — Multi-day entries and recurrence exceptions are incomplete
+### P2 — Multi-day entries and recurrence exceptions were incomplete (fixed v0.7)
 
-**Evidence:** the editor creates single-day items. The recurrence model has no
-skip dates. The database has `endDateKey`, but the UI does not expose it
-consistently.
+**Evidence:** the editor created single-day items; the recurrence model had no
+skip dates.
 
-**Impact:** holidays, trips, multi-day events and "skip this occurrence" are
-awkward or impossible.
+**Remediation (done):** multi-day all-day and timed entries, end dates in the
+editor, skip dates, moved/time-changed occurrences, and an only-this-occurrence
+save path.
 
-**Remediation (v0.7):** multi-day all-day/timed entries and recurrence
-exceptions.
+### P2 — No read-only calendar export (fixed v0.7)
 
-### P2 — No read-only calendar export
-
-**Evidence:** ICS is import-only. The private brief prefers a read-only export
-over a shared account when another person needs visibility.
-
-**Impact:** sharing the calendar requires screenshots or access to the app.
-
-**Remediation (v0.7):** export entries and shifts as a documented ICS file.
+**Remediation (done):** `features/export` writes a read-only VCALENDAR with
+entries, recurrence, `EXDATE`, `RECURRENCE-ID`, multi-day dates and concrete
+shift blocks. Settings exposes it.
 
 ### P2 — Backup is manual and accepts only schema version 5
 

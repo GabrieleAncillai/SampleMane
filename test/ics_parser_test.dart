@@ -14,8 +14,8 @@ void main() {
   });
 
   test('parses timed, all-day and UTC events from one file', () {
-    expect(result.events, hasLength(5));
-    expect(result.skipped, hasLength(2));
+    expect(result.events, hasLength(6));
+    expect(result.skipped, hasLength(1));
   });
 
   test('keeps the TZID, wall time and absolute instant of a timed event', () {
@@ -74,8 +74,39 @@ void main() {
   test('reports unsupported events instead of guessing', () {
     final reasons = result.skipped.map((skip) => skip.reason).join(' | ');
     expect(reasons, contains('Unknown timezone: Mars/Olympus'));
-    expect(reasons, contains('BYDAY'));
-    expect(result.events.where((event) => event.summary == 'Complex recurrence'), isEmpty);
+    expect(result.events.where((event) => event.summary == 'Complex recurrence'), hasLength(1));
+  });
+
+  test('parses an ordinal monthly BYDAY', () {
+    final complex = result.events.firstWhere((event) => event.summary == 'Complex recurrence');
+    final rule = complex.recurrence!;
+    expect(rule.frequency, RecurrenceFrequency.monthly);
+    expect(rule.ordinalWeekdays.single.weekday, DateTime.monday);
+    expect(rule.ordinalWeekdays.single.ordinal, 1);
+  });
+
+  test('merges EXDATE, RECURRENCE-ID and Windows TZIDs', () async {
+    final source = File('test/fixtures/calendar_exceptions.ics').readAsStringSync();
+    final parsed = parseIcs(source, defaultTimeZone: 'Europe/Madrid');
+    expect(parsed.skipped, isEmpty);
+    expect(parsed.events, hasLength(2));
+
+    final series = parsed.events.firstWhere((event) => event.summary == 'Weekly sync');
+    expect(series.timeZone, 'Europe/Berlin');
+    final rule = series.recurrence!;
+    expect(rule.skipDates, {LocalDate.parse('2026-11-16'), LocalDate.parse('2026-11-23')});
+    final moved = rule.overrides.single;
+    expect(moved.date, LocalDate.parse('2026-11-09'));
+    expect(moved.effectiveDate, LocalDate.parse('2026-11-10'));
+    expect(moved.startMinute, 14 * 60);
+    expect(moved.endMinute, 15 * 60);
+    expect(moved.title, 'Moved sync');
+
+    final trip = parsed.events.firstWhere((event) => event.summary == 'Conference');
+    expect(trip.allDay, isFalse);
+    expect(trip.endDate, LocalDate.parse('2026-11-14'));
+    expect(trip.endMinute, 10 * 60);
+    expect(trip.endAt, DateTime.utc(2026, 11, 14, 15));
   });
 
   test('skips cancelled events without reporting them as unsupported', () {

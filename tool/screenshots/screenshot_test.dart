@@ -58,6 +58,21 @@ void main() {
     await render(tester, 'v0.6-calendar-light.png', ManeTheme.light, shell(const CalendarPage()));
   });
 
+  testWidgets('render Calendar day light', (tester) async {
+    await render(
+      tester,
+      'v0.7-calendar-day-light.png',
+      ManeTheme.light,
+      shell(const CalendarPage()),
+      act: (tester) async {
+        await tester.tap(find.text('Day'));
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(ListView).first, const Offset(0, -720));
+        await tester.pumpAndSettle();
+      },
+    );
+  });
+
   testWidgets('render Settings light', (tester) async {
     await render(tester, 'v0.6-settings-light.png', ManeTheme.light, const SettingsPage());
   });
@@ -131,7 +146,13 @@ Widget shell(Widget page) {
   );
 }
 
-Future<void> render(WidgetTester tester, String name, ThemeData theme, Widget home) async {
+Future<void> render(
+  WidgetTester tester,
+  String name,
+  ThemeData theme,
+  Widget home, {
+  Future<void> Function(WidgetTester tester)? act,
+}) async {
   tester.view.physicalSize = const Size(1290, 2796);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
@@ -140,8 +161,6 @@ Future<void> render(WidgetTester tester, String name, ThemeData theme, Widget ho
   final entries = demoEntries(today);
   final shifts = demoShifts(today);
 
-  // ignore: avoid_print
-  print('pump $name');
   await tester.pumpWidget(
     RepaintBoundary(
       key: key,
@@ -187,14 +206,9 @@ Future<void> render(WidgetTester tester, String name, ThemeData theme, Widget ho
       ),
     ),
   );
-  // ignore: avoid_print
-  print('pumped $name');
   await tester.pump();
-  // ignore: avoid_print
-  print('pumped1 $name');
   await tester.pump(const Duration(milliseconds: 400));
-  // ignore: avoid_print
-  print('pumped2 $name');
+  if (act != null) await act(tester);
   final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: 2);

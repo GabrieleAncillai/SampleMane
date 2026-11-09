@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mane_core/mane_core.dart';
 
 import '../../../core/i18n/l10n.dart';
 import '../../../core/i18n/reminder_label.dart';
@@ -10,6 +11,8 @@ import '../../../state/settings_controller.dart';
 import '../../tags/pages/tags_page.dart';
 import '../../backup/backup_files.dart';
 import '../../backup/backup_service.dart';
+import '../../export/export_files.dart';
+import '../../export/ics_export_service.dart';
 import '../../home_inventory/pages/home_inventory_page.dart';
 import '../../home_inventory/pages/shopping_list_page.dart';
 import '../../import/companion_import.dart';
@@ -191,6 +194,12 @@ class SettingsPage extends ConsumerWidget {
                 subtitle: l10n.importCompanionSubtitle,
                 onTap: () => _importCompanion(context, ref),
               ),
+              SettingsNavRow(
+                icon: Icons.ios_share_outlined,
+                title: l10n.exportCalendar,
+                subtitle: l10n.exportCalendarSubtitle,
+                onTap: () => _exportCalendar(context, ref),
+              ),
             ],
           ),
           SettingsSection(
@@ -354,9 +363,9 @@ class SettingsPage extends ConsumerWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            report.imported == 0 && skipped == 0
+            report.imported == 0 && report.updated == 0 && skipped == 0
                 ? l10n.importCalendarEmpty
-                : l10n.importCalendarDone(report.imported, skipped),
+                : l10n.importCalendarDone(report.imported, report.updated, skipped),
           ),
         ),
       );
@@ -396,6 +405,23 @@ class SettingsPage extends ConsumerWidget {
       );
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.importCompanionFailed('$error'))));
+    }
+  }
+
+  Future<void> _exportCalendar(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final timeZone = ref.read(deviceTimeZoneProvider);
+      final today = localDateAt(ref.read(nowProvider), timeZone);
+      final content = await IcsExportService(
+        ref.read(repositoryProvider),
+      ).exportRange(start: today.addDays(-30), end: today.addDays(180), viewerTimeZone: timeZone);
+      final path = await saveIcsFile(content, dialogTitle: l10n.exportCalendar);
+      if (path == null) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.calendarExported(path))));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.calendarExportFailed('$error'))));
     }
   }
 

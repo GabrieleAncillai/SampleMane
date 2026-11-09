@@ -1,7 +1,7 @@
 # Mane: full docs
 
-Status: v0.6, visual foundation complete. Last updated 2026-11-09. The active
-completion program is in [completion-plan.md](completion-plan.md); the
+Status: v0.7, calendar and shift completeness. Last updated 2026-11-09. The
+active completion program is in [completion-plan.md](completion-plan.md); the
 constraint audit is in [compliance-audit.md](compliance-audit.md).
 
 This is the long version. The short version is in [overview.md](overview.md).
@@ -362,9 +362,9 @@ does not update changed rows.
 
 ## 6. Data model (target)
 
-The migration path is v1 → v2 → v3 → v4 → v5. The shipped schema has the shape
-below, including tags, home items, shopping items, shift checklists and the
-local pairing identity.
+The migration path is v1 → v2 → v3 → v4 → v5 → v6. The shipped schema has the
+shape below, including tags, home items, shopping items, per-slot shift
+checklists, shift tags, per-pattern sleep buffers and the local pairing identity.
 
 - **spaces**: id, name, color, position, timestamps, soft delete. Seeded with
   Personal, Work and Home. Spaces are rows, not an enum.
@@ -399,8 +399,11 @@ local pairing identity.
   the change.
 - **shift_checklist_items**: id, pattern id, label, position. They belong to a
   pattern, not to an entry.
-- **shift_checklist_completions**: checklist item id plus the shift date in the
-  pattern's timezone. Each shift occurrence keeps its own ticks.
+- **shift_checklist_completions**: checklist item id, the shift date in the
+  pattern's timezone and a stable slot key. Two slots on one date keep
+  independent ticks; legacy v5 rows are migrated to the first slot of the date.
+- **shift_pattern_tags**: pattern id plus tag id, the same join shape as entry
+  tags. The global tag filter applies to shifts as well as entries.
 - **maintenance**: reuse entries with `lastCompletedAt` and
   `repeatAfterCompletionDays`. Completing one records a completion row and
   advances the date from the day it was actually completed.
@@ -766,12 +769,22 @@ hierarchy. It does not copy GymMane's photo/dot background picker or Streak's
 three selectable nav designs; those are product options Mane does not ship. The
 result is the adapted reference language, not a new visual identity.
 
-### v0.7 Calendar, recurrence and shift completeness
+### v0.7 Calendar, recurrence and shift completeness (done)
 
-- [ ] Day timeline with shift background blocks.
-- [ ] Multi-day entries and recurrence exceptions.
-- [ ] Tagged shifts and per-slot checklist keys.
-- [ ] Read-only ICS export, per-pattern sleep buffers and real-file ICS hardening.
+- [x] Day timeline with shift background blocks.
+- [x] Multi-day entries and recurrence exceptions.
+- [x] Tagged shifts and per-slot checklist keys.
+- [x] Read-only ICS export, per-pattern sleep buffers and real-file ICS hardening.
+
+**Shipped in v0.7:** a 24-hour Day mode in Calendar (shifts behind entries,
+all-day chips, now line, per-shift checklists); multi-day all-day and timed
+entries including overnight tails; `skipDates`, moved/time-changed occurrences,
+ordinal weekdays, negative month days and `BYSETPOS`; an editor for end dates,
+skip and only-this-occurrence; tagged shift patterns with a shift-aware global
+filter; schema v6 with per-slot checklist keys and real v5 row migration;
+per-pattern commute/wind-down sleep overrides; read-only ICS export; and ICS
+import support for `EXDATE`, `RECURRENCE-ID`, Windows TZIDs, multi-day timed
+events and update-on-reimport.
 
 ### v0.8 Data interchange, home tracking and privacy
 
