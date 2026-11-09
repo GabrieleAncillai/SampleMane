@@ -30,6 +30,7 @@ git clone https://github.com/InlitX/streak.git ../Streak
 | Home inventory, shopping and maintenance | none | none | New planner domain. The settings rows and sheets follow GymMane/Streak patterns; the model and rules live in Mane. |
 | ICS import | `lib/services/workout_import.dart` for local file-picking patterns | `lib/services/import_service.dart` for validation and dedupe patterns | No reference implements iCalendar. The parser is Mane-specific and deliberately narrow. |
 | Sleep window and shift checklists | none | none | New planner domain; pure calculation in `mane_core`, UI in `features/sleep` and `features/shifts`. |
+| LAN pairing, query and MCP | none | `lib/services/auto_sync.dart`, `lib/services/folder_sync.dart` (shared-folder backup exchange only) | Neither reference has LAN pairing or MCP. Mane uses standard TLS pinning, PBKDF2, HMAC and a nonce cache in `features/sync` and `features/mcp`; settings rows follow the reference style. |
 | Device / desktop behavior | `lib/services/device_kind.dart` | `lib/services/desktop_window.dart`, `lib/core/utils/responsive.dart` | Phone-first, desktop-aware. |
 | Build and release | `.github/workflows/build-apk.yml` | `.github/workflows/build-apk.yml`, `.github/workflows/linux.yml`, `fdroid/com.streak.app.yml`, `fastlane/` | Split APKs, GitHub Releases, F-Droid metadata, signing docs. |
 | Tests | `test/` | `test/` | Copy the test style and coverage areas. |
@@ -52,6 +53,11 @@ git clone https://github.com/InlitX/streak.git ../Streak
   `home_inventory`, `import`, `shifts` and `sleep` feature folders. The visual
   language and settings rows still come from the references. See the v0.3
   deviation note in `docs/full-docs.md`.
+- **LAN pairing, query and MCP.** Streak has a shared-folder backup exchange,
+  not LAN discovery. Mane implements pinned TLS, a short-code pairing
+  handshake, signed read-only queries and a loopback MCP adapter. These stay in
+  `lib/features/sync` and `lib/features/mcp`. See the v0.4 deviation note in
+  `docs/full-docs.md`.
 
 ## How to use this map
 

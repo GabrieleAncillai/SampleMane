@@ -31,7 +31,7 @@ class BackupService {
   BackupService(this._database);
 
   static const appTag = 'mane';
-  static const currentSchemaVersion = 4;
+  static const currentSchemaVersion = 5;
 
   final AppDatabase _database;
 

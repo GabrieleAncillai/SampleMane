@@ -58,6 +58,11 @@ class SettingsController extends Notifier<AppSettings> {
     await _repository.writeSetting(SettingsKeys.mcpEnabled, '$value');
   }
 
+  Future<void> setMcpWritesEnabled(bool value) async {
+    state = state.copyWith(mcpWritesEnabled: value);
+    await _repository.writeSetting(SettingsKeys.mcpWritesEnabled, '$value');
+  }
+
   Future<void> setSleepEnabled(bool value) async {
     state = state.copyWith(sleepEnabled: value);
     await _repository.writeSetting(SettingsKeys.sleepEnabled, '$value');

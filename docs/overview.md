@@ -47,12 +47,12 @@ should follow with little extra work.
 
 ## Status
 
-v0.3 home and maintenance. Today, Week and Calendar tabs, tags, the
-shift-pattern editor with per-shift checklists, reminders, settings, versioned
-backup/restore, home inventory, shopping lists, interval maintenance, a soft
-sleep window and read-only ICS import exist, with English and Spanish
-localization. Timed entries and shifts are timezone-aware; all-day items stay
-date-only. LAN sync and MCP are next.
+v0.4 sync and MCP. Today, Week and Calendar tabs, tags, flexible shifts with
+per-shift checklists, reminders, settings, versioned backup/restore, home
+inventory, shopping lists, interval maintenance, a soft sleep window, ICS and
+companion import, optional LAN pairing with read-only snapshots, and a local
+MCP endpoint exist. Timed entries are timezone-aware; all-day items stay
+date-only. Search, widgets, accessibility and the release workflow are next.
 
 - [Full docs](full-docs.md): architecture, data model, feature areas and roadmap.
 - [Reference map](reference-map.md): where to look in GymMane and Streak.

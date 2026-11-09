@@ -6457,6 +6457,1278 @@ class ShoppingItemRecordsCompanion extends UpdateCompanion<ShoppingItemRow> {
   }
 }
 
+class $IdentityRecordsTable extends IdentityRecords
+    with TableInfo<$IdentityRecordsTable, IdentityRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $IdentityRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
+  );
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deviceNameMeta = const VerificationMeta(
+    'deviceName',
+  );
+  @override
+  late final GeneratedColumn<String> deviceName = GeneratedColumn<String>(
+    'device_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _usernameMeta = const VerificationMeta(
+    'username',
+  );
+  @override
+  late final GeneratedColumn<String> username = GeneratedColumn<String>(
+    'username',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pinSaltMeta = const VerificationMeta(
+    'pinSalt',
+  );
+  @override
+  late final GeneratedColumn<String> pinSalt = GeneratedColumn<String>(
+    'pin_salt',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pinHashMeta = const VerificationMeta(
+    'pinHash',
+  );
+  @override
+  late final GeneratedColumn<String> pinHash = GeneratedColumn<String>(
+    'pin_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _certificatePemMeta = const VerificationMeta(
+    'certificatePem',
+  );
+  @override
+  late final GeneratedColumn<String> certificatePem = GeneratedColumn<String>(
+    'certificate_pem',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _privateKeyPemMeta = const VerificationMeta(
+    'privateKeyPem',
+  );
+  @override
+  late final GeneratedColumn<String> privateKeyPem = GeneratedColumn<String>(
+    'private_key_pem',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mcpTokenMeta = const VerificationMeta(
+    'mcpToken',
+  );
+  @override
+  late final GeneratedColumn<String> mcpToken = GeneratedColumn<String>(
+    'mcp_token',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    deviceId,
+    deviceName,
+    username,
+    pinSalt,
+    pinHash,
+    certificatePem,
+    privateKeyPem,
+    mcpToken,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'identity_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<IdentityRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deviceIdMeta);
+    }
+    if (data.containsKey('device_name')) {
+      context.handle(
+        _deviceNameMeta,
+        deviceName.isAcceptableOrUnknown(data['device_name']!, _deviceNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deviceNameMeta);
+    }
+    if (data.containsKey('username')) {
+      context.handle(
+        _usernameMeta,
+        username.isAcceptableOrUnknown(data['username']!, _usernameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usernameMeta);
+    }
+    if (data.containsKey('pin_salt')) {
+      context.handle(
+        _pinSaltMeta,
+        pinSalt.isAcceptableOrUnknown(data['pin_salt']!, _pinSaltMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pinSaltMeta);
+    }
+    if (data.containsKey('pin_hash')) {
+      context.handle(
+        _pinHashMeta,
+        pinHash.isAcceptableOrUnknown(data['pin_hash']!, _pinHashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pinHashMeta);
+    }
+    if (data.containsKey('certificate_pem')) {
+      context.handle(
+        _certificatePemMeta,
+        certificatePem.isAcceptableOrUnknown(
+          data['certificate_pem']!,
+          _certificatePemMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_certificatePemMeta);
+    }
+    if (data.containsKey('private_key_pem')) {
+      context.handle(
+        _privateKeyPemMeta,
+        privateKeyPem.isAcceptableOrUnknown(
+          data['private_key_pem']!,
+          _privateKeyPemMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_privateKeyPemMeta);
+    }
+    if (data.containsKey('mcp_token')) {
+      context.handle(
+        _mcpTokenMeta,
+        mcpToken.isAcceptableOrUnknown(data['mcp_token']!, _mcpTokenMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mcpTokenMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  IdentityRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return IdentityRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      deviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_id'],
+      )!,
+      deviceName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_name'],
+      )!,
+      username: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}username'],
+      )!,
+      pinSalt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pin_salt'],
+      )!,
+      pinHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pin_hash'],
+      )!,
+      certificatePem: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}certificate_pem'],
+      )!,
+      privateKeyPem: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}private_key_pem'],
+      )!,
+      mcpToken: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mcp_token'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $IdentityRecordsTable createAlias(String alias) {
+    return $IdentityRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class IdentityRow extends DataClass implements Insertable<IdentityRow> {
+  final int id;
+  final String deviceId;
+  final String deviceName;
+  final String username;
+  final String pinSalt;
+  final String pinHash;
+  final String certificatePem;
+  final String privateKeyPem;
+  final String mcpToken;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const IdentityRow({
+    required this.id,
+    required this.deviceId,
+    required this.deviceName,
+    required this.username,
+    required this.pinSalt,
+    required this.pinHash,
+    required this.certificatePem,
+    required this.privateKeyPem,
+    required this.mcpToken,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['device_id'] = Variable<String>(deviceId);
+    map['device_name'] = Variable<String>(deviceName);
+    map['username'] = Variable<String>(username);
+    map['pin_salt'] = Variable<String>(pinSalt);
+    map['pin_hash'] = Variable<String>(pinHash);
+    map['certificate_pem'] = Variable<String>(certificatePem);
+    map['private_key_pem'] = Variable<String>(privateKeyPem);
+    map['mcp_token'] = Variable<String>(mcpToken);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  IdentityRecordsCompanion toCompanion(bool nullToAbsent) {
+    return IdentityRecordsCompanion(
+      id: Value(id),
+      deviceId: Value(deviceId),
+      deviceName: Value(deviceName),
+      username: Value(username),
+      pinSalt: Value(pinSalt),
+      pinHash: Value(pinHash),
+      certificatePem: Value(certificatePem),
+      privateKeyPem: Value(privateKeyPem),
+      mcpToken: Value(mcpToken),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory IdentityRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return IdentityRow(
+      id: serializer.fromJson<int>(json['id']),
+      deviceId: serializer.fromJson<String>(json['deviceId']),
+      deviceName: serializer.fromJson<String>(json['deviceName']),
+      username: serializer.fromJson<String>(json['username']),
+      pinSalt: serializer.fromJson<String>(json['pinSalt']),
+      pinHash: serializer.fromJson<String>(json['pinHash']),
+      certificatePem: serializer.fromJson<String>(json['certificatePem']),
+      privateKeyPem: serializer.fromJson<String>(json['privateKeyPem']),
+      mcpToken: serializer.fromJson<String>(json['mcpToken']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'deviceId': serializer.toJson<String>(deviceId),
+      'deviceName': serializer.toJson<String>(deviceName),
+      'username': serializer.toJson<String>(username),
+      'pinSalt': serializer.toJson<String>(pinSalt),
+      'pinHash': serializer.toJson<String>(pinHash),
+      'certificatePem': serializer.toJson<String>(certificatePem),
+      'privateKeyPem': serializer.toJson<String>(privateKeyPem),
+      'mcpToken': serializer.toJson<String>(mcpToken),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  IdentityRow copyWith({
+    int? id,
+    String? deviceId,
+    String? deviceName,
+    String? username,
+    String? pinSalt,
+    String? pinHash,
+    String? certificatePem,
+    String? privateKeyPem,
+    String? mcpToken,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => IdentityRow(
+    id: id ?? this.id,
+    deviceId: deviceId ?? this.deviceId,
+    deviceName: deviceName ?? this.deviceName,
+    username: username ?? this.username,
+    pinSalt: pinSalt ?? this.pinSalt,
+    pinHash: pinHash ?? this.pinHash,
+    certificatePem: certificatePem ?? this.certificatePem,
+    privateKeyPem: privateKeyPem ?? this.privateKeyPem,
+    mcpToken: mcpToken ?? this.mcpToken,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  IdentityRow copyWithCompanion(IdentityRecordsCompanion data) {
+    return IdentityRow(
+      id: data.id.present ? data.id.value : this.id,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deviceName: data.deviceName.present
+          ? data.deviceName.value
+          : this.deviceName,
+      username: data.username.present ? data.username.value : this.username,
+      pinSalt: data.pinSalt.present ? data.pinSalt.value : this.pinSalt,
+      pinHash: data.pinHash.present ? data.pinHash.value : this.pinHash,
+      certificatePem: data.certificatePem.present
+          ? data.certificatePem.value
+          : this.certificatePem,
+      privateKeyPem: data.privateKeyPem.present
+          ? data.privateKeyPem.value
+          : this.privateKeyPem,
+      mcpToken: data.mcpToken.present ? data.mcpToken.value : this.mcpToken,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IdentityRow(')
+          ..write('id: $id, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('deviceName: $deviceName, ')
+          ..write('username: $username, ')
+          ..write('pinSalt: $pinSalt, ')
+          ..write('pinHash: $pinHash, ')
+          ..write('certificatePem: $certificatePem, ')
+          ..write('privateKeyPem: $privateKeyPem, ')
+          ..write('mcpToken: $mcpToken, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    deviceId,
+    deviceName,
+    username,
+    pinSalt,
+    pinHash,
+    certificatePem,
+    privateKeyPem,
+    mcpToken,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IdentityRow &&
+          other.id == this.id &&
+          other.deviceId == this.deviceId &&
+          other.deviceName == this.deviceName &&
+          other.username == this.username &&
+          other.pinSalt == this.pinSalt &&
+          other.pinHash == this.pinHash &&
+          other.certificatePem == this.certificatePem &&
+          other.privateKeyPem == this.privateKeyPem &&
+          other.mcpToken == this.mcpToken &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class IdentityRecordsCompanion extends UpdateCompanion<IdentityRow> {
+  final Value<int> id;
+  final Value<String> deviceId;
+  final Value<String> deviceName;
+  final Value<String> username;
+  final Value<String> pinSalt;
+  final Value<String> pinHash;
+  final Value<String> certificatePem;
+  final Value<String> privateKeyPem;
+  final Value<String> mcpToken;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const IdentityRecordsCompanion({
+    this.id = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.deviceName = const Value.absent(),
+    this.username = const Value.absent(),
+    this.pinSalt = const Value.absent(),
+    this.pinHash = const Value.absent(),
+    this.certificatePem = const Value.absent(),
+    this.privateKeyPem = const Value.absent(),
+    this.mcpToken = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  IdentityRecordsCompanion.insert({
+    this.id = const Value.absent(),
+    required String deviceId,
+    required String deviceName,
+    required String username,
+    required String pinSalt,
+    required String pinHash,
+    required String certificatePem,
+    required String privateKeyPem,
+    required String mcpToken,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : deviceId = Value(deviceId),
+       deviceName = Value(deviceName),
+       username = Value(username),
+       pinSalt = Value(pinSalt),
+       pinHash = Value(pinHash),
+       certificatePem = Value(certificatePem),
+       privateKeyPem = Value(privateKeyPem),
+       mcpToken = Value(mcpToken),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<IdentityRow> custom({
+    Expression<int>? id,
+    Expression<String>? deviceId,
+    Expression<String>? deviceName,
+    Expression<String>? username,
+    Expression<String>? pinSalt,
+    Expression<String>? pinHash,
+    Expression<String>? certificatePem,
+    Expression<String>? privateKeyPem,
+    Expression<String>? mcpToken,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (deviceId != null) 'device_id': deviceId,
+      if (deviceName != null) 'device_name': deviceName,
+      if (username != null) 'username': username,
+      if (pinSalt != null) 'pin_salt': pinSalt,
+      if (pinHash != null) 'pin_hash': pinHash,
+      if (certificatePem != null) 'certificate_pem': certificatePem,
+      if (privateKeyPem != null) 'private_key_pem': privateKeyPem,
+      if (mcpToken != null) 'mcp_token': mcpToken,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  IdentityRecordsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? deviceId,
+    Value<String>? deviceName,
+    Value<String>? username,
+    Value<String>? pinSalt,
+    Value<String>? pinHash,
+    Value<String>? certificatePem,
+    Value<String>? privateKeyPem,
+    Value<String>? mcpToken,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return IdentityRecordsCompanion(
+      id: id ?? this.id,
+      deviceId: deviceId ?? this.deviceId,
+      deviceName: deviceName ?? this.deviceName,
+      username: username ?? this.username,
+      pinSalt: pinSalt ?? this.pinSalt,
+      pinHash: pinHash ?? this.pinHash,
+      certificatePem: certificatePem ?? this.certificatePem,
+      privateKeyPem: privateKeyPem ?? this.privateKeyPem,
+      mcpToken: mcpToken ?? this.mcpToken,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (deviceName.present) {
+      map['device_name'] = Variable<String>(deviceName.value);
+    }
+    if (username.present) {
+      map['username'] = Variable<String>(username.value);
+    }
+    if (pinSalt.present) {
+      map['pin_salt'] = Variable<String>(pinSalt.value);
+    }
+    if (pinHash.present) {
+      map['pin_hash'] = Variable<String>(pinHash.value);
+    }
+    if (certificatePem.present) {
+      map['certificate_pem'] = Variable<String>(certificatePem.value);
+    }
+    if (privateKeyPem.present) {
+      map['private_key_pem'] = Variable<String>(privateKeyPem.value);
+    }
+    if (mcpToken.present) {
+      map['mcp_token'] = Variable<String>(mcpToken.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IdentityRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('deviceName: $deviceName, ')
+          ..write('username: $username, ')
+          ..write('pinSalt: $pinSalt, ')
+          ..write('pinHash: $pinHash, ')
+          ..write('certificatePem: $certificatePem, ')
+          ..write('privateKeyPem: $privateKeyPem, ')
+          ..write('mcpToken: $mcpToken, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PairedDeviceRecordsTable extends PairedDeviceRecords
+    with TableInfo<$PairedDeviceRecordsTable, PairedDeviceRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PairedDeviceRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _usernameMeta = const VerificationMeta(
+    'username',
+  );
+  @override
+  late final GeneratedColumn<String> username = GeneratedColumn<String>(
+    'username',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _certificateFingerprintMeta =
+      const VerificationMeta('certificateFingerprint');
+  @override
+  late final GeneratedColumn<String> certificateFingerprint =
+      GeneratedColumn<String>(
+        'certificate_fingerprint',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _sharedKeyMeta = const VerificationMeta(
+    'sharedKey',
+  );
+  @override
+  late final GeneratedColumn<String> sharedKey = GeneratedColumn<String>(
+    'shared_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hostMeta = const VerificationMeta('host');
+  @override
+  late final GeneratedColumn<String> host = GeneratedColumn<String>(
+    'host',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _portMeta = const VerificationMeta('port');
+  @override
+  late final GeneratedColumn<int> port = GeneratedColumn<int>(
+    'port',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastSeenAtMeta = const VerificationMeta(
+    'lastSeenAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSeenAt = GeneratedColumn<DateTime>(
+    'last_seen_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    username,
+    certificateFingerprint,
+    sharedKey,
+    host,
+    port,
+    lastSeenAt,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'paired_device_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PairedDeviceRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('username')) {
+      context.handle(
+        _usernameMeta,
+        username.isAcceptableOrUnknown(data['username']!, _usernameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_usernameMeta);
+    }
+    if (data.containsKey('certificate_fingerprint')) {
+      context.handle(
+        _certificateFingerprintMeta,
+        certificateFingerprint.isAcceptableOrUnknown(
+          data['certificate_fingerprint']!,
+          _certificateFingerprintMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_certificateFingerprintMeta);
+    }
+    if (data.containsKey('shared_key')) {
+      context.handle(
+        _sharedKeyMeta,
+        sharedKey.isAcceptableOrUnknown(data['shared_key']!, _sharedKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sharedKeyMeta);
+    }
+    if (data.containsKey('host')) {
+      context.handle(
+        _hostMeta,
+        host.isAcceptableOrUnknown(data['host']!, _hostMeta),
+      );
+    }
+    if (data.containsKey('port')) {
+      context.handle(
+        _portMeta,
+        port.isAcceptableOrUnknown(data['port']!, _portMeta),
+      );
+    }
+    if (data.containsKey('last_seen_at')) {
+      context.handle(
+        _lastSeenAtMeta,
+        lastSeenAt.isAcceptableOrUnknown(
+          data['last_seen_at']!,
+          _lastSeenAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PairedDeviceRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PairedDeviceRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      username: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}username'],
+      )!,
+      certificateFingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}certificate_fingerprint'],
+      )!,
+      sharedKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}shared_key'],
+      )!,
+      host: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}host'],
+      )!,
+      port: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}port'],
+      )!,
+      lastSeenAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_seen_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PairedDeviceRecordsTable createAlias(String alias) {
+    return $PairedDeviceRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class PairedDeviceRow extends DataClass implements Insertable<PairedDeviceRow> {
+  final String id;
+  final String name;
+  final String username;
+  final String certificateFingerprint;
+  final String sharedKey;
+  final String host;
+  final int port;
+  final DateTime? lastSeenAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const PairedDeviceRow({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.certificateFingerprint,
+    required this.sharedKey,
+    required this.host,
+    required this.port,
+    this.lastSeenAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['username'] = Variable<String>(username);
+    map['certificate_fingerprint'] = Variable<String>(certificateFingerprint);
+    map['shared_key'] = Variable<String>(sharedKey);
+    map['host'] = Variable<String>(host);
+    map['port'] = Variable<int>(port);
+    if (!nullToAbsent || lastSeenAt != null) {
+      map['last_seen_at'] = Variable<DateTime>(lastSeenAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PairedDeviceRecordsCompanion toCompanion(bool nullToAbsent) {
+    return PairedDeviceRecordsCompanion(
+      id: Value(id),
+      name: Value(name),
+      username: Value(username),
+      certificateFingerprint: Value(certificateFingerprint),
+      sharedKey: Value(sharedKey),
+      host: Value(host),
+      port: Value(port),
+      lastSeenAt: lastSeenAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSeenAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PairedDeviceRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PairedDeviceRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      username: serializer.fromJson<String>(json['username']),
+      certificateFingerprint: serializer.fromJson<String>(
+        json['certificateFingerprint'],
+      ),
+      sharedKey: serializer.fromJson<String>(json['sharedKey']),
+      host: serializer.fromJson<String>(json['host']),
+      port: serializer.fromJson<int>(json['port']),
+      lastSeenAt: serializer.fromJson<DateTime?>(json['lastSeenAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'username': serializer.toJson<String>(username),
+      'certificateFingerprint': serializer.toJson<String>(
+        certificateFingerprint,
+      ),
+      'sharedKey': serializer.toJson<String>(sharedKey),
+      'host': serializer.toJson<String>(host),
+      'port': serializer.toJson<int>(port),
+      'lastSeenAt': serializer.toJson<DateTime?>(lastSeenAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PairedDeviceRow copyWith({
+    String? id,
+    String? name,
+    String? username,
+    String? certificateFingerprint,
+    String? sharedKey,
+    String? host,
+    int? port,
+    Value<DateTime?> lastSeenAt = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => PairedDeviceRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    username: username ?? this.username,
+    certificateFingerprint:
+        certificateFingerprint ?? this.certificateFingerprint,
+    sharedKey: sharedKey ?? this.sharedKey,
+    host: host ?? this.host,
+    port: port ?? this.port,
+    lastSeenAt: lastSeenAt.present ? lastSeenAt.value : this.lastSeenAt,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  PairedDeviceRow copyWithCompanion(PairedDeviceRecordsCompanion data) {
+    return PairedDeviceRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      username: data.username.present ? data.username.value : this.username,
+      certificateFingerprint: data.certificateFingerprint.present
+          ? data.certificateFingerprint.value
+          : this.certificateFingerprint,
+      sharedKey: data.sharedKey.present ? data.sharedKey.value : this.sharedKey,
+      host: data.host.present ? data.host.value : this.host,
+      port: data.port.present ? data.port.value : this.port,
+      lastSeenAt: data.lastSeenAt.present
+          ? data.lastSeenAt.value
+          : this.lastSeenAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PairedDeviceRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('username: $username, ')
+          ..write('certificateFingerprint: $certificateFingerprint, ')
+          ..write('sharedKey: $sharedKey, ')
+          ..write('host: $host, ')
+          ..write('port: $port, ')
+          ..write('lastSeenAt: $lastSeenAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    username,
+    certificateFingerprint,
+    sharedKey,
+    host,
+    port,
+    lastSeenAt,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PairedDeviceRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.username == this.username &&
+          other.certificateFingerprint == this.certificateFingerprint &&
+          other.sharedKey == this.sharedKey &&
+          other.host == this.host &&
+          other.port == this.port &&
+          other.lastSeenAt == this.lastSeenAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PairedDeviceRecordsCompanion extends UpdateCompanion<PairedDeviceRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> username;
+  final Value<String> certificateFingerprint;
+  final Value<String> sharedKey;
+  final Value<String> host;
+  final Value<int> port;
+  final Value<DateTime?> lastSeenAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const PairedDeviceRecordsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.username = const Value.absent(),
+    this.certificateFingerprint = const Value.absent(),
+    this.sharedKey = const Value.absent(),
+    this.host = const Value.absent(),
+    this.port = const Value.absent(),
+    this.lastSeenAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PairedDeviceRecordsCompanion.insert({
+    required String id,
+    required String name,
+    required String username,
+    required String certificateFingerprint,
+    required String sharedKey,
+    this.host = const Value.absent(),
+    this.port = const Value.absent(),
+    this.lastSeenAt = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       username = Value(username),
+       certificateFingerprint = Value(certificateFingerprint),
+       sharedKey = Value(sharedKey),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<PairedDeviceRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? username,
+    Expression<String>? certificateFingerprint,
+    Expression<String>? sharedKey,
+    Expression<String>? host,
+    Expression<int>? port,
+    Expression<DateTime>? lastSeenAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (username != null) 'username': username,
+      if (certificateFingerprint != null)
+        'certificate_fingerprint': certificateFingerprint,
+      if (sharedKey != null) 'shared_key': sharedKey,
+      if (host != null) 'host': host,
+      if (port != null) 'port': port,
+      if (lastSeenAt != null) 'last_seen_at': lastSeenAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PairedDeviceRecordsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? username,
+    Value<String>? certificateFingerprint,
+    Value<String>? sharedKey,
+    Value<String>? host,
+    Value<int>? port,
+    Value<DateTime?>? lastSeenAt,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return PairedDeviceRecordsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      certificateFingerprint:
+          certificateFingerprint ?? this.certificateFingerprint,
+      sharedKey: sharedKey ?? this.sharedKey,
+      host: host ?? this.host,
+      port: port ?? this.port,
+      lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (username.present) {
+      map['username'] = Variable<String>(username.value);
+    }
+    if (certificateFingerprint.present) {
+      map['certificate_fingerprint'] = Variable<String>(
+        certificateFingerprint.value,
+      );
+    }
+    if (sharedKey.present) {
+      map['shared_key'] = Variable<String>(sharedKey.value);
+    }
+    if (host.present) {
+      map['host'] = Variable<String>(host.value);
+    }
+    if (port.present) {
+      map['port'] = Variable<int>(port.value);
+    }
+    if (lastSeenAt.present) {
+      map['last_seen_at'] = Variable<DateTime>(lastSeenAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PairedDeviceRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('username: $username, ')
+          ..write('certificateFingerprint: $certificateFingerprint, ')
+          ..write('sharedKey: $sharedKey, ')
+          ..write('host: $host, ')
+          ..write('port: $port, ')
+          ..write('lastSeenAt: $lastSeenAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SettingRecordsTable extends SettingRecords
     with TableInfo<$SettingRecordsTable, SettingRow> {
   @override
@@ -6695,6 +7967,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $ShoppingItemRecordsTable shoppingItemRecords =
       $ShoppingItemRecordsTable(this);
+  late final $IdentityRecordsTable identityRecords = $IdentityRecordsTable(
+    this,
+  );
+  late final $PairedDeviceRecordsTable pairedDeviceRecords =
+      $PairedDeviceRecordsTable(this);
   late final $SettingRecordsTable settingRecords = $SettingRecordsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -6714,6 +7991,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     shiftChecklistCompletionRecords,
     homeItemRecords,
     shoppingItemRecords,
+    identityRecords,
+    pairedDeviceRecords,
     settingRecords,
   ];
 }
@@ -12824,6 +14103,637 @@ typedef $$ShoppingItemRecordsTableProcessedTableManager =
       ShoppingItemRow,
       PrefetchHooks Function({bool homeItemId})
     >;
+typedef $$IdentityRecordsTableCreateCompanionBuilder =
+    IdentityRecordsCompanion Function({
+      Value<int> id,
+      required String deviceId,
+      required String deviceName,
+      required String username,
+      required String pinSalt,
+      required String pinHash,
+      required String certificatePem,
+      required String privateKeyPem,
+      required String mcpToken,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$IdentityRecordsTableUpdateCompanionBuilder =
+    IdentityRecordsCompanion Function({
+      Value<int> id,
+      Value<String> deviceId,
+      Value<String> deviceName,
+      Value<String> username,
+      Value<String> pinSalt,
+      Value<String> pinHash,
+      Value<String> certificatePem,
+      Value<String> privateKeyPem,
+      Value<String> mcpToken,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$IdentityRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $IdentityRecordsTable> {
+  $$IdentityRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceName => $composableBuilder(
+    column: $table.deviceName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pinSalt => $composableBuilder(
+    column: $table.pinSalt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pinHash => $composableBuilder(
+    column: $table.pinHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get certificatePem => $composableBuilder(
+    column: $table.certificatePem,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get privateKeyPem => $composableBuilder(
+    column: $table.privateKeyPem,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mcpToken => $composableBuilder(
+    column: $table.mcpToken,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$IdentityRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $IdentityRecordsTable> {
+  $$IdentityRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceName => $composableBuilder(
+    column: $table.deviceName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pinSalt => $composableBuilder(
+    column: $table.pinSalt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pinHash => $composableBuilder(
+    column: $table.pinHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get certificatePem => $composableBuilder(
+    column: $table.certificatePem,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get privateKeyPem => $composableBuilder(
+    column: $table.privateKeyPem,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mcpToken => $composableBuilder(
+    column: $table.mcpToken,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$IdentityRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $IdentityRecordsTable> {
+  $$IdentityRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceName => $composableBuilder(
+    column: $table.deviceName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get username =>
+      $composableBuilder(column: $table.username, builder: (column) => column);
+
+  GeneratedColumn<String> get pinSalt =>
+      $composableBuilder(column: $table.pinSalt, builder: (column) => column);
+
+  GeneratedColumn<String> get pinHash =>
+      $composableBuilder(column: $table.pinHash, builder: (column) => column);
+
+  GeneratedColumn<String> get certificatePem => $composableBuilder(
+    column: $table.certificatePem,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get privateKeyPem => $composableBuilder(
+    column: $table.privateKeyPem,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mcpToken =>
+      $composableBuilder(column: $table.mcpToken, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$IdentityRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $IdentityRecordsTable,
+          IdentityRow,
+          $$IdentityRecordsTableFilterComposer,
+          $$IdentityRecordsTableOrderingComposer,
+          $$IdentityRecordsTableAnnotationComposer,
+          $$IdentityRecordsTableCreateCompanionBuilder,
+          $$IdentityRecordsTableUpdateCompanionBuilder,
+          (
+            IdentityRow,
+            BaseReferences<_$AppDatabase, $IdentityRecordsTable, IdentityRow>,
+          ),
+          IdentityRow,
+          PrefetchHooks Function()
+        > {
+  $$IdentityRecordsTableTableManager(
+    _$AppDatabase db,
+    $IdentityRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$IdentityRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$IdentityRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$IdentityRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> deviceId = const Value.absent(),
+                Value<String> deviceName = const Value.absent(),
+                Value<String> username = const Value.absent(),
+                Value<String> pinSalt = const Value.absent(),
+                Value<String> pinHash = const Value.absent(),
+                Value<String> certificatePem = const Value.absent(),
+                Value<String> privateKeyPem = const Value.absent(),
+                Value<String> mcpToken = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => IdentityRecordsCompanion(
+                id: id,
+                deviceId: deviceId,
+                deviceName: deviceName,
+                username: username,
+                pinSalt: pinSalt,
+                pinHash: pinHash,
+                certificatePem: certificatePem,
+                privateKeyPem: privateKeyPem,
+                mcpToken: mcpToken,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String deviceId,
+                required String deviceName,
+                required String username,
+                required String pinSalt,
+                required String pinHash,
+                required String certificatePem,
+                required String privateKeyPem,
+                required String mcpToken,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => IdentityRecordsCompanion.insert(
+                id: id,
+                deviceId: deviceId,
+                deviceName: deviceName,
+                username: username,
+                pinSalt: pinSalt,
+                pinHash: pinHash,
+                certificatePem: certificatePem,
+                privateKeyPem: privateKeyPem,
+                mcpToken: mcpToken,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$IdentityRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $IdentityRecordsTable,
+      IdentityRow,
+      $$IdentityRecordsTableFilterComposer,
+      $$IdentityRecordsTableOrderingComposer,
+      $$IdentityRecordsTableAnnotationComposer,
+      $$IdentityRecordsTableCreateCompanionBuilder,
+      $$IdentityRecordsTableUpdateCompanionBuilder,
+      (
+        IdentityRow,
+        BaseReferences<_$AppDatabase, $IdentityRecordsTable, IdentityRow>,
+      ),
+      IdentityRow,
+      PrefetchHooks Function()
+    >;
+typedef $$PairedDeviceRecordsTableCreateCompanionBuilder =
+    PairedDeviceRecordsCompanion Function({
+      required String id,
+      required String name,
+      required String username,
+      required String certificateFingerprint,
+      required String sharedKey,
+      Value<String> host,
+      Value<int> port,
+      Value<DateTime?> lastSeenAt,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$PairedDeviceRecordsTableUpdateCompanionBuilder =
+    PairedDeviceRecordsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> username,
+      Value<String> certificateFingerprint,
+      Value<String> sharedKey,
+      Value<String> host,
+      Value<int> port,
+      Value<DateTime?> lastSeenAt,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$PairedDeviceRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $PairedDeviceRecordsTable> {
+  $$PairedDeviceRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get certificateFingerprint => $composableBuilder(
+    column: $table.certificateFingerprint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sharedKey => $composableBuilder(
+    column: $table.sharedKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get host => $composableBuilder(
+    column: $table.host,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get port => $composableBuilder(
+    column: $table.port,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PairedDeviceRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PairedDeviceRecordsTable> {
+  $$PairedDeviceRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get username => $composableBuilder(
+    column: $table.username,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get certificateFingerprint => $composableBuilder(
+    column: $table.certificateFingerprint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sharedKey => $composableBuilder(
+    column: $table.sharedKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get host => $composableBuilder(
+    column: $table.host,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get port => $composableBuilder(
+    column: $table.port,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PairedDeviceRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PairedDeviceRecordsTable> {
+  $$PairedDeviceRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get username =>
+      $composableBuilder(column: $table.username, builder: (column) => column);
+
+  GeneratedColumn<String> get certificateFingerprint => $composableBuilder(
+    column: $table.certificateFingerprint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sharedKey =>
+      $composableBuilder(column: $table.sharedKey, builder: (column) => column);
+
+  GeneratedColumn<String> get host =>
+      $composableBuilder(column: $table.host, builder: (column) => column);
+
+  GeneratedColumn<int> get port =>
+      $composableBuilder(column: $table.port, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$PairedDeviceRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PairedDeviceRecordsTable,
+          PairedDeviceRow,
+          $$PairedDeviceRecordsTableFilterComposer,
+          $$PairedDeviceRecordsTableOrderingComposer,
+          $$PairedDeviceRecordsTableAnnotationComposer,
+          $$PairedDeviceRecordsTableCreateCompanionBuilder,
+          $$PairedDeviceRecordsTableUpdateCompanionBuilder,
+          (
+            PairedDeviceRow,
+            BaseReferences<
+              _$AppDatabase,
+              $PairedDeviceRecordsTable,
+              PairedDeviceRow
+            >,
+          ),
+          PairedDeviceRow,
+          PrefetchHooks Function()
+        > {
+  $$PairedDeviceRecordsTableTableManager(
+    _$AppDatabase db,
+    $PairedDeviceRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PairedDeviceRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PairedDeviceRecordsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PairedDeviceRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> username = const Value.absent(),
+                Value<String> certificateFingerprint = const Value.absent(),
+                Value<String> sharedKey = const Value.absent(),
+                Value<String> host = const Value.absent(),
+                Value<int> port = const Value.absent(),
+                Value<DateTime?> lastSeenAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PairedDeviceRecordsCompanion(
+                id: id,
+                name: name,
+                username: username,
+                certificateFingerprint: certificateFingerprint,
+                sharedKey: sharedKey,
+                host: host,
+                port: port,
+                lastSeenAt: lastSeenAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String username,
+                required String certificateFingerprint,
+                required String sharedKey,
+                Value<String> host = const Value.absent(),
+                Value<int> port = const Value.absent(),
+                Value<DateTime?> lastSeenAt = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PairedDeviceRecordsCompanion.insert(
+                id: id,
+                name: name,
+                username: username,
+                certificateFingerprint: certificateFingerprint,
+                sharedKey: sharedKey,
+                host: host,
+                port: port,
+                lastSeenAt: lastSeenAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PairedDeviceRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PairedDeviceRecordsTable,
+      PairedDeviceRow,
+      $$PairedDeviceRecordsTableFilterComposer,
+      $$PairedDeviceRecordsTableOrderingComposer,
+      $$PairedDeviceRecordsTableAnnotationComposer,
+      $$PairedDeviceRecordsTableCreateCompanionBuilder,
+      $$PairedDeviceRecordsTableUpdateCompanionBuilder,
+      (
+        PairedDeviceRow,
+        BaseReferences<
+          _$AppDatabase,
+          $PairedDeviceRecordsTable,
+          PairedDeviceRow
+        >,
+      ),
+      PairedDeviceRow,
+      PrefetchHooks Function()
+    >;
 typedef $$SettingRecordsTableCreateCompanionBuilder =
     SettingRecordsCompanion Function({
       required String key,
@@ -13003,6 +14913,10 @@ class $AppDatabaseManager {
       $$HomeItemRecordsTableTableManager(_db, _db.homeItemRecords);
   $$ShoppingItemRecordsTableTableManager get shoppingItemRecords =>
       $$ShoppingItemRecordsTableTableManager(_db, _db.shoppingItemRecords);
+  $$IdentityRecordsTableTableManager get identityRecords =>
+      $$IdentityRecordsTableTableManager(_db, _db.identityRecords);
+  $$PairedDeviceRecordsTableTableManager get pairedDeviceRecords =>
+      $$PairedDeviceRecordsTableTableManager(_db, _db.pairedDeviceRecords);
   $$SettingRecordsTableTableManager get settingRecords =>
       $$SettingRecordsTableTableManager(_db, _db.settingRecords);
 }

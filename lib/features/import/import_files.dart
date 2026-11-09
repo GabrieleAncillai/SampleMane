@@ -3,13 +3,13 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 
-/// Reads a local `.ics` file chosen by the user, or null when cancelled.
+/// Reads a local text file chosen by the user, or null when cancelled.
 ///
 /// No network access is involved: the file picker returns bytes or a path.
-Future<String?> pickIcsText() async {
+Future<String?> pickTextFile(List<String> extensions) async {
   final result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
-    allowedExtensions: ['ics', 'ical'],
+    allowedExtensions: extensions,
     withData: true,
   );
   final file = result?.files.single;
@@ -20,3 +20,7 @@ Future<String?> pickIcsText() async {
   if (path == null) return null;
   return File(path).readAsString();
 }
+
+Future<String?> pickIcsText() => pickTextFile(const ['ics', 'ical']);
+
+Future<String?> pickCompanionText() => pickTextFile(const ['json']);

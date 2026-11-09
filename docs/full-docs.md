@@ -1,6 +1,6 @@
 # Mane: full docs
 
-Status: v0.3, home and maintenance. Last updated 2026-11-09.
+Status: v0.4, sync and MCP. Last updated 2026-11-09.
 
 This is the long version. The short version is in [overview.md](overview.md).
 The file-by-file map of the reference projects is in
@@ -246,60 +246,123 @@ sync is never turned on, the app is complete.
 ### 5.3 Identity is pairing, not an account
 
 Username plus PIN, no server, no email, no password reset. The PIN is hashed
-locally with a vetted password-hashing package and never sent anywhere. It
-exists to pair devices the user owns, not to identify the user to a service.
+locally with PBKDF2-HMAC-SHA256 (210,000 iterations, 16-byte random salt) and is
+never sent anywhere. It exists to unlock pairing on the device, not to identify
+the user to a service.
 
-Pairing flow, when it exists: one device shows a short code, the other enters it,
-both store a shared key. Use a standard pairing pattern; do not invent
-cryptography.
+Each device also generates a self-signed RSA-2048 TLS certificate on first use.
+Peers pin its SHA-256 fingerprint. The private key, PIN hash and pairing secrets
+live in `identity_records` and `paired_device_records`, which are deliberately
+excluded from JSON backups.
+
+Pairing flow:
+
+1. One device opens a five-minute pairing session and shows a six-digit code.
+   Five failed attempts close the session.
+2. The other device fetches the host's certificate fingerprint and derives a
+   short-lived key from the code and **both** fingerprints with PBKDF2
+   (150,000 iterations). A man-in-the-middle with a different certificate
+   cannot produce the matching HMAC.
+3. The guest sends a random 32-byte shared key inside AES-256-GCM under that
+   pairing key, plus an HMAC over the binding message. The host verifies the
+   MAC, stores the key, and returns an HMAC acknowledgement under the new key.
+4. Every later request is signed with HMAC-SHA256 over method, path, timestamp,
+   nonce and body hash. The server accepts a five-minute clock window and keeps
+   a per-device nonce cache to reject replays.
+
+Unpairing removes the row locally; the other device keeps its own copy. There
+is no account to delete and no password-reset channel. The PIN is a local
+gate, not a defense against someone holding the unlocked device.
 
 ### 5.4 LAN sync is query, not replication
 
 Each app owns its data. The planner owns time. A companion app owns its own
 domain.
 
-The first version of sync is a query: Mane asks a companion app for the data it
-needs over the LAN and shows it. No merge, no conflicts, no CRDT. If the same
-data is later edited on two devices, then real sync with per-record timestamps,
-tombstones and a conflict rule. The schema is already sync-ready: UUIDs,
-`updatedAt`, soft deletes. The UI is not.
+Sync is a query: Mane asks a paired device for the data it needs over the LAN
+and shows a read-only snapshot. It never merges rows, resolves conflicts or
+writes into the remote database. The schema stays sync-ready (UUIDs,
+`updatedAt`, soft deletes), but replication and CRDTs are not part of v0.4.
 
-Sync is automatic when possible:
+Shipped transport and discovery:
 
-- A single opt-in master switch.
-- When both paired devices are reachable on the same LAN, discover and query
-  automatically on app start, app resume and network change.
-- Manual refresh is always available.
+- mDNS/DNS-SD advertisement and browsing through Bonsoir (`_mane._tcp`), with a
+  manual host and port fallback when the platform daemon is unavailable.
+- HTTPS with the device's pinned self-signed certificate. The server binds to
+  the LAN and uses an ephemeral port; only paired devices with a valid HMAC
+  signature can query.
+- Read-only resources: `summary` (today's plan and next shifts), `entries`,
+  `shifts`, `spaces`, `tags`, `home` and `shopping`. Date ranges are capped at
+  366 days.
+- A single opt-in master switch. When it is on, the app starts the server and
+  discovery on launch, refreshes on resume, refreshes when mDNS reports a peer,
+  and polls every five minutes. Manual refresh is always available.
+- Snapshots are kept in memory and shown on the Devices page. If a device is
+  offline, the local plan keeps working and the device shows its last error.
 - No cloud relay, no background traffic when the devices are not on the same
-  network.
-- If a device is offline, the local copy still works.
-
-Discovery over mDNS/DNS-SD, transport over HTTPS or WebSocket with a pinned
-self-signed certificate. Bind to the LAN only.
+  network, and no write path from one device to the other.
 
 ### 5.5 MCP is optional and local
 
-The MCP server is a thin adapter over the same service layer the UI uses. It
-runs on the desktop, binds to the LAN or loopback, and is off by default. It can
-read and, behind a setting, write. Tools are namespaced by space, for example
-`personal.today`, `work.next_shifts`, `home.shopping`, `plan.create`.
+The MCP endpoint is a thin adapter over `PlannerRepository`, never over SQL. It
+is off by default, binds to `127.0.0.1:8765` only, and requires a random bearer
+token stored with the local identity.
 
-No internet, no external server, no account. The agent is outside the app. Mane
-is not a chatbot host.
+It speaks JSON-RPC 2.0 over `POST /mcp` and implements `initialize`, `ping`,
+`tools/list`, `tools/call` and the client `notifications/*` messages. Read tools
+are always available; write tools appear only when the setting is on:
+
+- `personal.today`, `work.next_shifts`, `home.shopping` (read).
+- `plan.create`, `plan.complete` (write, gated).
+
+No internet, no external server, no account. The agent runs on the same
+machine. SSE/streamable sessions and a LAN-bound MCP listener are not part of
+this version; this is the core tools JSON-RPC surface, documented as such.
 
 ### 5.6 Companion apps
 
-When another app already owns a domain, the integration should be read-only and
-local. On Android, a ContentProvider or a small export is a better fit than a
-network listener: no internet permission, no port, no server. It keeps the
-companion app's zero-internet identity intact.
+When another app already owns a domain, the integration is read-only and
+local. Mane ships a small JSON export import for that case: the user picks a
+file, chooses a space, and the rows become read-only entries with
+`source = 'companion'`. The format is documented in
+[companion import](#companion-export-format) below and tested with fixtures.
+There is no network listener, no permission request and no background service.
 
-Mane must work without the companion app. Manual entry is always available.
+Mane works without the companion app; manual entry and ICS import remain
+available. A ContentProvider client is not shipped because no specific
+companion app and authority were named; the export path is the v0.4 answer.
+
+#### Companion export format
+
+The companion export format is deliberately small:
+
+```json
+{
+  "app": "companion",
+  "events": [
+    {
+      "id": "gym-1",
+      "title": "Gym",
+      "date": "2026-11-09",
+      "startMinute": 1080,
+      "endMinute": 1140,
+      "timeZone": "Europe/Madrid",
+      "notes": "Leg day"
+    },
+    {"id": "off", "title": "Day off", "date": "2026-11-11", "allDay": true}
+  ]
+}
+```
+
+`id` is optional; without it the importer derives a stable fallback key. Invalid
+rows are counted as skipped. Re-importing the same file deduplicates by id and
+does not update changed rows.
 
 ## 6. Data model (target)
 
-The migration path is v1 → v2 → v3 → v4. The shipped schema has the shape
-below, including tags, home items, shopping items and shift checklists.
+The migration path is v1 → v2 → v3 → v4 → v5. The shipped schema has the shape
+below, including tags, home items, shopping items, shift checklists and the
+local pairing identity.
 
 - **spaces**: id, name, color, position, timestamps, soft delete. Seeded with
   Personal, Work and Home. Spaces are rows, not an enum.
@@ -340,6 +403,12 @@ below, including tags, home items, shopping items and shift checklists.
   `repeatAfterCompletionDays`. Completing one records a completion row and
   advances the date from the day it was actually completed.
 - **settings**: key and value.
+- **identity_records**: one local row with the device id and name, username,
+  PBKDF2 salt and hash, self-signed certificate PEM, private key PEM and MCP
+  token. Never included in a backup.
+- **paired_device_records**: remote device id, name, username, pinned
+  certificate fingerprint, shared key, last host and port, last seen. Never
+  included in a backup.
 
 Recurrence rules support daily with an interval, weekly by ISO weekday with an
 interval, monthly on a day (clamped to the month length), and yearly (February 29
@@ -373,8 +442,8 @@ migrating existing data.
 
 The app now has Today, Week and Calendar tabs, the entry editor, the tags
 manager, the shift-pattern editor with checklists, settings, About,
-backup/import, ICS import, home inventory and the shopping list. Search is
-later.
+backup/import, ICS and companion import, home inventory, the shopping list, the
+Devices and pairing pages and the local MCP page. Search is later.
 
 ## 8. Platform, stack, architecture and references
 
@@ -604,15 +673,42 @@ These are planner-specific domains and are implemented in `mane_core`
 `shifts` feature folders. The app shell, settings rows and localization still
 follow the reference patterns.
 
-### v0.4 Sync and MCP
+### v0.4 Sync and MCP (done)
 
-- [ ] Username and PIN pairing.
-- [ ] mDNS discovery.
-- [ ] LAN query endpoint.
-- [ ] Automatic query when both paired devices are on the same LAN.
-- [ ] Read-only companion-app integration.
-- [ ] MCP read-only tools.
-- [ ] MCP write tools behind a setting.
+- [x] Username and PIN pairing.
+- [x] mDNS discovery.
+- [x] LAN query endpoint.
+- [x] Automatic query when both paired devices are on the same LAN.
+- [x] Read-only companion-app integration through a documented local export.
+- [x] MCP read-only tools.
+- [x] MCP write tools behind a setting.
+
+**Shipped in v0.4:** schema v5 with `identity_records` and
+`paired_device_records` (both excluded from backups); PBKDF2 PIN hashing;
+self-signed pinned TLS; a six-digit, five-minute, five-attempt pairing session
+bound to both certificate fingerprints with AES-GCM key wrapping; signed HTTP
+queries with a five-minute clock window and a nonce replay cache; Bonsoir mDNS
+advertisement and browsing with a manual address fallback; automatic refresh on
+launch, resume, discovery and a five-minute timer; a Devices page with identity
+setup, host/guest pairing and read-only snapshots; a local MCP endpoint with a
+bearer token, JSON-RPC `initialize`/`tools/list`/`tools/call`, read tools and
+gated write tools; and a read-only companion JSON export import.
+
+**Limitations:** the MCP endpoint is loopback-only and implements the core
+tools JSON-RPC surface, not SSE/streamable sessions. mDNS depends on the
+platform daemon (Avahi on Linux, NSD on Android) and still needs the user's real
+device check. Pairing sessions live in memory, so an app restart cancels them.
+Snapshots are not persisted and are never merged into the local plan. The
+export importer does not update a companion row that changed after the first
+import. A ContentProvider client is not shipped because no companion app and
+authority were specified.
+
+**Deviation from the references:** neither GymMane nor Streak has LAN pairing,
+mDNS query, MCP or a companion export import. Their only sync is a shared-folder
+backup exchange. Mane implements the v0.4 transport in `lib/features/sync` and
+`lib/features/mcp` using standard TLS pinning, HMAC and PBKDF2 rather than a
+new cryptographic protocol. The settings shell and page structure still follow
+the reference projects.
 
 ### v0.5 Polish and release
 

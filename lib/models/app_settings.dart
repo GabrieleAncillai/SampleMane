@@ -10,6 +10,7 @@ abstract final class SettingsKeys {
   static const defaultReminderOffsets = 'defaultReminderOffsets';
   static const syncEnabled = 'syncEnabled';
   static const mcpEnabled = 'mcpEnabled';
+  static const mcpWritesEnabled = 'mcpWritesEnabled';
   static const sleepEnabled = 'sleepEnabled';
   static const sleepCommuteMinutes = 'sleepCommuteMinutes';
   static const sleepWindDownMinutes = 'sleepWindDownMinutes';
@@ -26,6 +27,7 @@ class AppSettings {
     this.defaultReminderOffsets = const <int>[10, 60],
     this.syncEnabled = false,
     this.mcpEnabled = false,
+    this.mcpWritesEnabled = false,
     this.sleepEnabled = true,
     this.sleepCommuteMinutes = 30,
     this.sleepWindDownMinutes = 60,
@@ -47,6 +49,7 @@ class AppSettings {
 
   final bool syncEnabled;
   final bool mcpEnabled;
+  final bool mcpWritesEnabled;
 
   final bool sleepEnabled;
   final int sleepCommuteMinutes;
@@ -84,6 +87,7 @@ class AppSettings {
       defaultReminderOffsets: rawOffsets == null ? const <int>[10, 60] : offsets,
       syncEnabled: values[SettingsKeys.syncEnabled] == 'true',
       mcpEnabled: values[SettingsKeys.mcpEnabled] == 'true',
+      mcpWritesEnabled: values[SettingsKeys.mcpWritesEnabled] == 'true',
       sleepEnabled: values[SettingsKeys.sleepEnabled] != 'false',
       sleepCommuteMinutes: _minutes(values[SettingsKeys.sleepCommuteMinutes], 30),
       sleepWindDownMinutes: _minutes(values[SettingsKeys.sleepWindDownMinutes], 60),
@@ -105,6 +109,7 @@ class AppSettings {
     List<int>? defaultReminderOffsets,
     bool? syncEnabled,
     bool? mcpEnabled,
+    bool? mcpWritesEnabled,
     bool? sleepEnabled,
     int? sleepCommuteMinutes,
     int? sleepWindDownMinutes,
@@ -117,6 +122,7 @@ class AppSettings {
     defaultReminderOffsets: defaultReminderOffsets ?? this.defaultReminderOffsets,
     syncEnabled: syncEnabled ?? this.syncEnabled,
     mcpEnabled: mcpEnabled ?? this.mcpEnabled,
+    mcpWritesEnabled: mcpWritesEnabled ?? this.mcpWritesEnabled,
     sleepEnabled: sleepEnabled ?? this.sleepEnabled,
     sleepCommuteMinutes: sleepCommuteMinutes ?? this.sleepCommuteMinutes,
     sleepWindDownMinutes: sleepWindDownMinutes ?? this.sleepWindDownMinutes,

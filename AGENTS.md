@@ -103,7 +103,7 @@ replacement, chatbot inside the app.
 
 Treat this as the baseline. Verify it before changing anything.
 
-**Done (v0.1 through v0.3):**
+**Done (v0.1 through v0.4):**
 
 - Pure Dart domain package in `packages/mane_core` with:
   - `LocalDate` (date-only values for all-day items)
@@ -113,10 +113,12 @@ Treat this as the baseline. Verify it before changing anything.
   - `ShiftPattern` with cycle days, anchor date and overnight slots
   - `computeSleepWindow` for the soft sleep hint
   - `Space` and `Tag`
-- Drift schema v4 in `lib/services/app_database.dart`: `spaces`, `entries`,
+- Drift schema v5 in `lib/services/app_database.dart`: `spaces`, `entries`,
   `reminders`, `shift_patterns`, `shift_slots`, `shift_exceptions`,
   `shift_checklist_items`, `shift_checklist_completions`, `home_items`,
-  `shopping_items`, `completions`, `settings`. UUIDs, `updatedAt`, soft deletes.
+  `shopping_items`, `completions`, `settings`, `identity_records` and
+  `paired_device_records`. UUIDs, `updatedAt`, soft deletes. Pairing secrets are
+  excluded from backups.
 - `PlannerRepository` as the single read/write seam.
 - Riverpod providers in `lib/state/providers.dart`.
 - Today screen, Week screen and entry editor.
@@ -126,7 +128,7 @@ Treat this as the baseline. Verify it before changing anything.
 - Timed entries and shifts are timezone-aware: wall-clock template fields in an
   IANA timezone plus resolved UTC anchor instants, expanded in the stored zone
   and displayed in the device zone.
-- Personal, Work and Home are the three seeded spaces, with migrations v1→v4
+- Personal, Work and Home are the three seeded spaces, with migrations v1→v5
   tested against real rows.
 - Tags and entry tags with a manager, editor chips and a global filter.
 - Per-occurrence completion, keyed by the occurrence date in the entry's stored
@@ -144,12 +146,24 @@ Treat this as the baseline. Verify it before changing anything.
 - Soft sleep window on Today with configurable commute, wind-down and wake
   buffers.
 - Local-only ICS import with a documented RRULE subset and re-import dedupe.
+- Local pairing identity with a PBKDF2 PIN hash, self-signed pinned TLS and a
+  six-digit, five-minute pairing session. Shared keys and certificates are
+  never included in backups.
+- mDNS discovery through Bonsoir with a manual host/port fallback, signed
+  HTTPS queries, a nonce replay cache and automatic refresh on launch, resume,
+  discovery and a five-minute timer.
+- Read-only snapshots on a Devices page; the local plan is never merged with a
+  remote one and keeps working when a peer is offline.
+- Local MCP endpoint on loopback with a bearer token, JSON-RPC tools and write
+  tools behind a setting.
+- Read-only companion JSON export import with a documented schema and dedupe.
 - English/Spanish ARB coverage for shipped screens.
 - Linux debug build and Android debug APK both pass.
-- Tests: 50 app/database/widget tests, 68 core tests, including real v1, v2 and
-  v3 data migration tests, DST/travel scenarios, backup round-trip and
+- Tests: 79 app/database/widget tests, 68 core tests, including real v1, v2, v3
+  and v4 data migration tests, DST/travel scenarios, backup round-trip and
   rejection, calendar navigation, shift checklists, ICS parsing and importing,
-  and the shift editor flow.
+  companion import, pairing crypto, TLS pinning, replay rejection, MCP auth and
+  tools, sync orchestration and the shift editor flow.
 - CI in `.github/workflows/build.yml`: analyze, both test suites and a debug
   APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
@@ -161,12 +175,19 @@ Treat this as the baseline. Verify it before changing anything.
   timezone-change behavior still need the user's Android device checklist.
 - No dedicated Android `TIMEZONE_CHANGED` receiver; the queue rebuilds on
   resume and after the device zone is re-read.
-- Backup import accepts schema version 4 only.
+- Backup import accepts schema version 5 only.
 - ICS import does not support `EXDATE`, `RECURRENCE-ID`, ordinal `BYDAY`,
   `BYSETPOS`, multi-day timed events or non-IANA timezones; those events are
   reported as skipped. Re-import deduplicates but does not update changed
   events.
-- No LAN pairing, discovery, query endpoint or MCP server.
+- The MCP endpoint is loopback-only and implements the core tools JSON-RPC
+  methods, not SSE/streamable sessions.
+- mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
+  needs the user's real-device check. Pairing sessions live in memory and are
+  cancelled by an app restart.
+- LAN snapshots are in memory and are not persisted or merged. A companion
+  app's ContentProvider is not integrated because no app and authority are
+  specified; the documented JSON export is the v0.4 path.
 - No search, widgets or full accessibility pass.
 - The UI is a first pass, not the final visual language.
 
@@ -631,41 +652,49 @@ app resume, but a dedicated `TIMEZONE_CHANGED` receiver is not implemented.
 - [x] Editor and per-shift checklist UI.
 - [x] Tests for independence across occurrences.
 
-### v0.4 Sync and MCP
+### v0.4 Sync and MCP (done)
 
 **Pairing**
 
-- Username + PIN. Hash locally with a vetted password-hashing package.
-- Never send the PIN anywhere. No email, no reset, no server.
-- Standard short-code pairing: one device shows a code, the other enters it,
-  both store a shared key.
-- Constant-time comparisons and no secrets in logs.
+- [x] Username + PIN. Hash locally with a vetted password-hashing package.
+- [x] Never send the PIN anywhere. No email, no reset, no server.
+- [x] Standard short-code pairing: one device shows a code, the other enters
+  it, both store a shared key.
+- [x] Constant-time comparisons and no secrets in logs.
 
 **LAN discovery and automatic query**
 
-- mDNS/DNS-SD discovery, with manual host/port fallback.
-- Query only. No database replication, no merge, no CRDT.
-- HTTPS or WebSocket with a pinned self-signed certificate.
-- Pairing required. Bind to LAN only. No cloud relay.
-- Automatic when both paired devices are on the same LAN, with manual refresh.
-- If a device is offline, the local copy still works.
+- [x] mDNS/DNS-SD discovery, with manual host/port fallback.
+- [x] Query only. No database replication, no merge, no CRDT.
+- [x] HTTPS with a pinned self-signed certificate.
+- [x] Pairing required. Bind to LAN only. No cloud relay.
+- [x] Automatic when both paired devices are on the same LAN, with manual
+  refresh.
+- [x] If a device is offline, the local copy still works.
 
 **Companion-app integration**
 
-- Read-only integration with an app that already owns a domain (for example a
-  gym schedule). Prefer an Android ContentProvider or a small export over a
-  network listener.
-- Mane must work without the companion app; manual entry is the fallback.
-- Do not ask a companion app to add a network server just for Mane.
+- [x] Read-only integration through a documented local JSON export, with a
+  space choice and dedupe.
+- [x] Mane works without the companion app; manual entry is the fallback.
+- [x] No network server is required from the companion app.
 
 **MCP**
 
-- Thin adapter over the same repository/service layer. No direct SQL.
-- Off by default. Bind to loopback or LAN only. Token/pairing auth.
-- Tools namespaced by space, for example `personal.today`,
-  `work.next_shifts`, `home.shopping`, `plan.create`.
-- Read-only by default; write tools behind an explicit setting.
-- Test tool schemas, permission checks and failure cases.
+- [x] Thin adapter over the same repository/service layer. No direct SQL.
+- [x] Off by default. Loopback only. Bearer-token auth.
+- [x] Tools namespaced by space: `personal.today`, `work.next_shifts`,
+  `home.shopping`, `plan.create` and `plan.complete`.
+- [x] Read-only by default; write tools behind an explicit setting.
+- [x] Test tool schemas, permission checks and failure cases.
+
+**Shipped in v0.4:** schema v5 with local identity and paired-device tables
+(excluded from backups); PBKDF2 PIN hashing; pinned self-signed TLS; six-digit
+pairing bound to both certificate fingerprints; signed queries with timestamp
+and nonce replay checks; Bonsoir mDNS with manual fallback; automatic and manual
+refresh; Devices and MCP pages; loopback JSON-RPC MCP with read and gated write
+tools; and a read-only companion export import. See the v0.4 notes in
+`docs/full-docs.md` for the limitations.
 
 ### v0.5 Polish and release
 

@@ -417,6 +417,25 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get importCompanion => 'Importar una exportación de una app compañera';
+
+  @override
+  String get importCompanionSubtitle => 'Lee un horario JSON local exportado por otra app.';
+
+  @override
+  String importCompanionDone(int imported, int skipped) {
+    return '$imported eventos importados. $skipped duplicados o filas no válidas omitidos.';
+  }
+
+  @override
+  String get importCompanionEmpty => 'No se han encontrado eventos en este archivo.';
+
+  @override
+  String importCompanionFailed(String error) {
+    return 'La importación de la app compañera ha fallado: $error';
+  }
+
+  @override
   String backupExported(String path) {
     return 'Copia guardada en $path';
   }
@@ -453,6 +472,12 @@ class AppLocalizationsEs extends AppLocalizations {
       'Desactivada por defecto. Solo automática entre dispositivos vinculados en la misma red.';
 
   @override
+  String get on => 'Activado';
+
+  @override
+  String get off => 'Desactivado';
+
+  @override
   String get mcpEnabled => 'Endpoint MCP local';
 
   @override
@@ -481,14 +506,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String selectedCount(int count) {
     return '$count seleccionados';
   }
-
-  @override
-  String get syncNotActive =>
-      'La sincronización LAN no está activa en esta versión. El interruptor se guarda para la actualización de vinculación.';
-
-  @override
-  String get mcpNotActive =>
-      'El endpoint MCP local no está activo en esta versión. El interruptor se guarda para la actualización del agente.';
 
   @override
   String get basedOnGymMane => 'Basado en GymMane de InlitX';
@@ -813,6 +830,203 @@ class AppLocalizationsEs extends AppLocalizations {
   String checklistDone(int done, int total) {
     return '$done de $total hechas';
   }
+
+  @override
+  String get devices => 'Dispositivos';
+
+  @override
+  String get devicesSubtitle => 'Empareja tus propios dispositivos por la red local.';
+
+  @override
+  String get thisDevice => 'Este dispositivo';
+
+  @override
+  String get pairingIdentity => 'Identidad de emparejamiento';
+
+  @override
+  String get pairingIdentitySubtitle => 'Un usuario y PIN locales. Nunca salen de aquí.';
+
+  @override
+  String get username => 'Usuario';
+
+  @override
+  String get deviceName => 'Nombre del dispositivo';
+
+  @override
+  String get pin => 'PIN';
+
+  @override
+  String get pinHint => 'Al menos cuatro dígitos.';
+
+  @override
+  String get createIdentity => 'Crear identidad';
+
+  @override
+  String get identityCreated => 'Identidad de emparejamiento creada.';
+
+  @override
+  String get editIdentity => 'Editar identidad';
+
+  @override
+  String get changePin => 'Cambiar PIN';
+
+  @override
+  String get currentPin => 'PIN actual';
+
+  @override
+  String get newPin => 'PIN nuevo';
+
+  @override
+  String get identityRequired => 'Configura un usuario y un PIN antes de emparejar.';
+
+  @override
+  String get pairDevice => 'Emparejar un dispositivo';
+
+  @override
+  String get showPairingCode => 'Mostrar un código en este dispositivo';
+
+  @override
+  String get enterPairingCode => 'Introducir un código de otro dispositivo';
+
+  @override
+  String get pairingCode => 'Código de emparejamiento';
+
+  @override
+  String get pairingCodeHint => 'En el otro dispositivo, elige «Introducir un código» y escribe este código.';
+
+  @override
+  String get pairingExpires => 'Válido durante cinco minutos.';
+
+  @override
+  String get newCode => 'Código nuevo';
+
+  @override
+  String pairingSucceeded(String name) {
+    return 'Emparejado con $name.';
+  }
+
+  @override
+  String pairingFailed(String error) {
+    return 'El emparejamiento ha fallado: $error';
+  }
+
+  @override
+  String get discoveredOnNetwork => 'Encontrados en esta red';
+
+  @override
+  String get noDiscoveredDevices => 'Todavía no se han encontrado otros dispositivos Mane.';
+
+  @override
+  String get address => 'Dirección';
+
+  @override
+  String get port => 'Puerto';
+
+  @override
+  String get code => 'Código';
+
+  @override
+  String get pair => 'Emparejar';
+
+  @override
+  String get pairedDevices => 'Dispositivos emparejados';
+
+  @override
+  String get noPairedDevices => 'Todavía no hay dispositivos emparejados.';
+
+  @override
+  String get unpair => 'Desemparejar';
+
+  @override
+  String get unpairQuestion => '¿Desemparejar este dispositivo?';
+
+  @override
+  String get unpairBody => 'Desaparece de este dispositivo. El otro conserva su propia copia.';
+
+  @override
+  String lastSeen(String time) {
+    return 'Visto por última vez $time';
+  }
+
+  @override
+  String get neverReached => 'Todavía sin conexión';
+
+  @override
+  String get refreshDevices => 'Actualizar';
+
+  @override
+  String remoteToday(int entries, int shifts) {
+    return '$entries entradas y $shifts turnos hoy';
+  }
+
+  @override
+  String remoteNextShift(String label) {
+    return 'Próximo turno: $label';
+  }
+
+  @override
+  String remoteShopping(int count) {
+    return '$count artículos de compra pendientes';
+  }
+
+  @override
+  String serverOnPort(int port) {
+    return 'Servidor en el puerto $port';
+  }
+
+  @override
+  String get serverOff => 'Servidor apagado';
+
+  @override
+  String get discoveryUnavailable =>
+      'El descubrimiento en red no está disponible. Usa la dirección manualmente.';
+
+  @override
+  String get identityFingerprint => 'Huella del certificado';
+
+  @override
+  String get manualAddress => 'Dirección del dispositivo';
+
+  @override
+  String get hostHint => '192.168.1.20';
+
+  @override
+  String get mcpEndpoint => 'Endpoint MCP local';
+
+  @override
+  String get mcpEndpointSubtitle => 'Solo lectura por defecto, solo loopback y apagado salvo que lo actives.';
+
+  @override
+  String get mcpWriteTools => 'Permitir herramientas de escritura';
+
+  @override
+  String get mcpWriteToolsSubtitle => 'Deja que el agente local cree y complete entradas.';
+
+  @override
+  String get mcpToken => 'Token de acceso';
+
+  @override
+  String get mcpTokenHint => 'Úsalo como Bearer token. Al rotarlo se desconectan los agentes existentes.';
+
+  @override
+  String get rotateToken => 'Rotar token';
+
+  @override
+  String get copy => 'Copiar';
+
+  @override
+  String get copied => 'Copiado.';
+
+  @override
+  String get mcpLoopbackHint => 'Escucha solo en 127.0.0.1. El agente debe ejecutarse en esta máquina.';
+
+  @override
+  String mcpRunning(int port) {
+    return 'Escuchando en 127.0.0.1:$port';
+  }
+
+  @override
+  String get mcpStopped => 'El endpoint MCP está apagado.';
 
   @override
   String get backupRestoredReminders => 'Los recordatorios se han vuelto a programar.';

@@ -4,8 +4,8 @@ Keep this file current. A fresh context window should be able to resume from it.
 
 ## Current milestone
 
-v0.3 complete. Next: v0.4 (pairing, mDNS, LAN query, companion integration and
-MCP).
+v0.4 complete. Next: v0.5 (search, widgets, accessibility, full en/es coverage,
+performance and release workflow).
 
 ## Reference notes
 
@@ -30,14 +30,20 @@ MCP).
   planner-specific, implemented in `mane_core` and the `home_inventory`,
   `import`, `shifts` and `sleep` feature folders. The settings rows, theme and
   localization still follow the reference patterns.
+- LAN pairing, query and MCP have no equivalent. Streak's `auto_sync.dart` and
+  `folder_sync.dart` exchange backup files through a shared folder; they do not
+  discover peers, pin TLS certificates or expose tools. Mane implements the
+  v0.4 transport in `lib/features/sync` and `lib/features/mcp` with standard
+  PBKDF2, HMAC, AES-GCM and TLS pinning.
 
 ## Decisions
 
 - Keep Drift + Riverpod. The reason is in `docs/full-docs.md`.
 - Settings live in the existing `setting_records` table. Keys:
   `themeMode`, `locale`, `weekStart`, `hideWorkSpace`,
-  `defaultReminderOffsets`, `syncEnabled`, `mcpEnabled`, `sleepEnabled`,
-  `sleepCommuteMinutes`, `sleepWindDownMinutes`, `sleepWakeBufferMinutes`.
+  `defaultReminderOffsets`, `syncEnabled`, `mcpEnabled`, `mcpWritesEnabled`,
+  `sleepEnabled`, `sleepCommuteMinutes`, `sleepWindDownMinutes`,
+  `sleepWakeBufferMinutes`.
 - Default week start is Monday. Default reminder offsets are 10 and 60 minutes.
   All-day reminders count from 09:00 in the device timezone.
 - Default sleep buffers are 30 minutes commute, 60 minutes wind-down and
@@ -51,18 +57,34 @@ MCP).
   (`entryId:offsetMinutes`). The notification queue is rebuilt on start,
   resume, timezone change, and after entry/reminder edits. The horizon is 90
   days with a 500-notification cap.
-- Backup is a versioned JSON document (`app: mane`, `schemaVersion: 4`) with
-  every table, timestamps, IANA zones, recurrence JSON and soft deletes. Import
-  validates the envelope before the transaction and rolls back on any bad row.
+- Backup is a versioned JSON document (`app: mane`, `schemaVersion: 5`) with
+  every user table, timestamps, IANA zones, recurrence JSON and soft deletes.
+  Import validates the envelope before the transaction and rolls back on any bad
+  row. `identity_records` and `paired_device_records` are deliberately excluded.
 - Localization uses `lib/l10n/app_en.arb` and `app_es.arb`, generated into
   `lib/l10n/app_localizations*.dart`.
 - ICS import stores read-only entries with `source = 'ics'`. The external id is
   `uid:<UID>` when present, otherwise a stable
   `fallback:<date>:<startMinute>:<summary>` string. Re-import deduplicates but
   does not update changed events.
+- Companion import stores read-only entries with `source = 'companion'` and a
+  documented JSON export shape. It also deduplicates but does not update.
 - Shift checklist items belong to a pattern and keep their ids across edits.
   Completions are keyed by item id and the shift date in the pattern's timezone.
   Removing an item deletes its completions; renaming it preserves them.
+- Pairing identity is one local row: device id/name, username, PBKDF2-SHA256
+  PIN hash (210k iterations, 16-byte salt), self-signed RSA-2048 certificate and
+  private key, and the MCP token. It is device-local security material.
+- Pairing uses a six-digit code valid for five minutes with at most five
+  attempts. The code plus both certificate fingerprints derive a PBKDF2 key
+  (150k iterations). A random 32-byte shared key is wrapped in AES-256-GCM and
+  acknowledged with an HMAC. Queries are signed over method, path, timestamp,
+  nonce and body hash; the server keeps a five-minute nonce cache.
+- MCP is loopback-only (`127.0.0.1:8765/mcp`), off by default, and requires the
+  device bearer token. `initialize`, `ping`, `tools/list` and `tools/call` are
+  implemented. Write tools appear only when `mcpWritesEnabled` is on.
+- Snapshots from paired devices are display-only and stay in memory. Mane never
+  merges a remote plan into the local one.
 
 ## Work completed
 
@@ -91,27 +113,43 @@ MCP).
 
 ### v0.3
 
-- Schema v4: `home_item_records`, `shopping_item_records`,
-  `shift_checklist_item_records`, `shift_checklist_completion_records`; entry
-  columns `source`, `external_id`, `read_only`, `last_completed_at` and
-  `repeat_after_completion_days`. A v3 fixture and migration test cover real
-  prior rows.
-- Entry domain: read-only and imported sources, interval maintenance, and the
-  rule that a recurrence and a completion interval cannot coexist.
-- Home inventory: add/edit/archive, quantity, unit, location, reorder level,
-  low-stock view and "add all low stock to the shopping list".
-- Shopping list: add/edit/check off. Checking a linked line adds its quantity to
-  the inventory and stamps last-purchased; unchecking reverses it.
-- Maintenance: completing a task advances its date from the actual completion
-  date, records history and keeps a timed entry's wall time.
-- Sleep window: pure `computeSleepWindow` in `mane_core`, a soft card on Today
-  and settings for the toggle, commute, wind-down and wake buffer.
-- Shift checklists: editor section, per-date checklist in the day detail, and
-  tests proving independence across dates and preservation across renames.
-- ICS import: pure parser for the documented subset, a local file picker, an
-  import dialog with a space choice, read-only entries and re-import dedupe.
-- Backup now covers schema v4 and the new tables and columns.
-- Tests: 50 app/database/widget tests and 68 core tests.
+- Schema v4: home items, shopping items, shift checklist items and completions,
+  plus entry source/read-only/maintenance columns.
+- Home inventory, shopping list, low-stock flow and linked quantity updates.
+- Interval maintenance that advances from the actual completion date.
+- Sleep window on Today with configurable buffers.
+- Per-shift checklists in the editor and day detail, independent per date.
+- Local-only ICS import with a documented RRULE subset and dedupe.
+- Backup schema v4 and real v3 migration test.
+
+### v0.4
+
+- Schema v5: `identity_records` and `paired_device_records`, with a real v4
+  fixture and migration test. Both tables are excluded from backups.
+- Local identity setup: username, device name, PIN with PBKDF2 hashing,
+  self-signed certificate, MCP token, profile edit and PIN change.
+- Pairing: host code sheet with PIN unlock and five-minute expiry; guest sheet
+  with discovered peers and manual host/port; fingerprint-bound HMAC, AES-GCM
+  key wrapping and an HMAC acknowledgement.
+- LAN server: pinned HTTPS; `info`, `pair` and `query` endpoints; signed
+  requests with timestamp window and nonce replay cache; read-only resources for
+  summary, entries, shifts, spaces, tags, home and shopping.
+- LAN client: certificate capture and pinning, pairing, signed queries and
+  friendly errors for stale pairing, offline peers and wrong certificates.
+- Bonsoir mDNS advertisement and browsing with manual fallback.
+- Sync service: start/stop, discovery updates, presence, snapshots, automatic
+  refresh on launch, resume, discovery and a five-minute timer, manual refresh
+  and per-device errors. Local plan untouched when a peer is offline.
+- Devices page: identity setup, identity card, paired devices with snapshots,
+  refresh, unpair and pair flows. MCP page: endpoint, token, copy, rotate and
+  write-tool switch.
+- MCP server: loopback HTTP, bearer token, JSON-RPC initialize/ping/tools,
+  `personal.today`, `work.next_shifts`, `home.shopping`, and gated `plan.create`
+  and `plan.complete`.
+- Companion JSON export import with fixtures, dedupe, read-only rows and a space
+  choice.
+- Android permissions for LAN and multicast; MCP remains loopback-only.
+- Tests: 79 app/database/widget tests and 68 core tests.
 
 ## Known limitations
 
@@ -122,7 +160,7 @@ MCP).
   resume and after the device zone is re-read.
 - The notification channel name is English at the OS level; in-app strings are
   localized.
-- Backup import accepts schema version 4 only. A future schema will need an
+- Backup import accepts schema version 5 only. A future schema will need an
   explicit upgrade path.
 - Linux file export depends on zenity/kdialog through `file_picker`.
 - ICS import does not support `EXDATE`, `RECURRENCE-ID`, ordinal `BYDAY`,
@@ -133,16 +171,24 @@ MCP).
   the same date; the roadmap keys completion by pattern, date and item.
 - Multi-day recurring entries remain unsupported; multi-day all-day events are
   shown per day.
-- No LAN pairing, discovery, query endpoint or MCP server.
-- No search, widgets or full accessibility pass.
+- MCP is loopback-only and implements the core tools JSON-RPC surface, not
+  SSE/streamable sessions. LAN-bound MCP is not implemented.
+- mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
+  needs the user's real-device check. Pairing sessions live in memory and are
+  cancelled by an app restart.
+- LAN snapshots are in memory and are not persisted or merged. A companion
+  app's ContentProvider is not integrated because no app and authority were
+  specified; the documented JSON export is the v0.4 path.
+- No search, widgets or full accessibility pass yet.
 
 ## Next three steps
 
-1. v0.4 pairing: local username + PIN hashing, short-code pairing, tests.
-2. v0.4 LAN query: mDNS discovery, pinned transport, automatic refresh with a
-   manual fallback, offline behavior tests.
-3. v0.4 MCP: thin repository adapter, loopback/LAN binding, read-only by
-   default and write tools behind a setting.
+1. v0.5 search: repository query across entry titles/notes/tags and home items,
+   with a search screen and widget tests.
+2. v0.5 accessibility and empty/error states: semantics, contrast, text scaling,
+   44px targets and keyboard navigation on desktop.
+3. v0.5 release workflow: split-per-ABI APKs, CI artifacts, signing docs and
+   Linux release bundle, mirroring the reference projects.
 
 ## Commands and results
 
@@ -150,9 +196,13 @@ MCP).
 - `dart run build_runner build --force-jit` — ok.
 - `flutter gen-l10n` — ok.
 - `flutter analyze --no-fatal-infos` — no issues.
-- `flutter test` — 50 passed (database, migrations, timezone, calendar, tags,
-  reminders, backup, shift editor and checklists, home inventory, ICS, widgets).
+- `flutter test` — 79 passed (database, migrations v1→v5, timezone, calendar,
+  tags, reminders, backup and pairing-secret exclusion, shift editor and
+  checklists, home inventory, ICS, companion import, pairing crypto,
+  certificates, TLS pinning, replay rejection, MCP, sync orchestration, widget
+  flows).
 - `(cd packages/mane_core && dart test)` — 68 passed (recurrence, expansion,
   shifts, timezones, sleep).
-- `flutter build linux --debug` — ok.
+- `flutter build linux --debug` — ok, including the Bonsoir plugin.
 - `flutter build apk --debug` — ok with Java 21 and core library desugaring.
+- Linux launch with isolated `XDG_DATA_HOME` — starts and stays up.

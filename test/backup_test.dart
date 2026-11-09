@@ -5,6 +5,8 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/features/backup/backup_service.dart';
+import 'package:mane/models/local_identity.dart';
+import 'package:mane/models/paired_device.dart';
 import 'package:mane/models/reminder.dart';
 import 'package:mane/services/app_database.dart';
 import 'package:mane_core/mane_core.dart';
@@ -105,6 +107,52 @@ void main() {
     await database.writeSetting('locale', 'es');
     await database.writeSetting('weekStart', '7');
   }
+
+  test('backups exclude the pairing identity, certificates and shared keys', () async {
+    final now = DateTime.utc(2026, 11, 1, 8);
+    await source.saveIdentity(
+      LocalIdentity(
+        deviceId: 'self',
+        deviceName: 'Linux',
+        username: 'muffin',
+        pinSalt: 'c2FsdA==',
+        pinHash: 'cGluaGFzaA==',
+        certificatePem: '-----BEGIN CERTIFICATE-----\nsecret\n-----END CERTIFICATE-----',
+        privateKeyPem: '-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----',
+        mcpToken: 'mcp-secret',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await source.savePairedDevice(
+      PairedDevice(
+        id: 'phone',
+        name: 'Phone',
+        username: 'muffin',
+        certificateFingerprint: 'a' * 64,
+        sharedKey: 'c2hhcmVkLXNlY3JldA==',
+        host: '192.168.1.20',
+        port: 8766,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final exported = await BackupService(source).exportJson();
+    final payload = jsonDecode(exported) as Map<String, dynamic>;
+    expect(payload['schemaVersion'], 5);
+    expect(payload.containsKey('identity'), isFalse);
+    expect(payload.containsKey('pairedDevices'), isFalse);
+    expect(exported, isNot(contains('cGluaGFzaA==')));
+    expect(exported, isNot(contains('c2hhcmVkLXNlY3JldA==')));
+    expect(exported, isNot(contains('BEGIN PRIVATE KEY')));
+
+    final target = AppDatabase(NativeDatabase.memory(), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(target.close);
+    await BackupService(target).importJson(exported);
+    expect(await target.readIdentity(), isNull);
+    expect(await target.readPairedDevices(), isEmpty);
+  });
 
   test('export, clear and import round-trips every table', () async {
     await seedRealData(source);

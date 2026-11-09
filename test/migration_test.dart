@@ -5,6 +5,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/services/app_database.dart';
 import 'package:mane/models/home_item.dart';
+import 'package:mane/models/local_identity.dart';
+import 'package:mane/models/paired_device.dart';
 import 'package:mane/models/shopping_item.dart';
 import 'package:mane_core/mane_core.dart';
 import 'package:sqlite3/open.dart';
@@ -134,7 +136,7 @@ void main() {
     expect(columns.map((row) => row.data['name']), contains('time_zone'));
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 4);
+    expect(version.data.values.single, 5);
   });
 
   test('migrates real v2 data and keeps tags usable', () async {
@@ -196,7 +198,7 @@ void main() {
     expect((await database.watchTags().first).single.name, 'Tax');
 
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 4);
+    expect(version.data.values.single, 5);
   });
 
   test('migrates real v3 data and exposes the v0.3 tables', () async {
@@ -250,6 +252,153 @@ void main() {
 
     await database.saveShiftChecklistItems('missing-pattern', const []);
     final version = await database.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.single, 4);
+    expect(version.data.values.single, 5);
+  });
+
+  test('migrates real v4 data and creates the pairing tables', () async {
+    final directory = await Directory.systemTemp.createTemp('mane-migration-v4');
+    final path = '${directory.path}/mane.sqlite';
+    final createdAt = DateTime.utc(2026, 11, 1).millisecondsSinceEpoch ~/ 1000;
+
+    final raw = sqlite3.open(path);
+    raw.execute(File('test/fixtures/schema_v4.sql').readAsStringSync());
+    raw.execute(
+      'INSERT INTO space_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['personal', 'Personal', 0xFFB07D5C, 0, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO space_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['home', 'Home', 0xFF5B7F6B, 1, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO entry_records '
+      '(id, space_id, title, kind, date_key, all_day, status, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['passport', 'personal', 'Renew passport', 'task', 20261109, 1, 'open', createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO entry_records '
+      '(id, space_id, title, kind, date_key, all_day, status, source, external_id, read_only, '
+      'created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        'imported',
+        'personal',
+        'Imported',
+        'event',
+        20261110,
+        1,
+        'open',
+        'ics',
+        'uid:x',
+        1,
+        createdAt,
+        createdAt,
+      ],
+    );
+    raw.execute(
+      'INSERT INTO tag_records (id, name, color, position, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      ['admin', 'Admin', 0xFFB07D5C, 0, createdAt, createdAt],
+    );
+    raw.execute('INSERT INTO entry_tag_records (entry_id, tag_id) VALUES (?, ?)', ['passport', 'admin']);
+    raw.execute(
+      'INSERT INTO home_item_records '
+      '(id, name, quantity, reorder_level, unit, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ['coffee', 'Coffee', 100.0, 150.0, 'g', createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shopping_item_records '
+      '(id, name, quantity, unit, home_item_id, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ['buy-coffee', 'Coffee', 250.0, 'g', 'coffee', createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shift_pattern_records '
+      '(id, space_id, name, time_zone, cycle_days, anchor_date_key, enabled, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['bar', 'home', 'Bar', 'Europe/Madrid', 7, 20261109, 1, createdAt, createdAt],
+    );
+    raw.execute(
+      'INSERT INTO shift_slot_records (pattern_id, day_index, label, start_minute, end_minute) '
+      'VALUES (?, ?, ?, ?, ?)',
+      ['bar', 0, 'Open', 960, 1320],
+    );
+    raw.execute(
+      'INSERT INTO shift_checklist_item_records (id, pattern_id, label, position) VALUES (?, ?, ?, ?)',
+      ['count', 'bar', 'Count the drawer', 0],
+    );
+    raw.execute(
+      'INSERT INTO shift_checklist_completion_records (item_id, date_key, created_at) VALUES (?, ?, ?)',
+      ['count', 20261109, createdAt],
+    );
+    raw.execute('INSERT INTO setting_records (key, value) VALUES (?, ?)', ['themeMode', 'dark']);
+    raw.dispose();
+
+    final database = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(() async {
+      await database.close();
+      await directory.delete(recursive: true);
+    });
+
+    final entries = await database
+        .watchEntriesBetween(LocalDate.parse('2026-11-09'), LocalDate.parse('2026-11-10'), 'Europe/Madrid')
+        .first;
+    final passport = entries.firstWhere((item) => item.entry.id == 'passport');
+    expect(passport.entry.tagIds, {'admin'});
+    final imported = entries.firstWhere((item) => item.entry.id == 'imported');
+    expect(imported.entry.readOnly, isTrue);
+    expect(imported.entry.source, 'ics');
+
+    expect((await database.watchHomeItems().first).single.isLowStock, isTrue);
+    expect((await database.watchShoppingItems().first).single.homeItemId, 'coffee');
+    expect((await database.readShiftChecklistItems('bar')).single.label, 'Count the drawer');
+    expect(await database.readShiftChecklistCompletions('bar', LocalDate.parse('2026-11-09')), {'count'});
+    expect(await database.readIdentity(), isNull);
+    expect(await database.readPairedDevices(), isEmpty);
+
+    final now = DateTime.utc(2026, 11, 9, 8);
+    await database.saveIdentity(
+      LocalIdentity(
+        deviceId: 'self',
+        deviceName: 'Linux',
+        username: 'muffin',
+        pinSalt: 'c2FsdA==',
+        pinHash: 'aGFzaA==',
+        certificatePem: 'cert',
+        privateKeyPem: 'key',
+        mcpToken: 'token',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    final identity = await database.readIdentity();
+    expect(identity!.deviceId, 'self');
+    expect(identity.mcpToken, 'token');
+
+    await database.savePairedDevice(
+      PairedDevice(
+        id: 'phone',
+        name: 'Phone',
+        username: 'muffin',
+        certificateFingerprint: 'f' * 64,
+        sharedKey: 'c2hhcmVk',
+        host: '192.168.1.20',
+        port: 8766,
+        lastSeenAt: now,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    final paired = (await database.readPairedDevices()).single;
+    expect(paired.name, 'Phone');
+    expect(paired.host, '192.168.1.20');
+    expect(paired.port, 8766);
+
+    final version = await database.customSelect('PRAGMA user_version').getSingle();
+    expect(version.data.values.single, 5);
   });
 }

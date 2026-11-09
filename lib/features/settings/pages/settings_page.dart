@@ -11,9 +11,13 @@ import '../../backup/backup_files.dart';
 import '../../backup/backup_service.dart';
 import '../../home_inventory/pages/home_inventory_page.dart';
 import '../../home_inventory/pages/shopping_list_page.dart';
-import '../../import/ics_files.dart';
+import '../../import/companion_import.dart';
 import '../../import/ics_import_service.dart';
+import '../../import/import_dialogs.dart';
+import '../../import/import_files.dart';
+import '../../mcp/pages/mcp_page.dart';
 import '../../shifts/pages/shift_patterns_page.dart';
+import '../../sync/pages/devices_page.dart';
 import '../widgets/settings_rows.dart';
 import 'about_page.dart';
 
@@ -181,6 +185,33 @@ class SettingsPage extends ConsumerWidget {
                 subtitle: l10n.importCalendarSubtitle,
                 onTap: () => _importCalendar(context, ref),
               ),
+              SettingsNavRow(
+                icon: Icons.devices_other_outlined,
+                title: l10n.importCompanion,
+                subtitle: l10n.importCompanionSubtitle,
+                onTap: () => _importCompanion(context, ref),
+              ),
+            ],
+          ),
+          SettingsSection(
+            title: l10n.devices,
+            children: [
+              SettingsNavRow(
+                icon: Icons.devices_other,
+                title: l10n.devices,
+                subtitle: l10n.devicesSubtitle,
+                value: '${ref.watch(pairedDevicesProvider).value?.length ?? 0}',
+                onTap: () =>
+                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DevicesPage())),
+              ),
+              SettingsNavRow(
+                icon: Icons.terminal,
+                title: l10n.mcpEndpoint,
+                subtitle: l10n.mcpEndpointSubtitle,
+                value: settings.mcpEnabled ? l10n.on : l10n.off,
+                onTap: () =>
+                    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const McpPage())),
+              ),
             ],
           ),
           SettingsSection(
@@ -193,7 +224,13 @@ class SettingsPage extends ConsumerWidget {
                 value: settings.syncEnabled,
                 onChanged: (value) async {
                   await controller.setSyncEnabled(value);
-                  if (value && context.mounted) _showNotice(context, l10n.syncNotActive);
+                  await ref.read(serviceCoordinatorProvider).apply(ref.read(settingsProvider));
+                  if (value && context.mounted) {
+                    final identity = await ref.read(repositoryProvider).readIdentity();
+                    if (identity == null && context.mounted) {
+                      _showNotice(context, l10n.identityRequired);
+                    }
+                  }
                 },
               ),
               SettingsSwitchRow(
@@ -203,7 +240,13 @@ class SettingsPage extends ConsumerWidget {
                 value: settings.mcpEnabled,
                 onChanged: (value) async {
                   await controller.setMcpEnabled(value);
-                  if (value && context.mounted) _showNotice(context, l10n.mcpNotActive);
+                  await ref.read(serviceCoordinatorProvider).apply(ref.read(settingsProvider));
+                  if (value && context.mounted) {
+                    final identity = await ref.read(repositoryProvider).readIdentity();
+                    if (identity == null && context.mounted) {
+                      _showNotice(context, l10n.identityRequired);
+                    }
+                  }
                 },
               ),
             ],
@@ -274,6 +317,7 @@ class SettingsPage extends ConsumerWidget {
       await ref.read(backupServiceProvider).importJson(source);
       await ref.read(settingsProvider.notifier).reload();
       await ref.read(reminderCoordinatorProvider).reschedule();
+      await ref.read(serviceCoordinatorProvider).apply(ref.read(settingsProvider));
       messenger.showSnackBar(SnackBar(content: Text(l10n.backupImported)));
     } on BackupVersionException {
       messenger.showSnackBar(SnackBar(content: Text(l10n.backupFuture)));
@@ -296,30 +340,7 @@ class SettingsPage extends ConsumerWidget {
     }
     if (source == null || !context.mounted) return;
 
-    final spaces = ref.read(spacesProvider).value ?? fallbackSpaces;
-    var selectedSpace = spaces.first.id;
-    final spaceId = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(l10n.importCalendarSpace),
-          content: DropdownButtonFormField<String>(
-            initialValue: selectedSpace,
-            items: [for (final space in spaces) DropdownMenuItem(value: space.id, child: Text(space.name))],
-            onChanged: (value) {
-              if (value != null) setDialogState(() => selectedSpace = value);
-            },
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: Text(l10n.cancel)),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(selectedSpace),
-              child: Text(l10n.importCalendar),
-            ),
-          ],
-        ),
-      ),
-    );
+    final spaceId = await pickImportSpace(context, ref, title: l10n.importCalendarSpace);
     if (spaceId == null) return;
 
     try {
@@ -341,6 +362,40 @@ class SettingsPage extends ConsumerWidget {
       );
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.importCalendarFailed('$error'))));
+    }
+  }
+
+  Future<void> _importCompanion(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final String? source;
+    try {
+      source = await pickCompanionText();
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.importCompanionFailed('$error'))));
+      return;
+    }
+    if (source == null || !context.mounted) return;
+
+    final spaceId = await pickImportSpace(context, ref, title: l10n.importCalendarSpace);
+    if (spaceId == null) return;
+
+    try {
+      final report = await CompanionImportService(
+        ref.read(repositoryProvider),
+      ).importText(source, spaceId: spaceId, defaultTimeZone: ref.read(deviceTimeZoneProvider));
+      final skipped = report.duplicates + report.skipped.length;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            report.imported == 0 && skipped == 0
+                ? l10n.importCompanionEmpty
+                : l10n.importCompanionDone(report.imported, skipped),
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.importCompanionFailed('$error'))));
     }
   }
 

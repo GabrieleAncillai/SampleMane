@@ -416,6 +416,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get importCompanion => 'Import a companion export';
+
+  @override
+  String get importCompanionSubtitle => 'Read a local JSON schedule exported by another app.';
+
+  @override
+  String importCompanionDone(int imported, int skipped) {
+    return 'Imported $imported events. Skipped $skipped duplicates or invalid rows.';
+  }
+
+  @override
+  String get importCompanionEmpty => 'No events were found in this file.';
+
+  @override
+  String importCompanionFailed(String error) {
+    return 'Companion import failed: $error';
+  }
+
+  @override
   String backupExported(String path) {
     return 'Backup written to $path';
   }
@@ -450,6 +469,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncOffInfo => 'Off by default. Automatic only between paired devices on the same network.';
 
   @override
+  String get on => 'On';
+
+  @override
+  String get off => 'Off';
+
+  @override
   String get mcpEnabled => 'Local MCP endpoint';
 
   @override
@@ -477,14 +502,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String selectedCount(int count) {
     return '$count selected';
   }
-
-  @override
-  String get syncNotActive =>
-      'LAN sync is not active in this build. The switch is stored for the pairing update.';
-
-  @override
-  String get mcpNotActive =>
-      'The local MCP endpoint is not active in this build. The switch is stored for the agent update.';
 
   @override
   String get basedOnGymMane => 'Based on GymMane by InlitX';
@@ -808,6 +825,202 @@ class AppLocalizationsEn extends AppLocalizations {
   String checklistDone(int done, int total) {
     return '$done of $total done';
   }
+
+  @override
+  String get devices => 'Devices';
+
+  @override
+  String get devicesSubtitle => 'Pair your own devices over the local network.';
+
+  @override
+  String get thisDevice => 'This device';
+
+  @override
+  String get pairingIdentity => 'Pairing identity';
+
+  @override
+  String get pairingIdentitySubtitle => 'A local username and PIN. Never sent anywhere.';
+
+  @override
+  String get username => 'Username';
+
+  @override
+  String get deviceName => 'Device name';
+
+  @override
+  String get pin => 'PIN';
+
+  @override
+  String get pinHint => 'At least four digits.';
+
+  @override
+  String get createIdentity => 'Create identity';
+
+  @override
+  String get identityCreated => 'Pairing identity created.';
+
+  @override
+  String get editIdentity => 'Edit identity';
+
+  @override
+  String get changePin => 'Change PIN';
+
+  @override
+  String get currentPin => 'Current PIN';
+
+  @override
+  String get newPin => 'New PIN';
+
+  @override
+  String get identityRequired => 'Set a username and PIN before pairing.';
+
+  @override
+  String get pairDevice => 'Pair a device';
+
+  @override
+  String get showPairingCode => 'Show a code on this device';
+
+  @override
+  String get enterPairingCode => 'Enter a code from another device';
+
+  @override
+  String get pairingCode => 'Pairing code';
+
+  @override
+  String get pairingCodeHint => 'On the other device, choose “Enter a code” and type this code.';
+
+  @override
+  String get pairingExpires => 'Valid for five minutes.';
+
+  @override
+  String get newCode => 'New code';
+
+  @override
+  String pairingSucceeded(String name) {
+    return 'Paired with $name.';
+  }
+
+  @override
+  String pairingFailed(String error) {
+    return 'Pairing failed: $error';
+  }
+
+  @override
+  String get discoveredOnNetwork => 'Found on this network';
+
+  @override
+  String get noDiscoveredDevices => 'No other Mane devices found yet.';
+
+  @override
+  String get address => 'Address';
+
+  @override
+  String get port => 'Port';
+
+  @override
+  String get code => 'Code';
+
+  @override
+  String get pair => 'Pair';
+
+  @override
+  String get pairedDevices => 'Paired devices';
+
+  @override
+  String get noPairedDevices => 'No devices paired yet.';
+
+  @override
+  String get unpair => 'Unpair';
+
+  @override
+  String get unpairQuestion => 'Unpair this device?';
+
+  @override
+  String get unpairBody => 'It disappears from this device. The other device keeps its own copy.';
+
+  @override
+  String lastSeen(String time) {
+    return 'Last seen $time';
+  }
+
+  @override
+  String get neverReached => 'Not reached yet';
+
+  @override
+  String get refreshDevices => 'Refresh';
+
+  @override
+  String remoteToday(int entries, int shifts) {
+    return '$entries entries, $shifts shifts today';
+  }
+
+  @override
+  String remoteNextShift(String label) {
+    return 'Next shift: $label';
+  }
+
+  @override
+  String remoteShopping(int count) {
+    return '$count shopping items open';
+  }
+
+  @override
+  String serverOnPort(int port) {
+    return 'Server on port $port';
+  }
+
+  @override
+  String get serverOff => 'Server off';
+
+  @override
+  String get discoveryUnavailable => 'Network discovery is unavailable. Use the address manually.';
+
+  @override
+  String get identityFingerprint => 'Certificate fingerprint';
+
+  @override
+  String get manualAddress => 'Device address';
+
+  @override
+  String get hostHint => '192.168.1.20';
+
+  @override
+  String get mcpEndpoint => 'Local MCP endpoint';
+
+  @override
+  String get mcpEndpointSubtitle => 'Read-only by default, loopback only, off unless enabled.';
+
+  @override
+  String get mcpWriteTools => 'Allow write tools';
+
+  @override
+  String get mcpWriteToolsSubtitle => 'Lets the local agent create and complete entries.';
+
+  @override
+  String get mcpToken => 'Access token';
+
+  @override
+  String get mcpTokenHint => 'Use it as a Bearer token. Rotating it disconnects existing agents.';
+
+  @override
+  String get rotateToken => 'Rotate token';
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get copied => 'Copied.';
+
+  @override
+  String get mcpLoopbackHint => 'Bound to 127.0.0.1 only. The agent must run on this machine.';
+
+  @override
+  String mcpRunning(int port) {
+    return 'Listening on 127.0.0.1:$port';
+  }
+
+  @override
+  String get mcpStopped => 'MCP endpoint is off.';
 
   @override
   String get backupRestoredReminders => 'Reminders have been rescheduled.';

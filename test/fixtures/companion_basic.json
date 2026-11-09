@@ -1,0 +1,42 @@
+{
+  "app": "companion",
+  "events": [
+    {
+      "id": "gym-1",
+      "title": "Gym",
+      "date": "2026-11-09",
+      "startMinute": 1080,
+      "endMinute": 1140,
+      "timeZone": "Europe/Madrid",
+      "notes": "Leg day"
+    },
+    {
+      "id": "gym-2",
+      "title": "Late session",
+      "date": "2026-11-10",
+      "startMinute": 1380,
+      "endMinute": 1500,
+      "timeZone": "Europe/Madrid"
+    },
+    {
+      "id": "off",
+      "title": "Day off",
+      "date": "2026-11-11",
+      "allDay": true
+    },
+    {
+      "id": "bad",
+      "title": "Bad time",
+      "date": "2026-11-11",
+      "startMinute": 900,
+      "endMinute": 900
+    },
+    {
+      "title": "No id",
+      "date": "2026-11-12",
+      "startMinute": 600,
+      "endMinute": 660,
+      "timeZone": "Europe/Madrid"
+    }
+  ]
+}

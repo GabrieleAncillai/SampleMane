@@ -13,6 +13,7 @@ import '../screens/entry_editor.dart';
 import '../screens/today_screen.dart';
 import '../screens/week_screen.dart';
 import '../state/providers.dart';
+import '../state/settings_controller.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -55,6 +56,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     if (pending != null) await _openEntry(pending);
     if (!mounted) return;
     await ref.read(reminderCoordinatorProvider).reschedule();
+    await ref.read(serviceCoordinatorProvider).apply(ref.read(settingsProvider));
   }
 
   Future<void> _refreshTimeZoneAndSchedule() async {
@@ -68,6 +70,9 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
     }
     if (!mounted) return;
     await ref.read(reminderCoordinatorProvider).reschedule();
+    final settings = ref.read(settingsProvider);
+    await ref.read(serviceCoordinatorProvider).apply(settings);
+    if (settings.syncEnabled) await ref.read(syncServiceProvider).refresh();
   }
 
   Future<void> _openEntry(String id) async {

@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/home_item.dart';
+import '../models/local_identity.dart';
+import '../models/paired_device.dart';
 import '../models/reminder.dart';
 import '../models/shift_checklist.dart';
 import '../models/shopping_item.dart';
@@ -106,6 +108,43 @@ class ShoppingItemRecords extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// This device's pairing identity. One row, id = 1.
+@DataClassName('IdentityRow')
+class IdentityRecords extends Table {
+  IntColumn get id => integer()();
+  TextColumn get deviceId => text()();
+  TextColumn get deviceName => text()();
+  TextColumn get username => text()();
+  TextColumn get pinSalt => text()();
+  TextColumn get pinHash => text()();
+  TextColumn get certificatePem => text()();
+  TextColumn get privateKeyPem => text()();
+  TextColumn get mcpToken => text()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Devices paired with this one. Excluded from JSON backups on purpose.
+@DataClassName('PairedDeviceRow')
+class PairedDeviceRecords extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get username => text()();
+  TextColumn get certificateFingerprint => text()();
+  TextColumn get sharedKey => text()();
+  TextColumn get host => text().withDefault(const Constant(''))();
+  IntColumn get port => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastSeenAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -251,6 +290,8 @@ class SettingRecords extends Table {
     ShiftChecklistCompletionRecords,
     HomeItemRecords,
     ShoppingItemRecords,
+    IdentityRecords,
+    PairedDeviceRecords,
     SettingRecords,
   ],
 )
@@ -263,7 +304,7 @@ class AppDatabase extends _$AppDatabase {
   final String defaultTimeZone;
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -275,6 +316,7 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) await _migrateToV2(m);
       if (from < 3) await _migrateToV3(m);
       if (from < 4) await _migrateToV4(m);
+      if (from < 5) await _migrateToV5(m);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -667,6 +709,81 @@ class AppDatabase extends _$AppDatabase {
     )..where((row) => row.itemId.equals(itemId) & row.dateKey.equals(date.key))).go();
   }
 
+  Future<LocalIdentity?> readIdentity() async {
+    final row = await (select(identityRecords)..where((row) => row.id.equals(1))).getSingleOrNull();
+    return row == null ? null : _identityFromRow(row);
+  }
+
+  Future<void> saveIdentity(LocalIdentity identity) async {
+    await into(identityRecords).insertOnConflictUpdate(
+      IdentityRecordsCompanion(
+        id: const Value(1),
+        deviceId: Value(identity.deviceId),
+        deviceName: Value(identity.deviceName),
+        username: Value(identity.username),
+        pinSalt: Value(identity.pinSalt),
+        pinHash: Value(identity.pinHash),
+        certificatePem: Value(identity.certificatePem),
+        privateKeyPem: Value(identity.privateKeyPem),
+        mcpToken: Value(identity.mcpToken),
+        createdAt: Value(identity.createdAt),
+        updatedAt: Value(identity.updatedAt),
+      ),
+    );
+  }
+
+  Stream<List<PairedDevice>> watchPairedDevices() {
+    final query = select(pairedDeviceRecords);
+    return query.watch().map(
+      (rows) =>
+          rows.map(_pairedDeviceFromRow).toList()
+            ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())),
+    );
+  }
+
+  Future<List<PairedDevice>> readPairedDevices() async {
+    final rows = await select(pairedDeviceRecords).get();
+    return rows.map(_pairedDeviceFromRow).toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  }
+
+  Future<void> savePairedDevice(PairedDevice device) async {
+    await into(pairedDeviceRecords).insertOnConflictUpdate(
+      PairedDeviceRecordsCompanion(
+        id: Value(device.id),
+        name: Value(device.name),
+        username: Value(device.username),
+        certificateFingerprint: Value(device.certificateFingerprint),
+        sharedKey: Value(device.sharedKey),
+        host: Value(device.host),
+        port: Value(device.port),
+        lastSeenAt: Value(device.lastSeenAt),
+        createdAt: Value(device.createdAt),
+        updatedAt: Value(device.updatedAt),
+      ),
+    );
+  }
+
+  Future<void> removePairedDevice(String id) async {
+    await (delete(pairedDeviceRecords)..where((row) => row.id.equals(id))).go();
+  }
+
+  Future<void> updatePairedDevicePresence(
+    String id, {
+    required String host,
+    required int port,
+    required DateTime seenAt,
+  }) async {
+    await (update(pairedDeviceRecords)..where((row) => row.id.equals(id))).write(
+      PairedDeviceRecordsCompanion(
+        host: Value(host),
+        port: Value(port),
+        lastSeenAt: Value(seenAt),
+        updatedAt: Value(seenAt),
+      ),
+    );
+  }
+
   Future<bool> hasImportedEntry(String source, String externalId) async {
     final row = await (select(
       entryRecords,
@@ -985,6 +1102,11 @@ class AppDatabase extends _$AppDatabase {
     await m.createTable(shoppingItemRecords);
   }
 
+  Future<void> _migrateToV5(Migrator m) async {
+    await m.createTable(identityRecords);
+    await m.createTable(pairedDeviceRecords);
+  }
+
   Future<void> _addV4EntryColumns(Migrator m) async {
     await m.addColumn(entryRecords, entryRecords.source);
     await m.addColumn(entryRecords, entryRecords.externalId);
@@ -1041,6 +1163,32 @@ ShoppingItem _shoppingItemFromRow(ShoppingItemRow row) => ShoppingItem(
 
 ShiftChecklistItem _checklistItemFromRow(ShiftChecklistItemRow row) =>
     ShiftChecklistItem(id: row.id, patternId: row.patternId, label: row.label, position: row.position);
+
+LocalIdentity _identityFromRow(IdentityRow row) => LocalIdentity(
+  deviceId: row.deviceId,
+  deviceName: row.deviceName,
+  username: row.username,
+  pinSalt: row.pinSalt,
+  pinHash: row.pinHash,
+  certificatePem: row.certificatePem,
+  privateKeyPem: row.privateKeyPem,
+  mcpToken: row.mcpToken,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+);
+
+PairedDevice _pairedDeviceFromRow(PairedDeviceRow row) => PairedDevice(
+  id: row.id,
+  name: row.name,
+  username: row.username,
+  certificateFingerprint: row.certificateFingerprint,
+  sharedKey: row.sharedKey,
+  host: row.host,
+  port: row.port,
+  lastSeenAt: row.lastSeenAt,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+);
 
 Entry _entryFromRow(EntryRow row, {Set<String> tagIds = const <String>{}}) => Entry(
   id: row.id,

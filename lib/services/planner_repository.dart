@@ -1,6 +1,8 @@
 import 'package:mane_core/mane_core.dart';
 
 import '../models/home_item.dart';
+import '../models/local_identity.dart';
+import '../models/paired_device.dart';
 import '../models/reminder.dart';
 import '../models/shift_checklist.dart';
 import '../models/shopping_item.dart';
@@ -57,6 +59,25 @@ class PlannerRepository {
       _database.completeMaintenanceEntry(id, completionDate);
 
   Future<Map<String, String>> readSettings() => _database.readSettings();
+
+  Future<LocalIdentity?> readIdentity() => _database.readIdentity();
+
+  Future<void> saveIdentity(LocalIdentity identity) => _database.saveIdentity(identity);
+
+  Stream<List<PairedDevice>> watchPairedDevices() => _database.watchPairedDevices();
+
+  Future<List<PairedDevice>> readPairedDevices() => _database.readPairedDevices();
+
+  Future<void> savePairedDevice(PairedDevice device) => _database.savePairedDevice(device);
+
+  Future<void> removePairedDevice(String id) => _database.removePairedDevice(id);
+
+  Future<void> updatePairedDevicePresence(
+    String id, {
+    required String host,
+    required int port,
+    required DateTime seenAt,
+  }) => _database.updatePairedDevicePresence(id, host: host, port: port, seenAt: seenAt);
 
   Future<void> writeSetting(String key, String value) => _database.writeSetting(key, value);
 

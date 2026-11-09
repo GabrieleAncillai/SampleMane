@@ -812,6 +812,36 @@ abstract class AppLocalizations {
   /// **'Calendar import failed: {error}'**
   String importCalendarFailed(String error);
 
+  /// No description provided for @importCompanion.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a companion export'**
+  String get importCompanion;
+
+  /// No description provided for @importCompanionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read a local JSON schedule exported by another app.'**
+  String get importCompanionSubtitle;
+
+  /// No description provided for @importCompanionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {imported} events. Skipped {skipped} duplicates or invalid rows.'**
+  String importCompanionDone(int imported, int skipped);
+
+  /// No description provided for @importCompanionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No events were found in this file.'**
+  String get importCompanionEmpty;
+
+  /// No description provided for @importCompanionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Companion import failed: {error}'**
+  String importCompanionFailed(String error);
+
   /// No description provided for @backupExported.
   ///
   /// In en, this message translates to:
@@ -872,6 +902,18 @@ abstract class AppLocalizations {
   /// **'Off by default. Automatic only between paired devices on the same network.'**
   String get syncOffInfo;
 
+  /// No description provided for @on.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get on;
+
+  /// No description provided for @off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get off;
+
   /// No description provided for @mcpEnabled.
   ///
   /// In en, this message translates to:
@@ -925,18 +967,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} selected'**
   String selectedCount(int count);
-
-  /// No description provided for @syncNotActive.
-  ///
-  /// In en, this message translates to:
-  /// **'LAN sync is not active in this build. The switch is stored for the pairing update.'**
-  String get syncNotActive;
-
-  /// No description provided for @mcpNotActive.
-  ///
-  /// In en, this message translates to:
-  /// **'The local MCP endpoint is not active in this build. The switch is stored for the agent update.'**
-  String get mcpNotActive;
 
   /// No description provided for @basedOnGymMane.
   ///
@@ -1543,6 +1573,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{done} of {total} done'**
   String checklistDone(int done, int total);
+
+  /// No description provided for @devices.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get devices;
+
+  /// No description provided for @devicesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair your own devices over the local network.'**
+  String get devicesSubtitle;
+
+  /// No description provided for @thisDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get thisDevice;
+
+  /// No description provided for @pairingIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing identity'**
+  String get pairingIdentity;
+
+  /// No description provided for @pairingIdentitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A local username and PIN. Never sent anywhere.'**
+  String get pairingIdentitySubtitle;
+
+  /// No description provided for @username.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get username;
+
+  /// No description provided for @deviceName.
+  ///
+  /// In en, this message translates to:
+  /// **'Device name'**
+  String get deviceName;
+
+  /// No description provided for @pin.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN'**
+  String get pin;
+
+  /// No description provided for @pinHint.
+  ///
+  /// In en, this message translates to:
+  /// **'At least four digits.'**
+  String get pinHint;
+
+  /// No description provided for @createIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Create identity'**
+  String get createIdentity;
+
+  /// No description provided for @identityCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing identity created.'**
+  String get identityCreated;
+
+  /// No description provided for @editIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit identity'**
+  String get editIdentity;
+
+  /// No description provided for @changePin.
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get changePin;
+
+  /// No description provided for @currentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Current PIN'**
+  String get currentPin;
+
+  /// No description provided for @newPin.
+  ///
+  /// In en, this message translates to:
+  /// **'New PIN'**
+  String get newPin;
+
+  /// No description provided for @identityRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a username and PIN before pairing.'**
+  String get identityRequired;
+
+  /// No description provided for @pairDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair a device'**
+  String get pairDevice;
+
+  /// No description provided for @showPairingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a code on this device'**
+  String get showPairingCode;
+
+  /// No description provided for @enterPairingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a code from another device'**
+  String get enterPairingCode;
+
+  /// No description provided for @pairingCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing code'**
+  String get pairingCode;
+
+  /// No description provided for @pairingCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'On the other device, choose “Enter a code” and type this code.'**
+  String get pairingCodeHint;
+
+  /// No description provided for @pairingExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid for five minutes.'**
+  String get pairingExpires;
+
+  /// No description provided for @newCode.
+  ///
+  /// In en, this message translates to:
+  /// **'New code'**
+  String get newCode;
+
+  /// No description provided for @pairingSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired with {name}.'**
+  String pairingSucceeded(String name);
+
+  /// No description provided for @pairingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing failed: {error}'**
+  String pairingFailed(String error);
+
+  /// No description provided for @discoveredOnNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Found on this network'**
+  String get discoveredOnNetwork;
+
+  /// No description provided for @noDiscoveredDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No other Mane devices found yet.'**
+  String get noDiscoveredDevices;
+
+  /// No description provided for @address.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get address;
+
+  /// No description provided for @port.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get port;
+
+  /// No description provided for @code.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get code;
+
+  /// No description provided for @pair.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair'**
+  String get pair;
+
+  /// No description provided for @pairedDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired devices'**
+  String get pairedDevices;
+
+  /// No description provided for @noPairedDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices paired yet.'**
+  String get noPairedDevices;
+
+  /// No description provided for @unpair.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpair'**
+  String get unpair;
+
+  /// No description provided for @unpairQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpair this device?'**
+  String get unpairQuestion;
+
+  /// No description provided for @unpairBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It disappears from this device. The other device keeps its own copy.'**
+  String get unpairBody;
+
+  /// No description provided for @lastSeen.
+  ///
+  /// In en, this message translates to:
+  /// **'Last seen {time}'**
+  String lastSeen(String time);
+
+  /// No description provided for @neverReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reached yet'**
+  String get neverReached;
+
+  /// No description provided for @refreshDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refreshDevices;
+
+  /// No description provided for @remoteToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{entries} entries, {shifts} shifts today'**
+  String remoteToday(int entries, int shifts);
+
+  /// No description provided for @remoteNextShift.
+  ///
+  /// In en, this message translates to:
+  /// **'Next shift: {label}'**
+  String remoteNextShift(String label);
+
+  /// No description provided for @remoteShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} shopping items open'**
+  String remoteShopping(int count);
+
+  /// No description provided for @serverOnPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Server on port {port}'**
+  String serverOnPort(int port);
+
+  /// No description provided for @serverOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Server off'**
+  String get serverOff;
+
+  /// No description provided for @discoveryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Network discovery is unavailable. Use the address manually.'**
+  String get discoveryUnavailable;
+
+  /// No description provided for @identityFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate fingerprint'**
+  String get identityFingerprint;
+
+  /// No description provided for @manualAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Device address'**
+  String get manualAddress;
+
+  /// No description provided for @hostHint.
+  ///
+  /// In en, this message translates to:
+  /// **'192.168.1.20'**
+  String get hostHint;
+
+  /// No description provided for @mcpEndpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Local MCP endpoint'**
+  String get mcpEndpoint;
+
+  /// No description provided for @mcpEndpointSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only by default, loopback only, off unless enabled.'**
+  String get mcpEndpointSubtitle;
+
+  /// No description provided for @mcpWriteTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow write tools'**
+  String get mcpWriteTools;
+
+  /// No description provided for @mcpWriteToolsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lets the local agent create and complete entries.'**
+  String get mcpWriteToolsSubtitle;
+
+  /// No description provided for @mcpToken.
+  ///
+  /// In en, this message translates to:
+  /// **'Access token'**
+  String get mcpToken;
+
+  /// No description provided for @mcpTokenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use it as a Bearer token. Rotating it disconnects existing agents.'**
+  String get mcpTokenHint;
+
+  /// No description provided for @rotateToken.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate token'**
+  String get rotateToken;
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied.'**
+  String get copied;
+
+  /// No description provided for @mcpLoopbackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound to 127.0.0.1 only. The agent must run on this machine.'**
+  String get mcpLoopbackHint;
+
+  /// No description provided for @mcpRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening on 127.0.0.1:{port}'**
+  String mcpRunning(int port);
+
+  /// No description provided for @mcpStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP endpoint is off.'**
+  String get mcpStopped;
 
   /// No description provided for @backupRestoredReminders.
   ///

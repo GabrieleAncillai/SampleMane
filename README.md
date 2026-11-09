@@ -12,12 +12,12 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.3 home and maintenance. Today, Week and Calendar tabs, tags, the
-shift-pattern editor with per-shift checklists, reminders, settings, versioned
-backup/restore, home inventory, shopping lists, interval maintenance, a soft
-sleep window and read-only ICS import are in place, with English and Spanish
-localization. Timed entries and shifts remain timezone-aware; all-day items stay
-date-only. LAN sync and MCP are next.
+**Status:** v0.4 sync and MCP. Today, Week and Calendar tabs, tags, flexible
+shifts, reminders, settings, versioned backup/restore, home inventory, shopping
+lists, interval maintenance, a soft sleep window, ICS and companion import,
+optional LAN pairing with read-only snapshots, and a local MCP endpoint are in
+place. English and Spanish are covered. Search, widgets, accessibility and the
+release workflow are next.
 
 ## Docs
 
@@ -62,17 +62,26 @@ date-only. LAN sync and MCP are next.
 - Shift checklists whose completions stay independent for each shift date.
 - Read-only ICS import for local files, with TZID, all-day events, a documented
   RRULE subset and re-import deduplication.
-- A schema v1/v2/v3 to v4 migration tested against real prior rows.
+- Read-only companion JSON export import with a documented schema.
+- Optional LAN pairing: username + PBKDF2-hashed PIN, a six-digit short code,
+  pinned self-signed TLS, signed queries and replay rejection. The switch is
+  off by default.
+- mDNS discovery with a manual host/port fallback, automatic refresh on launch,
+  resume and discovery, a five-minute timer and manual refresh.
+- A Devices page with read-only snapshots from paired devices. The local plan is
+  never merged with a remote one and keeps working when a peer is offline.
+- Optional local MCP endpoint on loopback with a bearer token, read tools and
+  write tools behind a second setting.
+- A schema v1/v2/v3/v4 to v5 migration tested against real prior rows.
 - A pure Dart domain package with the timezone, recurrence, shift and sleep
   rules.
 - Android debug APK and Linux debug build.
 
 ## Planned
 
-- Optional LAN sync between the user's own devices, automatic on the same
-  network.
-- Optional local MCP endpoint for a desktop agent, off by default.
-- Search, home-screen widgets and a full accessibility pass.
+- Search across entries, notes, tags and home items.
+- Home-screen widgets.
+- Accessibility, empty states and a visual polish pass.
 - Release packaging and signing workflow.
 
 ## Stack
@@ -81,6 +90,8 @@ date-only. LAN sync and MCP are next.
 - Drift + SQLite
 - Riverpod
 - Material 3
+- `cryptography` for PBKDF2/AES-GCM, `basic_utils` for the self-signed
+  certificate, `bonsoir` for mDNS
 - Android and Linux desktop from one codebase
 
 The stack audit is done: Mane keeps Drift + Riverpod. The planner needs
@@ -95,6 +106,7 @@ There is no second state-management system. See
 ```
 lib/
   app/         MaterialApp and the shell
+  features/    calendar, shifts, home inventory, settings, backup, sync, mcp
   models/      plain data classes that are not in mane_core
   screens/     one file per screen
   services/    database, repository, platform side effects
