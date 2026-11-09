@@ -305,7 +305,7 @@ constraint audit is in `docs/compliance-audit.md`.
   correct; cold-start actions are handled at bootstrap.
 - Screenshots: `docs/screenshots/v0.9-settings-hours-light.png` and
   `v0.9-reminders-light.png`.
-- Tests: 130 app/database/widget tests and 85 core tests.
+- Tests: 131 app/database/widget tests and 85 core tests.
 - Validation: format check clean, analyze clean, both suites pass, Linux debug
   and Android debug APK build.
 

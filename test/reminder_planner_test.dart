@@ -214,6 +214,28 @@ void main() {
     expect(plans.map((plan) => plan.entryId), ['dinner']);
   });
 
+  test('a custom time keeps local wall time across spring-forward', () {
+    final entry = timedEntry(recurrence: const RecurrenceRule(frequency: RecurrenceFrequency.daily));
+    final occurrences = expandEntries(
+      entries: [entry],
+      start: LocalDate.parse('2026-03-07'),
+      end: LocalDate.parse('2026-03-08'),
+      viewerTimeZone: 'America/New_York',
+    );
+    final plans = planReminders(
+      occurrences: occurrences,
+      remindersByEntry: {
+        entry.id: [const Reminder(id: 'at8', entryId: 'standup', offsetMinutes: 0, timeMinute: 8 * 60)],
+      },
+      now: DateTime.utc(2026, 3, 7),
+      deviceTimeZone: 'America/New_York',
+    );
+
+    expect(plans, hasLength(2));
+    expect(plans[0].fireAt, DateTime.utc(2026, 3, 7, 13));
+    expect(plans[1].fireAt, DateTime.utc(2026, 3, 8, 12));
+  });
+
   test('notification ids are stable and distinct per occurrence', () {
     final first = notificationIdFor('entry', 'entry:10', 20260302);
     final again = notificationIdFor('entry', 'entry:10', 20260302);

@@ -190,7 +190,7 @@ snapshot resource carries spaces, tags, entries, shifts, home and shopping and
 is persisted read-only with pruning on unpair; work-hours visibility, quiet
 hours and notification suppression are wired through settings, screens and the
 reminder planner; custom reminder times use `time_minute`; and Android
-notifications carry snooze/complete actions. Tests: 130 app tests and 85 core
+notifications carry snooze/complete actions. Tests: 131 app tests and 85 core
 tests.
 
 ### v1.0 Device verification, polish and release

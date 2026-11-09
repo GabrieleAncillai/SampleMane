@@ -31,7 +31,7 @@ product/visual and feature work is the active program.
 | GPL-3.0-only and attribution | Pass | `LICENSE`, `ADDITIONAL_TERMS.md`, `CREDITS.md`, About screen | Keep |
 | Android + Linux both build | Pass at v0.9 | Debug APK and Linux debug pass locally; release workflow builds both | Add Linux build to the normal CI |
 | No new dependency without reason | Pass | Existing stack only; no analytics/ads/Firebase/Supabase | Keep |
-| Do not weaken tests or security | Pass | 130 app + 85 core tests; pairing/TLS/replay, app-lock hashing, MCP auth/session and snapshot tests | Keep |
+| Do not weaken tests or security | Pass | 131 app + 85 core tests; pairing/TLS/replay, app-lock hashing, MCP auth/session and snapshot tests | Keep |
 | Reference-first for components, styles, motion | Pass (v0.6) | Nunito, expanded `ManeColors`, `ManeType`, component themes, `lib/core/widgets` kit, floating shell and screen sweep; `test/visual_kit_test.dart` and `docs/screenshots/` | Keep |
 | Reference map describes shipped state | Pass (v0.6) | `docs/reference-map.md` now names the shipped kit and the visual deviation | Keep |
 | Every schema change has migration + real-row test | Pass | v1→v8 migration tests, including real v5, v6 and v7 fixtures | Keep |

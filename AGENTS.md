@@ -186,7 +186,7 @@ Treat this as the baseline. Verify it before changing anything.
 - A tagged release workflow for signed split-per-ABI APKs, a Linux bundle and
   checksums, with the keystore documented as a user-provided step.
 - Linux debug build and Android debug APK both pass.
-- Tests: 130 app/database/widget tests, 85 core tests, including real v1–v7
+- Tests: 131 app/database/widget tests, 85 core tests, including real v1–v7
   data migration tests, DST/travel scenarios, backup round-trip, older-schema
   upgrade and rejection, calendar navigation and semantics, shift checklists,
   ICS parsing/import/export, GymMane import, CSV, home tracking, app lock,
