@@ -1,5 +1,7 @@
 import 'dart:ffi';
+import 'dart:io';
 
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mane/services/app_database.dart';
@@ -11,28 +13,32 @@ void main() {
   // looks for the unversioned dev symlink by default.
   setUpAll(() {
     open.overrideFor(OperatingSystem.linux, () => DynamicLibrary.open('libsqlite3.so.0'));
+    initializeTimeZones();
+    // The restart scenario intentionally opens the same file twice in sequence.
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   });
 
   late AppDatabase database;
 
   setUp(() {
-    database = AppDatabase(NativeDatabase.memory());
+    database = AppDatabase(NativeDatabase.memory(), defaultTimeZone: 'Europe/Madrid');
   });
 
   tearDown(() => database.close());
 
-  test('seeds Home and Work once', () async {
+  test('seeds Personal, Work and Home once', () async {
     await database.seedDefaults();
     await database.seedDefaults();
 
     final spaces = await database.watchSpaces().first;
-    expect(spaces.map((space) => space.id), ['home', 'work']);
+    expect(spaces.map((space) => space.id), ['personal', 'work', 'home']);
+    expect(spaces.map((space) => space.name), ['Personal', 'Work', 'Home']);
   });
 
-  test('saves and expands a weekly entry', () async {
+  test('saves and expands a weekly all-day entry', () async {
     await database.seedDefaults();
     final monday = LocalDate.parse('2026-11-09');
-    final now = DateTime(2026, 11, 9, 8);
+    final now = DateTime.utc(2026, 11, 9, 8);
 
     await database.saveEntry(
       Entry(
@@ -40,22 +46,98 @@ void main() {
         spaceId: 'home',
         title: 'Take the bins out',
         date: monday,
-        startMinute: 20 * 60,
-        endMinute: 20 * 60 + 15,
+        allDay: true,
         recurrence: const RecurrenceRule(frequency: RecurrenceFrequency.weekly, weekdays: {1}),
         createdAt: now,
         updatedAt: now,
       ),
     );
 
-    final occurrences = await database.watchEntriesBetween(monday, monday.addDays(13)).first;
+    final occurrences = await database.watchEntriesBetween(monday, monday.addDays(13), 'Europe/Madrid').first;
     expect(occurrences.map((occurrence) => occurrence.date.iso), ['2026-11-09', '2026-11-16']);
+  });
+
+  test('a timed entry travels with the viewer timezone but an all-day date does not', () async {
+    await database.seedDefaults();
+    final monday = LocalDate.parse('2026-11-09');
+    final now = DateTime.utc(2026, 11, 9, 8);
+
+    await database.saveEntry(
+      Entry(
+        id: 'late',
+        spaceId: 'work',
+        title: 'Late shift',
+        date: monday,
+        startMinute: 23 * 60,
+        endMinute: 24 * 60,
+        timeZone: 'America/New_York',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await database.saveEntry(
+      Entry(
+        id: 'birthday',
+        spaceId: 'personal',
+        title: 'Birthday',
+        date: monday,
+        allDay: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final mondayInNewYork = await database.watchEntriesBetween(monday, monday, 'America/New_York').first;
+    expect(mondayInNewYork.map((item) => item.entry.id), containsAll(['late', 'birthday']));
+    final late = mondayInNewYork.firstWhere((item) => item.entry.id == 'late');
+    expect(late.displayDate, monday);
+    expect(localDateTimeAt(late.startAt!, 'America/New_York').hour, 23);
+
+    final mondayInMadrid = await database.watchEntriesBetween(monday, monday, 'Europe/Madrid').first;
+    expect(mondayInMadrid.map((item) => item.entry.id), ['birthday']);
+
+    final tuesdayInMadrid = await database
+        .watchEntriesBetween(monday.addDays(1), monday.addDays(1), 'Europe/Madrid')
+        .first;
+    final shiftedLate = tuesdayInMadrid.firstWhere((item) => item.entry.id == 'late');
+    expect(shiftedLate.displayDate, monday.addDays(1));
+    expect(shiftedLate.date, monday);
+    expect(localDateTimeAt(shiftedLate.startAt!, 'Europe/Madrid').hour, 5);
+  });
+
+  test('a recurring 09:00 entry keeps its wall time across DST', () async {
+    await database.seedDefaults();
+    final start = LocalDate.parse('2026-03-07');
+    final now = DateTime.utc(2026, 3, 1, 8);
+
+    await database.saveEntry(
+      Entry(
+        id: 'standup',
+        spaceId: 'work',
+        title: 'Standup',
+        date: start,
+        startMinute: 9 * 60,
+        endMinute: 10 * 60,
+        timeZone: 'America/New_York',
+        recurrence: const RecurrenceRule(frequency: RecurrenceFrequency.daily),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final occurrences = await database.watchEntriesBetween(start, start.addDays(1), 'America/New_York').first;
+    expect(occurrences, hasLength(2));
+    expect(occurrences[0].startAt, DateTime.utc(2026, 3, 7, 14));
+    expect(occurrences[1].startAt, DateTime.utc(2026, 3, 8, 13));
+    for (final occurrence in occurrences) {
+      expect(localDateTimeAt(occurrence.startAt!, 'America/New_York').hour, 9);
+    }
   });
 
   test('completing one occurrence does not complete the series', () async {
     await database.seedDefaults();
     final monday = LocalDate.parse('2026-11-09');
-    final now = DateTime(2026, 11, 9, 8);
+    final now = DateTime.utc(2026, 11, 9, 8);
 
     await database.saveEntry(
       Entry(
@@ -63,6 +145,7 @@ void main() {
         spaceId: 'home',
         title: 'Take the bins out',
         date: monday,
+        allDay: true,
         recurrence: const RecurrenceRule(frequency: RecurrenceFrequency.weekly, weekdays: {1}),
         createdAt: now,
         updatedAt: now,
@@ -70,44 +153,124 @@ void main() {
     );
     await database.setOccurrenceCompleted('bins', monday, completed: true);
 
-    final occurrences = await database.watchEntriesBetween(monday, monday.addDays(7)).first;
+    final occurrences = await database.watchEntriesBetween(monday, monday.addDays(7), 'Europe/Madrid').first;
     expect(occurrences, hasLength(2));
     expect(occurrences.first.completed, isTrue);
     expect(occurrences.last.completed, isFalse);
   });
 
-  test('stores and expands a shift pattern', () async {
+  test('completion survives a database restart', () async {
+    final directory = await Directory.systemTemp.createTemp('mane-restart');
+    final path = '${directory.path}/mane.sqlite';
+    final monday = LocalDate.parse('2026-11-09');
+    final now = DateTime.utc(2026, 11, 9, 8);
+
+    final first = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    await first.seedDefaults();
+    await first.saveEntry(
+      Entry(
+        id: 'bins',
+        spaceId: 'home',
+        title: 'Take the bins out',
+        date: monday,
+        allDay: true,
+        recurrence: const RecurrenceRule(frequency: RecurrenceFrequency.weekly, weekdays: {1}),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await first.setOccurrenceCompleted('bins', monday, completed: true);
+    await first.close();
+
+    final second = AppDatabase(NativeDatabase(File(path)), defaultTimeZone: 'Europe/Madrid');
+    final occurrences = await second.watchEntriesBetween(monday, monday, 'Europe/Madrid').first;
+    expect(occurrences, hasLength(1));
+    expect(occurrences.single.completed, isTrue);
+    await second.close();
+    await directory.delete(recursive: true);
+  });
+
+  test('stores a 14-day pattern with several slots and exceptions', () async {
     await database.seedDefaults();
     final monday = LocalDate.parse('2026-11-09');
 
     await database.saveShiftPattern(
       ShiftPattern(
-        id: 'bank',
+        id: 'rotation',
         spaceId: 'work',
-        name: 'Main job',
-        cycleDays: 7,
+        name: 'Two-week rotation',
+        timeZone: 'Europe/Madrid',
+        cycleDays: 14,
         anchorDate: monday,
-        slots: const [ShiftSlot(dayIndex: 0, label: 'Day', startMinute: 600, endMinute: 1140)],
+        slots: const [
+          ShiftSlot(dayIndex: 0, label: 'Open', startMinute: 900, endMinute: 1320),
+          ShiftSlot(dayIndex: 1, label: 'Open', startMinute: 900, endMinute: 1320),
+          ShiftSlot(dayIndex: 5, label: 'Long', startMinute: 600, endMinute: 1380),
+        ],
+        exceptions: [
+          ShiftException(date: monday.addDays(5), type: ShiftExceptionType.free),
+          ShiftException(
+            date: monday.addDays(8),
+            type: ShiftExceptionType.override,
+            startMinute: 480,
+            endMinute: 720,
+            note: 'Training',
+          ),
+          ShiftException(
+            date: monday.addDays(1),
+            type: ShiftExceptionType.extra,
+            startMinute: 1080,
+            endMinute: 1200,
+            note: 'Stock take',
+          ),
+        ],
       ),
     );
 
-    final shifts = await database.watchShiftsBetween(monday, monday.addDays(6)).first;
-    expect(shifts, hasLength(1));
-    expect(shifts.first.slot.startMinute, 600);
-    expect(shifts.first.pattern.name, 'Main job');
+    final firstDay = await database.watchShiftsBetween(monday, monday, 'Europe/Madrid').first;
+    expect(firstDay.map((item) => item.slot.label), ['Open']);
+
+    final secondDay = await database
+        .watchShiftsBetween(monday.addDays(1), monday.addDays(1), 'Europe/Madrid')
+        .first;
+    expect(secondDay.map((item) => item.slot.label), ['Open', 'Stock take']);
+    expect(secondDay.last.startAt, DateTime.utc(2026, 11, 10, 17));
+
+    final freedSaturday = await database
+        .watchShiftsBetween(monday.addDays(5), monday.addDays(5), 'Europe/Madrid')
+        .first;
+    expect(freedSaturday, isEmpty);
+
+    final weekTwo = await database
+        .watchShiftsBetween(monday.addDays(7), monday.addDays(8), 'Europe/Madrid')
+        .first;
+    expect(weekTwo, hasLength(1));
+    expect(weekTwo.single.slot.label, 'Training');
+    expect(weekTwo.single.displayDate, monday.addDays(8));
+
+    final fortnight = await database.watchShiftsBetween(monday, monday.addDays(13), 'Europe/Madrid').first;
+    expect(fortnight, hasLength(4));
   });
 
   test('soft-deleted entries disappear from the stream', () async {
     await database.seedDefaults();
     final monday = LocalDate.parse('2026-11-09');
-    final now = DateTime(2026, 11, 9, 8);
+    final now = DateTime.utc(2026, 11, 9, 8);
 
     await database.saveEntry(
-      Entry(id: 'temp', spaceId: 'work', title: 'Temporary', date: monday, createdAt: now, updatedAt: now),
+      Entry(
+        id: 'temp',
+        spaceId: 'work',
+        title: 'Temporary',
+        date: monday,
+        allDay: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
     );
     await database.softDeleteEntry('temp');
 
-    final occurrences = await database.watchEntriesBetween(monday, monday).first;
+    final occurrences = await database.watchEntriesBetween(monday, monday, 'Europe/Madrid').first;
     expect(occurrences, isEmpty);
   });
 }

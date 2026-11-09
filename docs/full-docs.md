@@ -201,25 +201,36 @@ are urgent.
 
 ### 5.1 Timezone-aware by default
 
-This supersedes the earlier wall-clock model.
+This supersedes the earlier wall-clock model and is implemented in v0.1.5.
 
-- Timed entries and shifts are absolute instants. Store a UTC `DateTime` plus
-  the IANA timezone in which the item was defined.
+- Timed entries and shift patterns store the wall-clock template (`dateKey`,
+  `startMinute`, `endMinute` or slot minutes) in an IANA `time_zone`, plus the
+  resolved UTC anchor instants (`start_at`, `end_at`) for range work and sync.
 - Display timed items in the device's current timezone. If the device timezone
-  changes, the displayed local time shifts. That is intended.
+  changes, the displayed local time and possibly the displayed date shift. That
+  is intended.
 - Recurrence expands in the stored IANA timezone, then converts each occurrence
-  to an absolute instant. Use the `timezone` package and test DST transitions.
+  to an absolute instant. `packages/mane_core` owns that rule; the database only
+  supplies rows and completions.
 - Shift patterns store a workplace timezone and local slot times, then expand
-  to instants the same way.
+  to instants the same way. Exceptions are applied before expansion.
 - All-day and date-only items remain `LocalDate` values. A birthday or a tax
   deadline is a date, not a midnight instant, and must not shift by a day.
+- The viewer timezone is passed into every expansion and display function. A
+  list of occurrences carries both `date` (stored zone) and `displayDate`
+  (viewer zone), so travel never loses per-occurrence completion.
 - Notifications schedule against absolute instants and reschedule when the
-  timezone changes.
-- Do not call `DateTime.now()` deep inside domain logic. Pass `now` and the
-  device timezone into pure functions so tests are deterministic.
+  timezone changes. That lands with notifications in v0.2.
+- Do not call `DateTime.now()` deep inside domain logic. The app reads
+  `nowProvider` and `deviceTimeZoneProvider`; pure functions take both.
 
-The current schema stores `dateKey` and minutes from midnight. It needs a
-migration before v0.2. This is the v0.1.5 prerequisite.
+The v0.1.5 migration reads the device IANA zone at open time, interprets legacy
+wall-clock rows and one-slot shift patterns in that zone, and backfills the
+instants. Migration tests use a fixed zone so they stay deterministic.
+
+Known limitation: the device timezone is read at app start. Changing it while
+the app is open takes effect on the next start until v0.2 adds resume-time
+refresh and notification rescheduling.
 
 ### 5.2 Offline by default
 
@@ -282,25 +293,30 @@ Mane must work without the companion app. Manual entry is always available.
 
 ## 6. Data model (target)
 
-The current schema is a v0.1 starting point. The target model below is what the
-v0.1.5 migration and the later features should converge on.
+The v0.1.5 migration brought the shipped schema to the shape below. Later
+milestones add tags, home items, reminders and sync metadata.
 
 - **spaces**: id, name, color, position, timestamps, soft delete. Seeded with
   Personal, Work and Home. Spaces are rows, not an enum.
 - **entries**: id, space, title, notes, kind (`task`, `event`, `obligation`,
   `deadline`), all-day `LocalDate` or timezone-aware start/end instants,
   timezone, status, recurrence JSON, source/external id, read-only flag,
-  timestamps, soft delete.
-- **completions**: entry id plus occurrence date or instant. This is what makes
-  a recurring chore checkable per occurrence. Checking this week's bins does
-  not check next week's.
+  timestamps, soft delete. The wall-clock `dateKey`, `startMinute` and
+  `endMinute` are the recurrence template; `start_at` and `end_at` are the
+  resolved UTC anchor instants.
+- **completions**: entry id plus occurrence date in the entry's stored
+  timezone. This is what makes a recurring chore checkable per occurrence.
+  Checking this week's bins does not check next week's, and travel does not
+  lose the check.
 - **reminders**: entry id, offset in minutes, enabled. Multiple rows per entry.
 - **shift_patterns**: id, space, name, timezone, cycle length in days, anchor
   date, enabled, timestamps, soft delete.
-- **shift_slots**: pattern id, cycle day index, start and end local minutes,
-  optional label. Allow zero, one or multiple slots per cycle day.
-- **shift_exceptions**: pattern id, date, type (`free`, `override`, `extra`),
-  start and end, note.
+- **shift_slots**: id, pattern id, cycle day index, start and end local
+  minutes, optional label. Zero, one or multiple slots per cycle day are
+  allowed; an end past 1440 crosses midnight.
+- **shift_exceptions**: id, pattern id, date, type (`free`, `override`,
+  `extra`), start and end, note. A free day wins over other exceptions for the
+  same date; override replaces the cycle slots; extra adds to them.
 - **tags**: id, space id (nullable), name, color, position, timestamps, soft
   delete.
 - **entry_tags**: entry id, tag id.
@@ -317,7 +333,8 @@ Recurrence rules support daily with an interval, weekly by ISO weekday with an
 interval, monthly on a day (clamped to the month length), and yearly (February 29
 falls on February 28 in normal years). `until` is inclusive. `count` counts the
 anchor as the first occurrence. Expand in the stored timezone, then convert to
-instants.
+instants. The pure functions live in `packages/mane_core`; the database calls
+them instead of reimplementing them.
 
 This is not a full RFC 5545 implementation. It is the subset the app can explain
 and test. Ordinal rules ("last Friday of the month") can be added later without
@@ -366,11 +383,17 @@ This applies to architecture and conventions too:
 - If neither has an equivalent, the domain is new. Design it, test it, and
   record the deviation here.
 
-The current Drift + Riverpod foundation is provisional. Before v0.2, audit it
-against GymMane's `ChangeNotifier` + local store and Streak's `provider` +
-per-feature controllers. If Drift or Riverpod are kept, record the concrete
-planner-specific reason (date-range queries, joins, per-occurrence state). If
-not, migrate to the reference pattern. Do not run two state-management systems.
+**Stack audit (before v0.2): keep Drift and Riverpod.** GymMane's single
+`ChangeNotifier` plus local JSON store and Streak's `provider` plus Hive boxes
+are a good fit for their domains, but the planner needs date-range queries,
+a join between entries and per-occurrence completions, and a transactional
+backup import. Drift gives those directly, and the generated schema is what
+makes the v1 to v2 migration test possible. Riverpod's provider overrides keep
+`now`, the device timezone and the database injectable in tests. Mane will not
+run a second state-management system; feature state stays in Riverpod
+providers, and the repository seam stays the only read/write path. The feature
+folder split from Streak is still the target layout; files move there when a
+screen grows, not as a rewrite.
 
 The target layout follows Streak's feature-first split, with GymMane's naming:
 
@@ -426,21 +449,30 @@ These are not promises with dates. They are the order of work.
 - [x] Linux desktop build.
 - [x] Android debug build.
 
-### v0.1.5 Timezone, three spaces and flexible shifts (prerequisite)
+### v0.1.5 Timezone, three spaces and flexible shifts (prerequisite) (done)
 
-- [ ] Replace the wall-clock timed model with timezone-aware instants and an
+- [x] Replaced the wall-clock timed model with timezone-aware instants and an
       IANA timezone on entries and shift patterns.
-- [ ] Keep `LocalDate` for all-day items.
-- [ ] Add the Personal space and migrate the seed to Personal/Work/Home.
-- [ ] Replace one-slot shift patterns with `shift_slots` and
+- [x] Kept `LocalDate` for all-day items.
+- [x] Added the Personal space and migrated the seed to Personal/Work/Home.
+- [x] Replaced one-slot shift patterns with `shift_slots` and
       `shift_exceptions`.
-- [ ] Allow multiple slots per day, overnight slots and cycle lengths beyond 7.
-- [ ] Add migration tests and timezone/DST tests.
-- [ ] Update the domain, schema, repository, providers and UI.
+- [x] Allowed multiple slots per day, overnight slots and cycle lengths beyond
+      7.
+- [x] Added migration tests and timezone/DST tests.
+- [x] Updated the domain, schema, repository, providers and UI.
 
-**Exit criteria:** changing the device timezone shifts timed items and leaves
-all-day dates alone; a 14-day shift cycle with per-day times and exceptions
-expands correctly; all tests and both builds pass.
+**Exit criteria met:** changing the viewer timezone shifts timed items and
+leaves all-day dates alone; a 14-day shift cycle with per-day times and
+exceptions expands correctly; all tests and both builds pass.
+
+**Deviation from the references:** GymMane and Streak both use wall-clock
+`DateTime` values for schedules and reminders. Neither has timezone-aware
+recurrence, flexible shift cycles, multiple slots per day or shift exceptions.
+Mane implements those rules in `mane_core` (`src/time.dart`, `src/entry.dart`,
+`src/entry_expander.dart`, `src/shift_pattern.dart`) because the planner is the
+product's core domain. The references remain the source for the app shell,
+theme, settings, notifications and release work.
 
 ### v0.2 Daily use
 

@@ -1,7 +1,8 @@
-/// A top-level context: Home or Work.
+/// A top-level context: Personal, Work or Home.
 ///
-/// Spaces are rows, not an enum, so adding "Personal" later is a data change
-/// rather than a schema change.
+/// Spaces are rows, not an enum, so a user can add a fourth later without a
+/// schema change. Tags, not extra spaces, separate the jobs and people inside
+/// one space.
 class Space {
   const Space({required this.id, required this.name, required this.colorValue, this.position = 0});
 

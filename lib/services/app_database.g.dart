@@ -556,6 +556,37 @@ class $EntryRecordsTable extends EntryRecords
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _timeZoneMeta = const VerificationMeta(
+    'timeZone',
+  );
+  @override
+  late final GeneratedColumn<String> timeZone = GeneratedColumn<String>(
+    'time_zone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _startAtMeta = const VerificationMeta(
+    'startAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startAt = GeneratedColumn<DateTime>(
+    'start_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endAtMeta = const VerificationMeta('endAt');
+  @override
+  late final GeneratedColumn<DateTime> endAt = GeneratedColumn<DateTime>(
+    'end_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _allDayMeta = const VerificationMeta('allDay');
   @override
   late final GeneratedColumn<bool> allDay = GeneratedColumn<bool>(
@@ -633,6 +664,9 @@ class $EntryRecordsTable extends EntryRecords
     endDateKey,
     startMinute,
     endMinute,
+    timeZone,
+    startAt,
+    endAt,
     allDay,
     status,
     recurrenceJson,
@@ -715,6 +749,24 @@ class $EntryRecordsTable extends EntryRecords
       context.handle(
         _endMinuteMeta,
         endMinute.isAcceptableOrUnknown(data['end_minute']!, _endMinuteMeta),
+      );
+    }
+    if (data.containsKey('time_zone')) {
+      context.handle(
+        _timeZoneMeta,
+        timeZone.isAcceptableOrUnknown(data['time_zone']!, _timeZoneMeta),
+      );
+    }
+    if (data.containsKey('start_at')) {
+      context.handle(
+        _startAtMeta,
+        startAt.isAcceptableOrUnknown(data['start_at']!, _startAtMeta),
+      );
+    }
+    if (data.containsKey('end_at')) {
+      context.handle(
+        _endAtMeta,
+        endAt.isAcceptableOrUnknown(data['end_at']!, _endAtMeta),
       );
     }
     if (data.containsKey('all_day')) {
@@ -807,6 +859,18 @@ class $EntryRecordsTable extends EntryRecords
         DriftSqlType.int,
         data['${effectivePrefix}end_minute'],
       ),
+      timeZone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_zone'],
+      ),
+      startAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_at'],
+      ),
+      endAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_at'],
+      ),
       allDay: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}all_day'],
@@ -849,15 +913,23 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
   /// One of [EntryKind]. Stored as text so the database stays readable.
   final String kind;
 
-  /// Start date as `YYYYMMDD`, null when the entry is unscheduled.
+  /// Anchor date as `YYYYMMDD`, in [timeZone] for timed entries.
   final int? dateKey;
 
-  /// End date for multi-day entries.
+  /// End date for multi-day all-day entries.
   final int? endDateKey;
 
-  /// Minutes from midnight, null for all-day entries.
+  /// Local minutes from midnight, null for all-day entries. An end of 1440 or
+  /// more means the entry crosses midnight.
   final int? startMinute;
   final int? endMinute;
+
+  /// IANA timezone for the wall-clock fields, null for all-day entries.
+  final String? timeZone;
+
+  /// Resolved anchor instants in UTC, null for all-day entries.
+  final DateTime? startAt;
+  final DateTime? endAt;
   final bool allDay;
 
   /// One of [EntryStatus].
@@ -878,6 +950,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     this.endDateKey,
     this.startMinute,
     this.endMinute,
+    this.timeZone,
+    this.startAt,
+    this.endAt,
     required this.allDay,
     required this.status,
     this.recurrenceJson,
@@ -904,6 +979,15 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     }
     if (!nullToAbsent || endMinute != null) {
       map['end_minute'] = Variable<int>(endMinute);
+    }
+    if (!nullToAbsent || timeZone != null) {
+      map['time_zone'] = Variable<String>(timeZone);
+    }
+    if (!nullToAbsent || startAt != null) {
+      map['start_at'] = Variable<DateTime>(startAt);
+    }
+    if (!nullToAbsent || endAt != null) {
+      map['end_at'] = Variable<DateTime>(endAt);
     }
     map['all_day'] = Variable<bool>(allDay);
     map['status'] = Variable<String>(status);
@@ -937,6 +1021,15 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       endMinute: endMinute == null && nullToAbsent
           ? const Value.absent()
           : Value(endMinute),
+      timeZone: timeZone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timeZone),
+      startAt: startAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startAt),
+      endAt: endAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endAt),
       allDay: Value(allDay),
       status: Value(status),
       recurrenceJson: recurrenceJson == null && nullToAbsent
@@ -965,6 +1058,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       endDateKey: serializer.fromJson<int?>(json['endDateKey']),
       startMinute: serializer.fromJson<int?>(json['startMinute']),
       endMinute: serializer.fromJson<int?>(json['endMinute']),
+      timeZone: serializer.fromJson<String?>(json['timeZone']),
+      startAt: serializer.fromJson<DateTime?>(json['startAt']),
+      endAt: serializer.fromJson<DateTime?>(json['endAt']),
       allDay: serializer.fromJson<bool>(json['allDay']),
       status: serializer.fromJson<String>(json['status']),
       recurrenceJson: serializer.fromJson<String?>(json['recurrenceJson']),
@@ -986,6 +1082,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
       'endDateKey': serializer.toJson<int?>(endDateKey),
       'startMinute': serializer.toJson<int?>(startMinute),
       'endMinute': serializer.toJson<int?>(endMinute),
+      'timeZone': serializer.toJson<String?>(timeZone),
+      'startAt': serializer.toJson<DateTime?>(startAt),
+      'endAt': serializer.toJson<DateTime?>(endAt),
       'allDay': serializer.toJson<bool>(allDay),
       'status': serializer.toJson<String>(status),
       'recurrenceJson': serializer.toJson<String?>(recurrenceJson),
@@ -1005,6 +1104,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     Value<int?> endDateKey = const Value.absent(),
     Value<int?> startMinute = const Value.absent(),
     Value<int?> endMinute = const Value.absent(),
+    Value<String?> timeZone = const Value.absent(),
+    Value<DateTime?> startAt = const Value.absent(),
+    Value<DateTime?> endAt = const Value.absent(),
     bool? allDay,
     String? status,
     Value<String?> recurrenceJson = const Value.absent(),
@@ -1021,6 +1123,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     endDateKey: endDateKey.present ? endDateKey.value : this.endDateKey,
     startMinute: startMinute.present ? startMinute.value : this.startMinute,
     endMinute: endMinute.present ? endMinute.value : this.endMinute,
+    timeZone: timeZone.present ? timeZone.value : this.timeZone,
+    startAt: startAt.present ? startAt.value : this.startAt,
+    endAt: endAt.present ? endAt.value : this.endAt,
     allDay: allDay ?? this.allDay,
     status: status ?? this.status,
     recurrenceJson: recurrenceJson.present
@@ -1045,6 +1150,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
           ? data.startMinute.value
           : this.startMinute,
       endMinute: data.endMinute.present ? data.endMinute.value : this.endMinute,
+      timeZone: data.timeZone.present ? data.timeZone.value : this.timeZone,
+      startAt: data.startAt.present ? data.startAt.value : this.startAt,
+      endAt: data.endAt.present ? data.endAt.value : this.endAt,
       allDay: data.allDay.present ? data.allDay.value : this.allDay,
       status: data.status.present ? data.status.value : this.status,
       recurrenceJson: data.recurrenceJson.present
@@ -1068,6 +1176,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
           ..write('endDateKey: $endDateKey, ')
           ..write('startMinute: $startMinute, ')
           ..write('endMinute: $endMinute, ')
+          ..write('timeZone: $timeZone, ')
+          ..write('startAt: $startAt, ')
+          ..write('endAt: $endAt, ')
           ..write('allDay: $allDay, ')
           ..write('status: $status, ')
           ..write('recurrenceJson: $recurrenceJson, ')
@@ -1089,6 +1200,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
     endDateKey,
     startMinute,
     endMinute,
+    timeZone,
+    startAt,
+    endAt,
     allDay,
     status,
     recurrenceJson,
@@ -1109,6 +1223,9 @@ class EntryRow extends DataClass implements Insertable<EntryRow> {
           other.endDateKey == this.endDateKey &&
           other.startMinute == this.startMinute &&
           other.endMinute == this.endMinute &&
+          other.timeZone == this.timeZone &&
+          other.startAt == this.startAt &&
+          other.endAt == this.endAt &&
           other.allDay == this.allDay &&
           other.status == this.status &&
           other.recurrenceJson == this.recurrenceJson &&
@@ -1127,6 +1244,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
   final Value<int?> endDateKey;
   final Value<int?> startMinute;
   final Value<int?> endMinute;
+  final Value<String?> timeZone;
+  final Value<DateTime?> startAt;
+  final Value<DateTime?> endAt;
   final Value<bool> allDay;
   final Value<String> status;
   final Value<String?> recurrenceJson;
@@ -1144,6 +1264,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
     this.endDateKey = const Value.absent(),
     this.startMinute = const Value.absent(),
     this.endMinute = const Value.absent(),
+    this.timeZone = const Value.absent(),
+    this.startAt = const Value.absent(),
+    this.endAt = const Value.absent(),
     this.allDay = const Value.absent(),
     this.status = const Value.absent(),
     this.recurrenceJson = const Value.absent(),
@@ -1162,6 +1285,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
     this.endDateKey = const Value.absent(),
     this.startMinute = const Value.absent(),
     this.endMinute = const Value.absent(),
+    this.timeZone = const Value.absent(),
+    this.startAt = const Value.absent(),
+    this.endAt = const Value.absent(),
     this.allDay = const Value.absent(),
     required String status,
     this.recurrenceJson = const Value.absent(),
@@ -1186,6 +1312,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
     Expression<int>? endDateKey,
     Expression<int>? startMinute,
     Expression<int>? endMinute,
+    Expression<String>? timeZone,
+    Expression<DateTime>? startAt,
+    Expression<DateTime>? endAt,
     Expression<bool>? allDay,
     Expression<String>? status,
     Expression<String>? recurrenceJson,
@@ -1204,6 +1333,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
       if (endDateKey != null) 'end_date_key': endDateKey,
       if (startMinute != null) 'start_minute': startMinute,
       if (endMinute != null) 'end_minute': endMinute,
+      if (timeZone != null) 'time_zone': timeZone,
+      if (startAt != null) 'start_at': startAt,
+      if (endAt != null) 'end_at': endAt,
       if (allDay != null) 'all_day': allDay,
       if (status != null) 'status': status,
       if (recurrenceJson != null) 'recurrence_json': recurrenceJson,
@@ -1224,6 +1356,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
     Value<int?>? endDateKey,
     Value<int?>? startMinute,
     Value<int?>? endMinute,
+    Value<String?>? timeZone,
+    Value<DateTime?>? startAt,
+    Value<DateTime?>? endAt,
     Value<bool>? allDay,
     Value<String>? status,
     Value<String?>? recurrenceJson,
@@ -1242,6 +1377,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
       endDateKey: endDateKey ?? this.endDateKey,
       startMinute: startMinute ?? this.startMinute,
       endMinute: endMinute ?? this.endMinute,
+      timeZone: timeZone ?? this.timeZone,
+      startAt: startAt ?? this.startAt,
+      endAt: endAt ?? this.endAt,
       allDay: allDay ?? this.allDay,
       status: status ?? this.status,
       recurrenceJson: recurrenceJson ?? this.recurrenceJson,
@@ -1282,6 +1420,15 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
     if (endMinute.present) {
       map['end_minute'] = Variable<int>(endMinute.value);
     }
+    if (timeZone.present) {
+      map['time_zone'] = Variable<String>(timeZone.value);
+    }
+    if (startAt.present) {
+      map['start_at'] = Variable<DateTime>(startAt.value);
+    }
+    if (endAt.present) {
+      map['end_at'] = Variable<DateTime>(endAt.value);
+    }
     if (allDay.present) {
       map['all_day'] = Variable<bool>(allDay.value);
     }
@@ -1318,6 +1465,9 @@ class EntryRecordsCompanion extends UpdateCompanion<EntryRow> {
           ..write('endDateKey: $endDateKey, ')
           ..write('startMinute: $startMinute, ')
           ..write('endMinute: $endMinute, ')
+          ..write('timeZone: $timeZone, ')
+          ..write('startAt: $startAt, ')
+          ..write('endAt: $endAt, ')
           ..write('allDay: $allDay, ')
           ..write('status: $status, ')
           ..write('recurrenceJson: $recurrenceJson, ')
@@ -1959,6 +2109,18 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _timeZoneMeta = const VerificationMeta(
+    'timeZone',
+  );
+  @override
+  late final GeneratedColumn<String> timeZone = GeneratedColumn<String>(
+    'time_zone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('UTC'),
+  );
   static const VerificationMeta _cycleDaysMeta = const VerificationMeta(
     'cycleDays',
   );
@@ -1979,17 +2141,6 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
     aliasedName,
     false,
     type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _slotsJsonMeta = const VerificationMeta(
-    'slotsJson',
-  );
-  @override
-  late final GeneratedColumn<String> slotsJson = GeneratedColumn<String>(
-    'slots_json',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _enabledMeta = const VerificationMeta(
@@ -2045,9 +2196,9 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
     id,
     spaceId,
     name,
+    timeZone,
     cycleDays,
     anchorDateKey,
-    slotsJson,
     enabled,
     createdAt,
     updatedAt,
@@ -2086,6 +2237,12 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('time_zone')) {
+      context.handle(
+        _timeZoneMeta,
+        timeZone.isAcceptableOrUnknown(data['time_zone']!, _timeZoneMeta),
+      );
+    }
     if (data.containsKey('cycle_days')) {
       context.handle(
         _cycleDaysMeta,
@@ -2104,14 +2261,6 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
       );
     } else if (isInserting) {
       context.missing(_anchorDateKeyMeta);
-    }
-    if (data.containsKey('slots_json')) {
-      context.handle(
-        _slotsJsonMeta,
-        slotsJson.isAcceptableOrUnknown(data['slots_json']!, _slotsJsonMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_slotsJsonMeta);
     }
     if (data.containsKey('enabled')) {
       context.handle(
@@ -2162,6 +2311,10 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      timeZone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_zone'],
+      )!,
       cycleDays: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}cycle_days'],
@@ -2169,10 +2322,6 @@ class $ShiftPatternRecordsTable extends ShiftPatternRecords
       anchorDateKey: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}anchor_date_key'],
-      )!,
-      slotsJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}slots_json'],
       )!,
       enabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -2203,11 +2352,11 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
   final String id;
   final String spaceId;
   final String name;
+
+  /// IANA timezone the slot times are defined in.
+  final String timeZone;
   final int cycleDays;
   final int anchorDateKey;
-
-  /// Serialized list of [ShiftSlot].
-  final String slotsJson;
   final bool enabled;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -2216,9 +2365,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     required this.id,
     required this.spaceId,
     required this.name,
+    required this.timeZone,
     required this.cycleDays,
     required this.anchorDateKey,
-    required this.slotsJson,
     required this.enabled,
     required this.createdAt,
     required this.updatedAt,
@@ -2230,9 +2379,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     map['id'] = Variable<String>(id);
     map['space_id'] = Variable<String>(spaceId);
     map['name'] = Variable<String>(name);
+    map['time_zone'] = Variable<String>(timeZone);
     map['cycle_days'] = Variable<int>(cycleDays);
     map['anchor_date_key'] = Variable<int>(anchorDateKey);
-    map['slots_json'] = Variable<String>(slotsJson);
     map['enabled'] = Variable<bool>(enabled);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2247,9 +2396,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       id: Value(id),
       spaceId: Value(spaceId),
       name: Value(name),
+      timeZone: Value(timeZone),
       cycleDays: Value(cycleDays),
       anchorDateKey: Value(anchorDateKey),
-      slotsJson: Value(slotsJson),
       enabled: Value(enabled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -2268,9 +2417,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       id: serializer.fromJson<String>(json['id']),
       spaceId: serializer.fromJson<String>(json['spaceId']),
       name: serializer.fromJson<String>(json['name']),
+      timeZone: serializer.fromJson<String>(json['timeZone']),
       cycleDays: serializer.fromJson<int>(json['cycleDays']),
       anchorDateKey: serializer.fromJson<int>(json['anchorDateKey']),
-      slotsJson: serializer.fromJson<String>(json['slotsJson']),
       enabled: serializer.fromJson<bool>(json['enabled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -2284,9 +2433,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       'id': serializer.toJson<String>(id),
       'spaceId': serializer.toJson<String>(spaceId),
       'name': serializer.toJson<String>(name),
+      'timeZone': serializer.toJson<String>(timeZone),
       'cycleDays': serializer.toJson<int>(cycleDays),
       'anchorDateKey': serializer.toJson<int>(anchorDateKey),
-      'slotsJson': serializer.toJson<String>(slotsJson),
       'enabled': serializer.toJson<bool>(enabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -2298,9 +2447,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     String? id,
     String? spaceId,
     String? name,
+    String? timeZone,
     int? cycleDays,
     int? anchorDateKey,
-    String? slotsJson,
     bool? enabled,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -2309,9 +2458,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     id: id ?? this.id,
     spaceId: spaceId ?? this.spaceId,
     name: name ?? this.name,
+    timeZone: timeZone ?? this.timeZone,
     cycleDays: cycleDays ?? this.cycleDays,
     anchorDateKey: anchorDateKey ?? this.anchorDateKey,
-    slotsJson: slotsJson ?? this.slotsJson,
     enabled: enabled ?? this.enabled,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -2322,11 +2471,11 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
       id: data.id.present ? data.id.value : this.id,
       spaceId: data.spaceId.present ? data.spaceId.value : this.spaceId,
       name: data.name.present ? data.name.value : this.name,
+      timeZone: data.timeZone.present ? data.timeZone.value : this.timeZone,
       cycleDays: data.cycleDays.present ? data.cycleDays.value : this.cycleDays,
       anchorDateKey: data.anchorDateKey.present
           ? data.anchorDateKey.value
           : this.anchorDateKey,
-      slotsJson: data.slotsJson.present ? data.slotsJson.value : this.slotsJson,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -2340,9 +2489,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
           ..write('id: $id, ')
           ..write('spaceId: $spaceId, ')
           ..write('name: $name, ')
+          ..write('timeZone: $timeZone, ')
           ..write('cycleDays: $cycleDays, ')
           ..write('anchorDateKey: $anchorDateKey, ')
-          ..write('slotsJson: $slotsJson, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2356,9 +2505,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
     id,
     spaceId,
     name,
+    timeZone,
     cycleDays,
     anchorDateKey,
-    slotsJson,
     enabled,
     createdAt,
     updatedAt,
@@ -2371,9 +2520,9 @@ class ShiftPatternRow extends DataClass implements Insertable<ShiftPatternRow> {
           other.id == this.id &&
           other.spaceId == this.spaceId &&
           other.name == this.name &&
+          other.timeZone == this.timeZone &&
           other.cycleDays == this.cycleDays &&
           other.anchorDateKey == this.anchorDateKey &&
-          other.slotsJson == this.slotsJson &&
           other.enabled == this.enabled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -2384,9 +2533,9 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
   final Value<String> id;
   final Value<String> spaceId;
   final Value<String> name;
+  final Value<String> timeZone;
   final Value<int> cycleDays;
   final Value<int> anchorDateKey;
-  final Value<String> slotsJson;
   final Value<bool> enabled;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -2396,9 +2545,9 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     this.id = const Value.absent(),
     this.spaceId = const Value.absent(),
     this.name = const Value.absent(),
+    this.timeZone = const Value.absent(),
     this.cycleDays = const Value.absent(),
     this.anchorDateKey = const Value.absent(),
-    this.slotsJson = const Value.absent(),
     this.enabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -2409,9 +2558,9 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     required String id,
     required String spaceId,
     required String name,
+    this.timeZone = const Value.absent(),
     required int cycleDays,
     required int anchorDateKey,
-    required String slotsJson,
     this.enabled = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -2422,16 +2571,15 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
        name = Value(name),
        cycleDays = Value(cycleDays),
        anchorDateKey = Value(anchorDateKey),
-       slotsJson = Value(slotsJson),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<ShiftPatternRow> custom({
     Expression<String>? id,
     Expression<String>? spaceId,
     Expression<String>? name,
+    Expression<String>? timeZone,
     Expression<int>? cycleDays,
     Expression<int>? anchorDateKey,
-    Expression<String>? slotsJson,
     Expression<bool>? enabled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -2442,9 +2590,9 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
       if (id != null) 'id': id,
       if (spaceId != null) 'space_id': spaceId,
       if (name != null) 'name': name,
+      if (timeZone != null) 'time_zone': timeZone,
       if (cycleDays != null) 'cycle_days': cycleDays,
       if (anchorDateKey != null) 'anchor_date_key': anchorDateKey,
-      if (slotsJson != null) 'slots_json': slotsJson,
       if (enabled != null) 'enabled': enabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -2457,9 +2605,9 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     Value<String>? id,
     Value<String>? spaceId,
     Value<String>? name,
+    Value<String>? timeZone,
     Value<int>? cycleDays,
     Value<int>? anchorDateKey,
-    Value<String>? slotsJson,
     Value<bool>? enabled,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -2470,9 +2618,9 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
       id: id ?? this.id,
       spaceId: spaceId ?? this.spaceId,
       name: name ?? this.name,
+      timeZone: timeZone ?? this.timeZone,
       cycleDays: cycleDays ?? this.cycleDays,
       anchorDateKey: anchorDateKey ?? this.anchorDateKey,
-      slotsJson: slotsJson ?? this.slotsJson,
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -2493,14 +2641,14 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (timeZone.present) {
+      map['time_zone'] = Variable<String>(timeZone.value);
+    }
     if (cycleDays.present) {
       map['cycle_days'] = Variable<int>(cycleDays.value);
     }
     if (anchorDateKey.present) {
       map['anchor_date_key'] = Variable<int>(anchorDateKey.value);
-    }
-    if (slotsJson.present) {
-      map['slots_json'] = Variable<String>(slotsJson.value);
     }
     if (enabled.present) {
       map['enabled'] = Variable<bool>(enabled.value);
@@ -2526,14 +2674,873 @@ class ShiftPatternRecordsCompanion extends UpdateCompanion<ShiftPatternRow> {
           ..write('id: $id, ')
           ..write('spaceId: $spaceId, ')
           ..write('name: $name, ')
+          ..write('timeZone: $timeZone, ')
           ..write('cycleDays: $cycleDays, ')
           ..write('anchorDateKey: $anchorDateKey, ')
-          ..write('slotsJson: $slotsJson, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ShiftSlotRecordsTable extends ShiftSlotRecords
+    with TableInfo<$ShiftSlotRecordsTable, ShiftSlotRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShiftSlotRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _patternIdMeta = const VerificationMeta(
+    'patternId',
+  );
+  @override
+  late final GeneratedColumn<String> patternId = GeneratedColumn<String>(
+    'pattern_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shift_pattern_records (id)',
+    ),
+  );
+  static const VerificationMeta _dayIndexMeta = const VerificationMeta(
+    'dayIndex',
+  );
+  @override
+  late final GeneratedColumn<int> dayIndex = GeneratedColumn<int>(
+    'day_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _startMinuteMeta = const VerificationMeta(
+    'startMinute',
+  );
+  @override
+  late final GeneratedColumn<int> startMinute = GeneratedColumn<int>(
+    'start_minute',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endMinuteMeta = const VerificationMeta(
+    'endMinute',
+  );
+  @override
+  late final GeneratedColumn<int> endMinute = GeneratedColumn<int>(
+    'end_minute',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    patternId,
+    dayIndex,
+    label,
+    startMinute,
+    endMinute,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shift_slot_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShiftSlotRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('pattern_id')) {
+      context.handle(
+        _patternIdMeta,
+        patternId.isAcceptableOrUnknown(data['pattern_id']!, _patternIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_patternIdMeta);
+    }
+    if (data.containsKey('day_index')) {
+      context.handle(
+        _dayIndexMeta,
+        dayIndex.isAcceptableOrUnknown(data['day_index']!, _dayIndexMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dayIndexMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
+    if (data.containsKey('start_minute')) {
+      context.handle(
+        _startMinuteMeta,
+        startMinute.isAcceptableOrUnknown(
+          data['start_minute']!,
+          _startMinuteMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_startMinuteMeta);
+    }
+    if (data.containsKey('end_minute')) {
+      context.handle(
+        _endMinuteMeta,
+        endMinute.isAcceptableOrUnknown(data['end_minute']!, _endMinuteMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endMinuteMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ShiftSlotRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShiftSlotRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      patternId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pattern_id'],
+      )!,
+      dayIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}day_index'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      startMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_minute'],
+      )!,
+      endMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_minute'],
+      )!,
+    );
+  }
+
+  @override
+  $ShiftSlotRecordsTable createAlias(String alias) {
+    return $ShiftSlotRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class ShiftSlotRow extends DataClass implements Insertable<ShiftSlotRow> {
+  final int id;
+  final String patternId;
+  final int dayIndex;
+  final String label;
+  final int startMinute;
+  final int endMinute;
+  const ShiftSlotRow({
+    required this.id,
+    required this.patternId,
+    required this.dayIndex,
+    required this.label,
+    required this.startMinute,
+    required this.endMinute,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['pattern_id'] = Variable<String>(patternId);
+    map['day_index'] = Variable<int>(dayIndex);
+    map['label'] = Variable<String>(label);
+    map['start_minute'] = Variable<int>(startMinute);
+    map['end_minute'] = Variable<int>(endMinute);
+    return map;
+  }
+
+  ShiftSlotRecordsCompanion toCompanion(bool nullToAbsent) {
+    return ShiftSlotRecordsCompanion(
+      id: Value(id),
+      patternId: Value(patternId),
+      dayIndex: Value(dayIndex),
+      label: Value(label),
+      startMinute: Value(startMinute),
+      endMinute: Value(endMinute),
+    );
+  }
+
+  factory ShiftSlotRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShiftSlotRow(
+      id: serializer.fromJson<int>(json['id']),
+      patternId: serializer.fromJson<String>(json['patternId']),
+      dayIndex: serializer.fromJson<int>(json['dayIndex']),
+      label: serializer.fromJson<String>(json['label']),
+      startMinute: serializer.fromJson<int>(json['startMinute']),
+      endMinute: serializer.fromJson<int>(json['endMinute']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'patternId': serializer.toJson<String>(patternId),
+      'dayIndex': serializer.toJson<int>(dayIndex),
+      'label': serializer.toJson<String>(label),
+      'startMinute': serializer.toJson<int>(startMinute),
+      'endMinute': serializer.toJson<int>(endMinute),
+    };
+  }
+
+  ShiftSlotRow copyWith({
+    int? id,
+    String? patternId,
+    int? dayIndex,
+    String? label,
+    int? startMinute,
+    int? endMinute,
+  }) => ShiftSlotRow(
+    id: id ?? this.id,
+    patternId: patternId ?? this.patternId,
+    dayIndex: dayIndex ?? this.dayIndex,
+    label: label ?? this.label,
+    startMinute: startMinute ?? this.startMinute,
+    endMinute: endMinute ?? this.endMinute,
+  );
+  ShiftSlotRow copyWithCompanion(ShiftSlotRecordsCompanion data) {
+    return ShiftSlotRow(
+      id: data.id.present ? data.id.value : this.id,
+      patternId: data.patternId.present ? data.patternId.value : this.patternId,
+      dayIndex: data.dayIndex.present ? data.dayIndex.value : this.dayIndex,
+      label: data.label.present ? data.label.value : this.label,
+      startMinute: data.startMinute.present
+          ? data.startMinute.value
+          : this.startMinute,
+      endMinute: data.endMinute.present ? data.endMinute.value : this.endMinute,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShiftSlotRow(')
+          ..write('id: $id, ')
+          ..write('patternId: $patternId, ')
+          ..write('dayIndex: $dayIndex, ')
+          ..write('label: $label, ')
+          ..write('startMinute: $startMinute, ')
+          ..write('endMinute: $endMinute')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, patternId, dayIndex, label, startMinute, endMinute);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShiftSlotRow &&
+          other.id == this.id &&
+          other.patternId == this.patternId &&
+          other.dayIndex == this.dayIndex &&
+          other.label == this.label &&
+          other.startMinute == this.startMinute &&
+          other.endMinute == this.endMinute);
+}
+
+class ShiftSlotRecordsCompanion extends UpdateCompanion<ShiftSlotRow> {
+  final Value<int> id;
+  final Value<String> patternId;
+  final Value<int> dayIndex;
+  final Value<String> label;
+  final Value<int> startMinute;
+  final Value<int> endMinute;
+  const ShiftSlotRecordsCompanion({
+    this.id = const Value.absent(),
+    this.patternId = const Value.absent(),
+    this.dayIndex = const Value.absent(),
+    this.label = const Value.absent(),
+    this.startMinute = const Value.absent(),
+    this.endMinute = const Value.absent(),
+  });
+  ShiftSlotRecordsCompanion.insert({
+    this.id = const Value.absent(),
+    required String patternId,
+    required int dayIndex,
+    this.label = const Value.absent(),
+    required int startMinute,
+    required int endMinute,
+  }) : patternId = Value(patternId),
+       dayIndex = Value(dayIndex),
+       startMinute = Value(startMinute),
+       endMinute = Value(endMinute);
+  static Insertable<ShiftSlotRow> custom({
+    Expression<int>? id,
+    Expression<String>? patternId,
+    Expression<int>? dayIndex,
+    Expression<String>? label,
+    Expression<int>? startMinute,
+    Expression<int>? endMinute,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (patternId != null) 'pattern_id': patternId,
+      if (dayIndex != null) 'day_index': dayIndex,
+      if (label != null) 'label': label,
+      if (startMinute != null) 'start_minute': startMinute,
+      if (endMinute != null) 'end_minute': endMinute,
+    });
+  }
+
+  ShiftSlotRecordsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? patternId,
+    Value<int>? dayIndex,
+    Value<String>? label,
+    Value<int>? startMinute,
+    Value<int>? endMinute,
+  }) {
+    return ShiftSlotRecordsCompanion(
+      id: id ?? this.id,
+      patternId: patternId ?? this.patternId,
+      dayIndex: dayIndex ?? this.dayIndex,
+      label: label ?? this.label,
+      startMinute: startMinute ?? this.startMinute,
+      endMinute: endMinute ?? this.endMinute,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (patternId.present) {
+      map['pattern_id'] = Variable<String>(patternId.value);
+    }
+    if (dayIndex.present) {
+      map['day_index'] = Variable<int>(dayIndex.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (startMinute.present) {
+      map['start_minute'] = Variable<int>(startMinute.value);
+    }
+    if (endMinute.present) {
+      map['end_minute'] = Variable<int>(endMinute.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShiftSlotRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('patternId: $patternId, ')
+          ..write('dayIndex: $dayIndex, ')
+          ..write('label: $label, ')
+          ..write('startMinute: $startMinute, ')
+          ..write('endMinute: $endMinute')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ShiftExceptionRecordsTable extends ShiftExceptionRecords
+    with TableInfo<$ShiftExceptionRecordsTable, ShiftExceptionRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShiftExceptionRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _patternIdMeta = const VerificationMeta(
+    'patternId',
+  );
+  @override
+  late final GeneratedColumn<String> patternId = GeneratedColumn<String>(
+    'pattern_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shift_pattern_records (id)',
+    ),
+  );
+  static const VerificationMeta _dateKeyMeta = const VerificationMeta(
+    'dateKey',
+  );
+  @override
+  late final GeneratedColumn<int> dateKey = GeneratedColumn<int>(
+    'date_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startMinuteMeta = const VerificationMeta(
+    'startMinute',
+  );
+  @override
+  late final GeneratedColumn<int> startMinute = GeneratedColumn<int>(
+    'start_minute',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endMinuteMeta = const VerificationMeta(
+    'endMinute',
+  );
+  @override
+  late final GeneratedColumn<int> endMinute = GeneratedColumn<int>(
+    'end_minute',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    patternId,
+    dateKey,
+    type,
+    startMinute,
+    endMinute,
+    note,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shift_exception_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShiftExceptionRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('pattern_id')) {
+      context.handle(
+        _patternIdMeta,
+        patternId.isAcceptableOrUnknown(data['pattern_id']!, _patternIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_patternIdMeta);
+    }
+    if (data.containsKey('date_key')) {
+      context.handle(
+        _dateKeyMeta,
+        dateKey.isAcceptableOrUnknown(data['date_key']!, _dateKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateKeyMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('start_minute')) {
+      context.handle(
+        _startMinuteMeta,
+        startMinute.isAcceptableOrUnknown(
+          data['start_minute']!,
+          _startMinuteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('end_minute')) {
+      context.handle(
+        _endMinuteMeta,
+        endMinute.isAcceptableOrUnknown(data['end_minute']!, _endMinuteMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ShiftExceptionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShiftExceptionRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      patternId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pattern_id'],
+      )!,
+      dateKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}date_key'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      startMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_minute'],
+      ),
+      endMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_minute'],
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+    );
+  }
+
+  @override
+  $ShiftExceptionRecordsTable createAlias(String alias) {
+    return $ShiftExceptionRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class ShiftExceptionRow extends DataClass
+    implements Insertable<ShiftExceptionRow> {
+  final int id;
+  final String patternId;
+  final int dateKey;
+
+  /// One of [ShiftExceptionType].
+  final String type;
+  final int? startMinute;
+  final int? endMinute;
+  final String note;
+  const ShiftExceptionRow({
+    required this.id,
+    required this.patternId,
+    required this.dateKey,
+    required this.type,
+    this.startMinute,
+    this.endMinute,
+    required this.note,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['pattern_id'] = Variable<String>(patternId);
+    map['date_key'] = Variable<int>(dateKey);
+    map['type'] = Variable<String>(type);
+    if (!nullToAbsent || startMinute != null) {
+      map['start_minute'] = Variable<int>(startMinute);
+    }
+    if (!nullToAbsent || endMinute != null) {
+      map['end_minute'] = Variable<int>(endMinute);
+    }
+    map['note'] = Variable<String>(note);
+    return map;
+  }
+
+  ShiftExceptionRecordsCompanion toCompanion(bool nullToAbsent) {
+    return ShiftExceptionRecordsCompanion(
+      id: Value(id),
+      patternId: Value(patternId),
+      dateKey: Value(dateKey),
+      type: Value(type),
+      startMinute: startMinute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startMinute),
+      endMinute: endMinute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endMinute),
+      note: Value(note),
+    );
+  }
+
+  factory ShiftExceptionRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShiftExceptionRow(
+      id: serializer.fromJson<int>(json['id']),
+      patternId: serializer.fromJson<String>(json['patternId']),
+      dateKey: serializer.fromJson<int>(json['dateKey']),
+      type: serializer.fromJson<String>(json['type']),
+      startMinute: serializer.fromJson<int?>(json['startMinute']),
+      endMinute: serializer.fromJson<int?>(json['endMinute']),
+      note: serializer.fromJson<String>(json['note']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'patternId': serializer.toJson<String>(patternId),
+      'dateKey': serializer.toJson<int>(dateKey),
+      'type': serializer.toJson<String>(type),
+      'startMinute': serializer.toJson<int?>(startMinute),
+      'endMinute': serializer.toJson<int?>(endMinute),
+      'note': serializer.toJson<String>(note),
+    };
+  }
+
+  ShiftExceptionRow copyWith({
+    int? id,
+    String? patternId,
+    int? dateKey,
+    String? type,
+    Value<int?> startMinute = const Value.absent(),
+    Value<int?> endMinute = const Value.absent(),
+    String? note,
+  }) => ShiftExceptionRow(
+    id: id ?? this.id,
+    patternId: patternId ?? this.patternId,
+    dateKey: dateKey ?? this.dateKey,
+    type: type ?? this.type,
+    startMinute: startMinute.present ? startMinute.value : this.startMinute,
+    endMinute: endMinute.present ? endMinute.value : this.endMinute,
+    note: note ?? this.note,
+  );
+  ShiftExceptionRow copyWithCompanion(ShiftExceptionRecordsCompanion data) {
+    return ShiftExceptionRow(
+      id: data.id.present ? data.id.value : this.id,
+      patternId: data.patternId.present ? data.patternId.value : this.patternId,
+      dateKey: data.dateKey.present ? data.dateKey.value : this.dateKey,
+      type: data.type.present ? data.type.value : this.type,
+      startMinute: data.startMinute.present
+          ? data.startMinute.value
+          : this.startMinute,
+      endMinute: data.endMinute.present ? data.endMinute.value : this.endMinute,
+      note: data.note.present ? data.note.value : this.note,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShiftExceptionRow(')
+          ..write('id: $id, ')
+          ..write('patternId: $patternId, ')
+          ..write('dateKey: $dateKey, ')
+          ..write('type: $type, ')
+          ..write('startMinute: $startMinute, ')
+          ..write('endMinute: $endMinute, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, patternId, dateKey, type, startMinute, endMinute, note);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShiftExceptionRow &&
+          other.id == this.id &&
+          other.patternId == this.patternId &&
+          other.dateKey == this.dateKey &&
+          other.type == this.type &&
+          other.startMinute == this.startMinute &&
+          other.endMinute == this.endMinute &&
+          other.note == this.note);
+}
+
+class ShiftExceptionRecordsCompanion
+    extends UpdateCompanion<ShiftExceptionRow> {
+  final Value<int> id;
+  final Value<String> patternId;
+  final Value<int> dateKey;
+  final Value<String> type;
+  final Value<int?> startMinute;
+  final Value<int?> endMinute;
+  final Value<String> note;
+  const ShiftExceptionRecordsCompanion({
+    this.id = const Value.absent(),
+    this.patternId = const Value.absent(),
+    this.dateKey = const Value.absent(),
+    this.type = const Value.absent(),
+    this.startMinute = const Value.absent(),
+    this.endMinute = const Value.absent(),
+    this.note = const Value.absent(),
+  });
+  ShiftExceptionRecordsCompanion.insert({
+    this.id = const Value.absent(),
+    required String patternId,
+    required int dateKey,
+    required String type,
+    this.startMinute = const Value.absent(),
+    this.endMinute = const Value.absent(),
+    this.note = const Value.absent(),
+  }) : patternId = Value(patternId),
+       dateKey = Value(dateKey),
+       type = Value(type);
+  static Insertable<ShiftExceptionRow> custom({
+    Expression<int>? id,
+    Expression<String>? patternId,
+    Expression<int>? dateKey,
+    Expression<String>? type,
+    Expression<int>? startMinute,
+    Expression<int>? endMinute,
+    Expression<String>? note,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (patternId != null) 'pattern_id': patternId,
+      if (dateKey != null) 'date_key': dateKey,
+      if (type != null) 'type': type,
+      if (startMinute != null) 'start_minute': startMinute,
+      if (endMinute != null) 'end_minute': endMinute,
+      if (note != null) 'note': note,
+    });
+  }
+
+  ShiftExceptionRecordsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? patternId,
+    Value<int>? dateKey,
+    Value<String>? type,
+    Value<int?>? startMinute,
+    Value<int?>? endMinute,
+    Value<String>? note,
+  }) {
+    return ShiftExceptionRecordsCompanion(
+      id: id ?? this.id,
+      patternId: patternId ?? this.patternId,
+      dateKey: dateKey ?? this.dateKey,
+      type: type ?? this.type,
+      startMinute: startMinute ?? this.startMinute,
+      endMinute: endMinute ?? this.endMinute,
+      note: note ?? this.note,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (patternId.present) {
+      map['pattern_id'] = Variable<String>(patternId.value);
+    }
+    if (dateKey.present) {
+      map['date_key'] = Variable<int>(dateKey.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (startMinute.present) {
+      map['start_minute'] = Variable<int>(startMinute.value);
+    }
+    if (endMinute.present) {
+      map['end_minute'] = Variable<int>(endMinute.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShiftExceptionRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('patternId: $patternId, ')
+          ..write('dateKey: $dateKey, ')
+          ..write('type: $type, ')
+          ..write('startMinute: $startMinute, ')
+          ..write('endMinute: $endMinute, ')
+          ..write('note: $note')
           ..write(')'))
         .toString();
   }
@@ -2759,6 +3766,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $ShiftPatternRecordsTable shiftPatternRecords =
       $ShiftPatternRecordsTable(this);
+  late final $ShiftSlotRecordsTable shiftSlotRecords = $ShiftSlotRecordsTable(
+    this,
+  );
+  late final $ShiftExceptionRecordsTable shiftExceptionRecords =
+      $ShiftExceptionRecordsTable(this);
   late final $SettingRecordsTable settingRecords = $SettingRecordsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2770,6 +3782,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     completionRecords,
     reminderRecords,
     shiftPatternRecords,
+    shiftSlotRecords,
+    shiftExceptionRecords,
     settingRecords,
   ];
 }
@@ -3235,6 +4249,9 @@ typedef $$EntryRecordsTableCreateCompanionBuilder =
       Value<int?> endDateKey,
       Value<int?> startMinute,
       Value<int?> endMinute,
+      Value<String?> timeZone,
+      Value<DateTime?> startAt,
+      Value<DateTime?> endAt,
       Value<bool> allDay,
       required String status,
       Value<String?> recurrenceJson,
@@ -3254,6 +4271,9 @@ typedef $$EntryRecordsTableUpdateCompanionBuilder =
       Value<int?> endDateKey,
       Value<int?> startMinute,
       Value<int?> endMinute,
+      Value<String?> timeZone,
+      Value<DateTime?> startAt,
+      Value<DateTime?> endAt,
       Value<bool> allDay,
       Value<String> status,
       Value<String?> recurrenceJson,
@@ -3380,6 +4400,21 @@ class $$EntryRecordsTableFilterComposer
 
   ColumnFilters<int> get endMinute => $composableBuilder(
     column: $table.endMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeZone => $composableBuilder(
+    column: $table.timeZone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startAt => $composableBuilder(
+    column: $table.startAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endAt => $composableBuilder(
+    column: $table.endAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3536,6 +4571,21 @@ class $$EntryRecordsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get timeZone => $composableBuilder(
+    column: $table.timeZone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startAt => $composableBuilder(
+    column: $table.startAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endAt => $composableBuilder(
+    column: $table.endAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get allDay => $composableBuilder(
     column: $table.allDay,
     builder: (column) => ColumnOrderings(column),
@@ -3626,6 +4676,15 @@ class $$EntryRecordsTableAnnotationComposer
 
   GeneratedColumn<int> get endMinute =>
       $composableBuilder(column: $table.endMinute, builder: (column) => column);
+
+  GeneratedColumn<String> get timeZone =>
+      $composableBuilder(column: $table.timeZone, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startAt =>
+      $composableBuilder(column: $table.startAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endAt =>
+      $composableBuilder(column: $table.endAt, builder: (column) => column);
 
   GeneratedColumn<bool> get allDay =>
       $composableBuilder(column: $table.allDay, builder: (column) => column);
@@ -3763,6 +4822,9 @@ class $$EntryRecordsTableTableManager
                 Value<int?> endDateKey = const Value.absent(),
                 Value<int?> startMinute = const Value.absent(),
                 Value<int?> endMinute = const Value.absent(),
+                Value<String?> timeZone = const Value.absent(),
+                Value<DateTime?> startAt = const Value.absent(),
+                Value<DateTime?> endAt = const Value.absent(),
                 Value<bool> allDay = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> recurrenceJson = const Value.absent(),
@@ -3780,6 +4842,9 @@ class $$EntryRecordsTableTableManager
                 endDateKey: endDateKey,
                 startMinute: startMinute,
                 endMinute: endMinute,
+                timeZone: timeZone,
+                startAt: startAt,
+                endAt: endAt,
                 allDay: allDay,
                 status: status,
                 recurrenceJson: recurrenceJson,
@@ -3799,6 +4864,9 @@ class $$EntryRecordsTableTableManager
                 Value<int?> endDateKey = const Value.absent(),
                 Value<int?> startMinute = const Value.absent(),
                 Value<int?> endMinute = const Value.absent(),
+                Value<String?> timeZone = const Value.absent(),
+                Value<DateTime?> startAt = const Value.absent(),
+                Value<DateTime?> endAt = const Value.absent(),
                 Value<bool> allDay = const Value.absent(),
                 required String status,
                 Value<String?> recurrenceJson = const Value.absent(),
@@ -3816,6 +4884,9 @@ class $$EntryRecordsTableTableManager
                 endDateKey: endDateKey,
                 startMinute: startMinute,
                 endMinute: endMinute,
+                timeZone: timeZone,
+                startAt: startAt,
+                endAt: endAt,
                 allDay: allDay,
                 status: status,
                 recurrenceJson: recurrenceJson,
@@ -4556,9 +5627,9 @@ typedef $$ShiftPatternRecordsTableCreateCompanionBuilder =
       required String id,
       required String spaceId,
       required String name,
+      Value<String> timeZone,
       required int cycleDays,
       required int anchorDateKey,
-      required String slotsJson,
       Value<bool> enabled,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -4570,9 +5641,9 @@ typedef $$ShiftPatternRecordsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> spaceId,
       Value<String> name,
+      Value<String> timeZone,
       Value<int> cycleDays,
       Value<int> anchorDateKey,
-      Value<String> slotsJson,
       Value<bool> enabled,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -4614,6 +5685,57 @@ final class $$ShiftPatternRecordsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$ShiftSlotRecordsTable, List<ShiftSlotRow>>
+  _shiftSlotRecordsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.shiftSlotRecords,
+    aliasName: $_aliasNameGenerator(
+      db.shiftPatternRecords.id,
+      db.shiftSlotRecords.patternId,
+    ),
+  );
+
+  $$ShiftSlotRecordsTableProcessedTableManager get shiftSlotRecordsRefs {
+    final manager = $$ShiftSlotRecordsTableTableManager(
+      $_db,
+      $_db.shiftSlotRecords,
+    ).filter((f) => f.patternId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _shiftSlotRecordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $ShiftExceptionRecordsTable,
+    List<ShiftExceptionRow>
+  >
+  _shiftExceptionRecordsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.shiftExceptionRecords,
+        aliasName: $_aliasNameGenerator(
+          db.shiftPatternRecords.id,
+          db.shiftExceptionRecords.patternId,
+        ),
+      );
+
+  $$ShiftExceptionRecordsTableProcessedTableManager
+  get shiftExceptionRecordsRefs {
+    final manager = $$ShiftExceptionRecordsTableTableManager(
+      $_db,
+      $_db.shiftExceptionRecords,
+    ).filter((f) => f.patternId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _shiftExceptionRecordsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ShiftPatternRecordsTableFilterComposer
@@ -4635,6 +5757,11 @@ class $$ShiftPatternRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get timeZone => $composableBuilder(
+    column: $table.timeZone,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get cycleDays => $composableBuilder(
     column: $table.cycleDays,
     builder: (column) => ColumnFilters(column),
@@ -4642,11 +5769,6 @@ class $$ShiftPatternRecordsTableFilterComposer
 
   ColumnFilters<int> get anchorDateKey => $composableBuilder(
     column: $table.anchorDateKey,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get slotsJson => $composableBuilder(
-    column: $table.slotsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4692,6 +5814,57 @@ class $$ShiftPatternRecordsTableFilterComposer
     );
     return composer;
   }
+
+  Expression<bool> shiftSlotRecordsRefs(
+    Expression<bool> Function($$ShiftSlotRecordsTableFilterComposer f) f,
+  ) {
+    final $$ShiftSlotRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.shiftSlotRecords,
+      getReferencedColumn: (t) => t.patternId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShiftSlotRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.shiftSlotRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> shiftExceptionRecordsRefs(
+    Expression<bool> Function($$ShiftExceptionRecordsTableFilterComposer f) f,
+  ) {
+    final $$ShiftExceptionRecordsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.shiftExceptionRecords,
+          getReferencedColumn: (t) => t.patternId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftExceptionRecordsTableFilterComposer(
+                $db: $db,
+                $table: $db.shiftExceptionRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ShiftPatternRecordsTableOrderingComposer
@@ -4713,6 +5886,11 @@ class $$ShiftPatternRecordsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get timeZone => $composableBuilder(
+    column: $table.timeZone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get cycleDays => $composableBuilder(
     column: $table.cycleDays,
     builder: (column) => ColumnOrderings(column),
@@ -4720,11 +5898,6 @@ class $$ShiftPatternRecordsTableOrderingComposer
 
   ColumnOrderings<int> get anchorDateKey => $composableBuilder(
     column: $table.anchorDateKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get slotsJson => $composableBuilder(
-    column: $table.slotsJson,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4787,6 +5960,9 @@ class $$ShiftPatternRecordsTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
+  GeneratedColumn<String> get timeZone =>
+      $composableBuilder(column: $table.timeZone, builder: (column) => column);
+
   GeneratedColumn<int> get cycleDays =>
       $composableBuilder(column: $table.cycleDays, builder: (column) => column);
 
@@ -4794,9 +5970,6 @@ class $$ShiftPatternRecordsTableAnnotationComposer
     column: $table.anchorDateKey,
     builder: (column) => column,
   );
-
-  GeneratedColumn<String> get slotsJson =>
-      $composableBuilder(column: $table.slotsJson, builder: (column) => column);
 
   GeneratedColumn<bool> get enabled =>
       $composableBuilder(column: $table.enabled, builder: (column) => column);
@@ -4832,6 +6005,57 @@ class $$ShiftPatternRecordsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> shiftSlotRecordsRefs<T extends Object>(
+    Expression<T> Function($$ShiftSlotRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$ShiftSlotRecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.shiftSlotRecords,
+      getReferencedColumn: (t) => t.patternId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShiftSlotRecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shiftSlotRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> shiftExceptionRecordsRefs<T extends Object>(
+    Expression<T> Function($$ShiftExceptionRecordsTableAnnotationComposer a) f,
+  ) {
+    final $$ShiftExceptionRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.shiftExceptionRecords,
+          getReferencedColumn: (t) => t.patternId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftExceptionRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.shiftExceptionRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ShiftPatternRecordsTableTableManager
@@ -4847,7 +6071,11 @@ class $$ShiftPatternRecordsTableTableManager
           $$ShiftPatternRecordsTableUpdateCompanionBuilder,
           (ShiftPatternRow, $$ShiftPatternRecordsTableReferences),
           ShiftPatternRow,
-          PrefetchHooks Function({bool spaceId})
+          PrefetchHooks Function({
+            bool spaceId,
+            bool shiftSlotRecordsRefs,
+            bool shiftExceptionRecordsRefs,
+          })
         > {
   $$ShiftPatternRecordsTableTableManager(
     _$AppDatabase db,
@@ -4873,9 +6101,9 @@ class $$ShiftPatternRecordsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> spaceId = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String> timeZone = const Value.absent(),
                 Value<int> cycleDays = const Value.absent(),
                 Value<int> anchorDateKey = const Value.absent(),
-                Value<String> slotsJson = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -4885,9 +6113,9 @@ class $$ShiftPatternRecordsTableTableManager
                 id: id,
                 spaceId: spaceId,
                 name: name,
+                timeZone: timeZone,
                 cycleDays: cycleDays,
                 anchorDateKey: anchorDateKey,
-                slotsJson: slotsJson,
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -4899,9 +6127,9 @@ class $$ShiftPatternRecordsTableTableManager
                 required String id,
                 required String spaceId,
                 required String name,
+                Value<String> timeZone = const Value.absent(),
                 required int cycleDays,
                 required int anchorDateKey,
-                required String slotsJson,
                 Value<bool> enabled = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -4911,9 +6139,9 @@ class $$ShiftPatternRecordsTableTableManager
                 id: id,
                 spaceId: spaceId,
                 name: name,
+                timeZone: timeZone,
                 cycleDays: cycleDays,
                 anchorDateKey: anchorDateKey,
-                slotsJson: slotsJson,
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -4928,7 +6156,410 @@ class $$ShiftPatternRecordsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({spaceId = false}) {
+          prefetchHooksCallback:
+              ({
+                spaceId = false,
+                shiftSlotRecordsRefs = false,
+                shiftExceptionRecordsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (shiftSlotRecordsRefs) db.shiftSlotRecords,
+                    if (shiftExceptionRecordsRefs) db.shiftExceptionRecords,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (spaceId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.spaceId,
+                                    referencedTable:
+                                        $$ShiftPatternRecordsTableReferences
+                                            ._spaceIdTable(db),
+                                    referencedColumn:
+                                        $$ShiftPatternRecordsTableReferences
+                                            ._spaceIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (shiftSlotRecordsRefs)
+                        await $_getPrefetchedData<
+                          ShiftPatternRow,
+                          $ShiftPatternRecordsTable,
+                          ShiftSlotRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShiftPatternRecordsTableReferences
+                              ._shiftSlotRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShiftPatternRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).shiftSlotRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.patternId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (shiftExceptionRecordsRefs)
+                        await $_getPrefetchedData<
+                          ShiftPatternRow,
+                          $ShiftPatternRecordsTable,
+                          ShiftExceptionRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShiftPatternRecordsTableReferences
+                              ._shiftExceptionRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShiftPatternRecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).shiftExceptionRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.patternId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ShiftPatternRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ShiftPatternRecordsTable,
+      ShiftPatternRow,
+      $$ShiftPatternRecordsTableFilterComposer,
+      $$ShiftPatternRecordsTableOrderingComposer,
+      $$ShiftPatternRecordsTableAnnotationComposer,
+      $$ShiftPatternRecordsTableCreateCompanionBuilder,
+      $$ShiftPatternRecordsTableUpdateCompanionBuilder,
+      (ShiftPatternRow, $$ShiftPatternRecordsTableReferences),
+      ShiftPatternRow,
+      PrefetchHooks Function({
+        bool spaceId,
+        bool shiftSlotRecordsRefs,
+        bool shiftExceptionRecordsRefs,
+      })
+    >;
+typedef $$ShiftSlotRecordsTableCreateCompanionBuilder =
+    ShiftSlotRecordsCompanion Function({
+      Value<int> id,
+      required String patternId,
+      required int dayIndex,
+      Value<String> label,
+      required int startMinute,
+      required int endMinute,
+    });
+typedef $$ShiftSlotRecordsTableUpdateCompanionBuilder =
+    ShiftSlotRecordsCompanion Function({
+      Value<int> id,
+      Value<String> patternId,
+      Value<int> dayIndex,
+      Value<String> label,
+      Value<int> startMinute,
+      Value<int> endMinute,
+    });
+
+final class $$ShiftSlotRecordsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $ShiftSlotRecordsTable, ShiftSlotRow> {
+  $$ShiftSlotRecordsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShiftPatternRecordsTable _patternIdTable(_$AppDatabase db) =>
+      db.shiftPatternRecords.createAlias(
+        $_aliasNameGenerator(
+          db.shiftSlotRecords.patternId,
+          db.shiftPatternRecords.id,
+        ),
+      );
+
+  $$ShiftPatternRecordsTableProcessedTableManager get patternId {
+    final $_column = $_itemColumn<String>('pattern_id')!;
+
+    final manager = $$ShiftPatternRecordsTableTableManager(
+      $_db,
+      $_db.shiftPatternRecords,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_patternIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ShiftSlotRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $ShiftSlotRecordsTable> {
+  $$ShiftSlotRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dayIndex => $composableBuilder(
+    column: $table.dayIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startMinute => $composableBuilder(
+    column: $table.startMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endMinute => $composableBuilder(
+    column: $table.endMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShiftPatternRecordsTableFilterComposer get patternId {
+    final $$ShiftPatternRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.patternId,
+      referencedTable: $db.shiftPatternRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShiftPatternRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.shiftPatternRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShiftSlotRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ShiftSlotRecordsTable> {
+  $$ShiftSlotRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dayIndex => $composableBuilder(
+    column: $table.dayIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startMinute => $composableBuilder(
+    column: $table.startMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endMinute => $composableBuilder(
+    column: $table.endMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShiftPatternRecordsTableOrderingComposer get patternId {
+    final $$ShiftPatternRecordsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.patternId,
+          referencedTable: $db.shiftPatternRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternRecordsTableOrderingComposer(
+                $db: $db,
+                $table: $db.shiftPatternRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ShiftSlotRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ShiftSlotRecordsTable> {
+  $$ShiftSlotRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get dayIndex =>
+      $composableBuilder(column: $table.dayIndex, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<int> get startMinute => $composableBuilder(
+    column: $table.startMinute,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get endMinute =>
+      $composableBuilder(column: $table.endMinute, builder: (column) => column);
+
+  $$ShiftPatternRecordsTableAnnotationComposer get patternId {
+    final $$ShiftPatternRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.patternId,
+          referencedTable: $db.shiftPatternRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.shiftPatternRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ShiftSlotRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ShiftSlotRecordsTable,
+          ShiftSlotRow,
+          $$ShiftSlotRecordsTableFilterComposer,
+          $$ShiftSlotRecordsTableOrderingComposer,
+          $$ShiftSlotRecordsTableAnnotationComposer,
+          $$ShiftSlotRecordsTableCreateCompanionBuilder,
+          $$ShiftSlotRecordsTableUpdateCompanionBuilder,
+          (ShiftSlotRow, $$ShiftSlotRecordsTableReferences),
+          ShiftSlotRow,
+          PrefetchHooks Function({bool patternId})
+        > {
+  $$ShiftSlotRecordsTableTableManager(
+    _$AppDatabase db,
+    $ShiftSlotRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShiftSlotRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ShiftSlotRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ShiftSlotRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> patternId = const Value.absent(),
+                Value<int> dayIndex = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<int> startMinute = const Value.absent(),
+                Value<int> endMinute = const Value.absent(),
+              }) => ShiftSlotRecordsCompanion(
+                id: id,
+                patternId: patternId,
+                dayIndex: dayIndex,
+                label: label,
+                startMinute: startMinute,
+                endMinute: endMinute,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String patternId,
+                required int dayIndex,
+                Value<String> label = const Value.absent(),
+                required int startMinute,
+                required int endMinute,
+              }) => ShiftSlotRecordsCompanion.insert(
+                id: id,
+                patternId: patternId,
+                dayIndex: dayIndex,
+                label: label,
+                startMinute: startMinute,
+                endMinute: endMinute,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ShiftSlotRecordsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({patternId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -4948,17 +6579,17 @@ class $$ShiftPatternRecordsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (spaceId) {
+                    if (patternId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.spaceId,
+                                currentColumn: table.patternId,
                                 referencedTable:
-                                    $$ShiftPatternRecordsTableReferences
-                                        ._spaceIdTable(db),
+                                    $$ShiftSlotRecordsTableReferences
+                                        ._patternIdTable(db),
                                 referencedColumn:
-                                    $$ShiftPatternRecordsTableReferences
-                                        ._spaceIdTable(db)
+                                    $$ShiftSlotRecordsTableReferences
+                                        ._patternIdTable(db)
                                         .id,
                               )
                               as T;
@@ -4975,19 +6606,399 @@ class $$ShiftPatternRecordsTableTableManager
       );
 }
 
-typedef $$ShiftPatternRecordsTableProcessedTableManager =
+typedef $$ShiftSlotRecordsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $ShiftPatternRecordsTable,
-      ShiftPatternRow,
-      $$ShiftPatternRecordsTableFilterComposer,
-      $$ShiftPatternRecordsTableOrderingComposer,
-      $$ShiftPatternRecordsTableAnnotationComposer,
-      $$ShiftPatternRecordsTableCreateCompanionBuilder,
-      $$ShiftPatternRecordsTableUpdateCompanionBuilder,
-      (ShiftPatternRow, $$ShiftPatternRecordsTableReferences),
-      ShiftPatternRow,
-      PrefetchHooks Function({bool spaceId})
+      $ShiftSlotRecordsTable,
+      ShiftSlotRow,
+      $$ShiftSlotRecordsTableFilterComposer,
+      $$ShiftSlotRecordsTableOrderingComposer,
+      $$ShiftSlotRecordsTableAnnotationComposer,
+      $$ShiftSlotRecordsTableCreateCompanionBuilder,
+      $$ShiftSlotRecordsTableUpdateCompanionBuilder,
+      (ShiftSlotRow, $$ShiftSlotRecordsTableReferences),
+      ShiftSlotRow,
+      PrefetchHooks Function({bool patternId})
+    >;
+typedef $$ShiftExceptionRecordsTableCreateCompanionBuilder =
+    ShiftExceptionRecordsCompanion Function({
+      Value<int> id,
+      required String patternId,
+      required int dateKey,
+      required String type,
+      Value<int?> startMinute,
+      Value<int?> endMinute,
+      Value<String> note,
+    });
+typedef $$ShiftExceptionRecordsTableUpdateCompanionBuilder =
+    ShiftExceptionRecordsCompanion Function({
+      Value<int> id,
+      Value<String> patternId,
+      Value<int> dateKey,
+      Value<String> type,
+      Value<int?> startMinute,
+      Value<int?> endMinute,
+      Value<String> note,
+    });
+
+final class $$ShiftExceptionRecordsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ShiftExceptionRecordsTable,
+          ShiftExceptionRow
+        > {
+  $$ShiftExceptionRecordsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShiftPatternRecordsTable _patternIdTable(_$AppDatabase db) =>
+      db.shiftPatternRecords.createAlias(
+        $_aliasNameGenerator(
+          db.shiftExceptionRecords.patternId,
+          db.shiftPatternRecords.id,
+        ),
+      );
+
+  $$ShiftPatternRecordsTableProcessedTableManager get patternId {
+    final $_column = $_itemColumn<String>('pattern_id')!;
+
+    final manager = $$ShiftPatternRecordsTableTableManager(
+      $_db,
+      $_db.shiftPatternRecords,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_patternIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ShiftExceptionRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $ShiftExceptionRecordsTable> {
+  $$ShiftExceptionRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dateKey => $composableBuilder(
+    column: $table.dateKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startMinute => $composableBuilder(
+    column: $table.startMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endMinute => $composableBuilder(
+    column: $table.endMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShiftPatternRecordsTableFilterComposer get patternId {
+    final $$ShiftPatternRecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.patternId,
+      referencedTable: $db.shiftPatternRecords,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShiftPatternRecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.shiftPatternRecords,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShiftExceptionRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ShiftExceptionRecordsTable> {
+  $$ShiftExceptionRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dateKey => $composableBuilder(
+    column: $table.dateKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startMinute => $composableBuilder(
+    column: $table.startMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endMinute => $composableBuilder(
+    column: $table.endMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShiftPatternRecordsTableOrderingComposer get patternId {
+    final $$ShiftPatternRecordsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.patternId,
+          referencedTable: $db.shiftPatternRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternRecordsTableOrderingComposer(
+                $db: $db,
+                $table: $db.shiftPatternRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ShiftExceptionRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ShiftExceptionRecordsTable> {
+  $$ShiftExceptionRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get dateKey =>
+      $composableBuilder(column: $table.dateKey, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get startMinute => $composableBuilder(
+    column: $table.startMinute,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get endMinute =>
+      $composableBuilder(column: $table.endMinute, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  $$ShiftPatternRecordsTableAnnotationComposer get patternId {
+    final $$ShiftPatternRecordsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.patternId,
+          referencedTable: $db.shiftPatternRecords,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ShiftPatternRecordsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.shiftPatternRecords,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$ShiftExceptionRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ShiftExceptionRecordsTable,
+          ShiftExceptionRow,
+          $$ShiftExceptionRecordsTableFilterComposer,
+          $$ShiftExceptionRecordsTableOrderingComposer,
+          $$ShiftExceptionRecordsTableAnnotationComposer,
+          $$ShiftExceptionRecordsTableCreateCompanionBuilder,
+          $$ShiftExceptionRecordsTableUpdateCompanionBuilder,
+          (ShiftExceptionRow, $$ShiftExceptionRecordsTableReferences),
+          ShiftExceptionRow,
+          PrefetchHooks Function({bool patternId})
+        > {
+  $$ShiftExceptionRecordsTableTableManager(
+    _$AppDatabase db,
+    $ShiftExceptionRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShiftExceptionRecordsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ShiftExceptionRecordsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ShiftExceptionRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> patternId = const Value.absent(),
+                Value<int> dateKey = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<int?> startMinute = const Value.absent(),
+                Value<int?> endMinute = const Value.absent(),
+                Value<String> note = const Value.absent(),
+              }) => ShiftExceptionRecordsCompanion(
+                id: id,
+                patternId: patternId,
+                dateKey: dateKey,
+                type: type,
+                startMinute: startMinute,
+                endMinute: endMinute,
+                note: note,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String patternId,
+                required int dateKey,
+                required String type,
+                Value<int?> startMinute = const Value.absent(),
+                Value<int?> endMinute = const Value.absent(),
+                Value<String> note = const Value.absent(),
+              }) => ShiftExceptionRecordsCompanion.insert(
+                id: id,
+                patternId: patternId,
+                dateKey: dateKey,
+                type: type,
+                startMinute: startMinute,
+                endMinute: endMinute,
+                note: note,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ShiftExceptionRecordsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({patternId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (patternId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.patternId,
+                                referencedTable:
+                                    $$ShiftExceptionRecordsTableReferences
+                                        ._patternIdTable(db),
+                                referencedColumn:
+                                    $$ShiftExceptionRecordsTableReferences
+                                        ._patternIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ShiftExceptionRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ShiftExceptionRecordsTable,
+      ShiftExceptionRow,
+      $$ShiftExceptionRecordsTableFilterComposer,
+      $$ShiftExceptionRecordsTableOrderingComposer,
+      $$ShiftExceptionRecordsTableAnnotationComposer,
+      $$ShiftExceptionRecordsTableCreateCompanionBuilder,
+      $$ShiftExceptionRecordsTableUpdateCompanionBuilder,
+      (ShiftExceptionRow, $$ShiftExceptionRecordsTableReferences),
+      ShiftExceptionRow,
+      PrefetchHooks Function({bool patternId})
     >;
 typedef $$SettingRecordsTableCreateCompanionBuilder =
     SettingRecordsCompanion Function({
@@ -5145,6 +7156,10 @@ class $AppDatabaseManager {
       $$ReminderRecordsTableTableManager(_db, _db.reminderRecords);
   $$ShiftPatternRecordsTableTableManager get shiftPatternRecords =>
       $$ShiftPatternRecordsTableTableManager(_db, _db.shiftPatternRecords);
+  $$ShiftSlotRecordsTableTableManager get shiftSlotRecords =>
+      $$ShiftSlotRecordsTableTableManager(_db, _db.shiftSlotRecords);
+  $$ShiftExceptionRecordsTableTableManager get shiftExceptionRecords =>
+      $$ShiftExceptionRecordsTableTableManager(_db, _db.shiftExceptionRecords);
   $$SettingRecordsTableTableManager get settingRecords =>
       $$SettingRecordsTableTableManager(_db, _db.settingRecords);
 }

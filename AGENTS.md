@@ -103,7 +103,7 @@ replacement, chatbot inside the app.
 
 Treat this as the baseline. Verify it before changing anything.
 
-**Done (v0.1):**
+**Done (v0.1 and v0.1.5):**
 
 - Pure Dart domain package in `packages/mane_core` with:
   - `LocalDate` (date-only values for all-day items)
@@ -119,8 +119,17 @@ Treat this as the baseline. Verify it before changing anything.
 - Riverpod providers in `lib/state/providers.dart`.
 - Today screen, Week screen and entry editor.
 - Per-occurrence completion for recurring entries.
+- Shift patterns now use `shift_slots` and `shift_exceptions`, with arbitrary
+  cycle lengths, multiple slots per day and overnight slots.
+- Timed entries and shifts are timezone-aware: wall-clock template fields in an
+  IANA timezone plus resolved UTC anchor instants, expanded in the stored zone
+  and displayed in the device zone.
+- Personal, Work and Home are the three seeded spaces, with a v1 to v2 migration.
+- Per-occurrence completion for recurring entries, keyed by the occurrence date
+  in the entry's stored timezone.
 - Linux debug build and Android debug APK both pass.
-- Tests: 5 app/database tests, 31 core tests.
+- Tests: 12 app/database/widget tests, 64 core tests, including a real v1 data
+  migration test and DST/travel scenarios.
 - CI in `.github/workflows/build.yml`: analyze, both test suites and a debug
   APK build.
 - Zed tasks in `.zed/tasks.json` for deps, codegen, tests, lint, builds and
@@ -128,11 +137,6 @@ Treat this as the baseline. Verify it before changing anything.
 
 **Known gaps:**
 
-- Only Home and Work are seeded. Personal is the target third space.
-- Timed entries and shifts still use the old wall-clock model. They must become
-  timezone-aware.
-- Shift patterns support one slot per cycle day. They must support arbitrary
-  cycles, multiple slots per day and date exceptions.
 - No calendar view.
 - No local notifications or reminder scheduling UI.
 - No week navigation.
@@ -148,6 +152,8 @@ Treat this as the baseline. Verify it before changing anything.
 - No LAN pairing, discovery, query endpoint or MCP server.
 - No search, widgets, accessibility pass or English/Spanish localization.
 - The UI is a first pass, not the final visual language.
+- The device timezone is read at app start; live refresh lands with v0.2
+  notifications.
 
 **Baseline check:**
 
@@ -484,16 +490,16 @@ usable, tested and documented.
 
 See section 4. Keep the existing tests green.
 
-### v0.1.5 Timezone, three spaces and flexible shifts (prerequisite)
+### v0.1.5 Timezone, three spaces and flexible shifts (prerequisite) (done)
 
-- Replace the wall-clock timed model with timezone-aware instants and an IANA
+- [x] Replace the wall-clock timed model with timezone-aware instants and an IANA
   timezone on entries and shift patterns.
-- Keep `LocalDate` for all-day items.
-- Add the Personal space and migrate the Home/Work seed to Personal/Work/Home.
-- Replace one-slot shift patterns with `shift_slots` and `shift_exceptions`.
-- Allow multiple slots per day, overnight slots and cycle lengths beyond 7.
-- Add migration tests and timezone/DST tests.
-- Update the domain, schema, repository, providers and UI.
+- [x] Keep `LocalDate` for all-day items.
+- [x] Add the Personal space and migrate the Home/Work seed to Personal/Work/Home.
+- [x] Replace one-slot shift patterns with `shift_slots` and `shift_exceptions`.
+- [x] Allow multiple slots per day, overnight slots and cycle lengths beyond 7.
+- [x] Add migration tests and timezone/DST tests.
+- [x] Update the domain, schema, repository, providers and UI.
 
 **Exit criteria:** changing the device timezone shifts timed items and leaves
 all-day dates alone; a 14-day shift cycle with per-day times and exceptions

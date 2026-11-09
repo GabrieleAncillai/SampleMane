@@ -31,6 +31,19 @@ git clone https://github.com/InlitX/streak.git ../Streak
 | Build and release | `.github/workflows/build-apk.yml` | `.github/workflows/build-apk.yml`, `.github/workflows/linux.yml`, `fdroid/com.streak.app.yml`, `fastlane/` | Split APKs, GitHub Releases, F-Droid metadata, signing docs. |
 | Tests | `test/` | `test/` | Copy the test style and coverage areas. |
 
+## Documented deviations
+
+- **Timezone-aware recurrence and flexible shifts.** GymMane and Streak use
+  wall-clock `DateTime` schedules and neither supports timezone-aware
+  recurrence, cycles longer than a week, multiple slots per day or date
+  exceptions. Mane implements these in `packages/mane_core/lib/src/time.dart`,
+  `entry_expander.dart` and `shift_pattern.dart`. See the v0.1.5 deviation note
+  in `docs/full-docs.md`.
+- **Drift + Riverpod.** The reference projects use a local JSON/Hive store with
+  `ChangeNotifier`/`provider`. Mane keeps Drift and Riverpod for date-range
+  queries, completion joins and transactional backup import. The audit is in
+  `docs/full-docs.md`.
+
 ## How to use this map
 
 1. Read the GymMane file first when the task is about the small-app shell,

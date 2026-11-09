@@ -47,9 +47,10 @@ should follow with little extra work.
 
 ## Status
 
-Foundations. The domain model, recurrence and shift engines, the SQLite schema
-and a first Today/Week UI exist. Calendar view, timezone-aware storage, the
-three-space migration, notifications, LAN sync and MCP are next.
+v0.1.5. The domain model, recurrence and flexible shift engines, the v2 SQLite
+schema and migration, and a first Today/Week UI exist. Timed entries and shifts
+are timezone-aware; all-day items stay date-only. Calendar view, notifications,
+tags, settings and backup are next.
 
 - [Full docs](full-docs.md): architecture, data model, feature areas and roadmap.
 - [Reference map](reference-map.md): where to look in GymMane and Streak.

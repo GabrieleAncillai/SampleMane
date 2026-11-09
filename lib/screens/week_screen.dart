@@ -12,7 +12,8 @@ class WeekScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final today = LocalDate.fromDateTime(DateTime.now());
+    final deviceTimeZone = ref.watch(deviceTimeZoneProvider);
+    final today = localDateAt(ref.watch(nowProvider), deviceTimeZone);
     final monday = today.mondayOfWeek;
     final range = (start: monday, end: monday.addDays(6));
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
@@ -21,12 +22,12 @@ class WeekScreen extends ConsumerWidget {
 
     final entriesByDate = <LocalDate, List<EntryOccurrence>>{};
     for (final occurrence in entries) {
-      (entriesByDate[occurrence.date] ??= []).add(occurrence);
+      (entriesByDate[occurrence.displayDate] ??= []).add(occurrence);
     }
 
     final shiftsByDate = <LocalDate, List<ShiftOccurrence>>{};
     for (final occurrence in shifts) {
-      (shiftsByDate[occurrence.date] ??= []).add(occurrence);
+      (shiftsByDate[occurrence.displayDate] ??= []).add(occurrence);
     }
 
     return SafeArea(

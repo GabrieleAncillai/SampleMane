@@ -12,10 +12,10 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** foundations. The domain model, recurrence and shift engines with
-tests, the SQLite schema, and a first Today/Week UI are in place. The calendar,
-timezone-aware storage, three-space migration, notifications, LAN sync and MCP
-come next.
+**Status:** v0.1.5. The domain model, recurrence and flexible shift engines,
+the v2 SQLite schema and migration, and the Today/Week UI are in place. Timed
+entries and shifts are timezone-aware; all-day items stay date-only. The
+calendar, notifications, tags, settings and backup are next.
 
 ## Docs
 
@@ -34,20 +34,21 @@ come next.
 ## Working now
 
 - Today and Week screens with entries and shift blocks.
-- Home and Work spaces, add/edit/soft-delete entries.
-- Daily, weekly, monthly and yearly recurrence with `until` and `count`.
-- Per-occurrence completion, so a recurring chore is checked per occurrence.
-- A pure Dart domain package with the recurrence and shift rules.
+- Personal, Work and Home spaces, add/edit/soft-delete entries.
+- Timezone-aware timed entries and shift patterns. Device travel moves the
+  displayed local time; all-day dates never shift.
+- Flexible shifts: cycles longer than a week, several slots per day, overnight
+  slots, and free/override/extra date exceptions.
+- Daily, weekly, monthly and yearly recurrence with `until` and `count`,
+  expanded in the entry's stored IANA timezone.
+- Per-occurrence completion that survives travel and a database restart.
+- A schema v1 to v2 migration tested against real v1 rows.
+- A pure Dart domain package with the timezone, recurrence and shift rules.
 - Android debug APK and Linux debug build.
 
 ## Planned
 
-- Three spaces: Personal, Work and Home.
 - Month and week calendar, modelled on Streak.
-- Flexible shifts: fixed, rotating, per-day times, overnight, multiple slots and
-  date exceptions.
-- Timezone-aware timed items: change the device timezone and timed entries and
-  shifts move with it. All-day dates stay dates.
 - Local notifications and multiple reminders.
 - Tags for jobs and people/groups.
 - Home inventory, shopping and grocery lists.
@@ -67,9 +68,12 @@ come next.
 - Material 3
 - Android and Linux desktop from one codebase
 
-The Drift + Riverpod foundation is provisional. It is being audited against
-GymMane's `ChangeNotifier` + local store and Streak's `provider` + per-feature
-controllers before v0.2. See [docs/full-docs.md](docs/full-docs.md).
+The stack audit is done: Mane keeps Drift + Riverpod. The planner needs
+date-range queries, entry/completion joins and a transactional backup import,
+which the reference projects' local JSON stores do not provide directly.
+Riverpod's overrides keep the clock, timezone and database injectable in tests.
+There is no second state-management system. See
+[docs/full-docs.md](docs/full-docs.md).
 
 ## Layout
 

@@ -33,15 +33,23 @@ class EntryRecords extends Table {
   /// One of [EntryKind]. Stored as text so the database stays readable.
   TextColumn get kind => text()();
 
-  /// Start date as `YYYYMMDD`, null when the entry is unscheduled.
+  /// Anchor date as `YYYYMMDD`, in [timeZone] for timed entries.
   IntColumn get dateKey => integer().nullable()();
 
-  /// End date for multi-day entries.
+  /// End date for multi-day all-day entries.
   IntColumn get endDateKey => integer().nullable()();
 
-  /// Minutes from midnight, null for all-day entries.
+  /// Local minutes from midnight, null for all-day entries. An end of 1440 or
+  /// more means the entry crosses midnight.
   IntColumn get startMinute => integer().nullable()();
   IntColumn get endMinute => integer().nullable()();
+
+  /// IANA timezone for the wall-clock fields, null for all-day entries.
+  TextColumn get timeZone => text().nullable()();
+
+  /// Resolved anchor instants in UTC, null for all-day entries.
+  DateTimeColumn get startAt => dateTime().nullable()();
+  DateTimeColumn get endAt => dateTime().nullable()();
 
   BoolColumn get allDay => boolean().withDefault(const Constant(false))();
 
@@ -75,11 +83,12 @@ class ShiftPatternRecords extends Table {
   TextColumn get id => text()();
   TextColumn get spaceId => text().references(SpaceRecords, #id)();
   TextColumn get name => text()();
+
+  /// IANA timezone the slot times are defined in.
+  TextColumn get timeZone => text().withDefault(const Constant('UTC'))();
+
   IntColumn get cycleDays => integer()();
   IntColumn get anchorDateKey => integer()();
-
-  /// Serialized list of [ShiftSlot].
-  TextColumn get slotsJson => text()();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -87,6 +96,29 @@ class ShiftPatternRecords extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('ShiftSlotRow')
+class ShiftSlotRecords extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get patternId => text().references(ShiftPatternRecords, #id)();
+  IntColumn get dayIndex => integer()();
+  TextColumn get label => text().withDefault(const Constant(''))();
+  IntColumn get startMinute => integer()();
+  IntColumn get endMinute => integer()();
+}
+
+@DataClassName('ShiftExceptionRow')
+class ShiftExceptionRecords extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get patternId => text().references(ShiftPatternRecords, #id)();
+  IntColumn get dateKey => integer()();
+
+  /// One of [ShiftExceptionType].
+  TextColumn get type => text()();
+  IntColumn get startMinute => integer().nullable()();
+  IntColumn get endMinute => integer().nullable()();
+  TextColumn get note => text().withDefault(const Constant(''))();
 }
 
 @DataClassName('CompletionRow')
@@ -115,49 +147,54 @@ class SettingRecords extends Table {
     CompletionRecords,
     ReminderRecords,
     ShiftPatternRecords,
+    ShiftSlotRecords,
+    ShiftExceptionRecords,
     SettingRecords,
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase(super.e);
+  AppDatabase(super.e, {this.defaultTimeZone = 'UTC'});
 
-  AppDatabase.open() : super(_openConnection());
+  AppDatabase.open({this.defaultTimeZone = 'UTC'}) : super(_openConnection());
+
+  /// Used to interpret legacy wall-clock rows during the v1 to v2 migration.
+  final String defaultTimeZone;
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await _migrateToV2(m);
+    },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
 
-  /// Home and Work exist on first launch. No sample life data is inserted.
+  /// Personal, Work and Home exist on first launch. No sample life data is
+  /// inserted. Missing defaults are added individually so a partially seeded
+  /// database still ends up complete.
   Future<void> seedDefaults() async {
-    final existing = await (select(spaceRecords)..where((row) => row.deletedAt.isNull())).get();
-    if (existing.isNotEmpty) return;
+    final existing = await select(spaceRecords).get();
+    final ids = existing.map((row) => row.id).toSet();
+    final missing = _defaultSpaces.where((space) => !ids.contains(space.id)).toList();
+    if (missing.isEmpty) return;
 
     final now = DateTime.now();
     await batch((batch) {
       batch.insertAll(spaceRecords, [
-        SpaceRecordsCompanion.insert(
-          id: 'home',
-          name: 'Home',
-          color: 0xFF5B7F6B,
-          position: const Value(0),
-          createdAt: now,
-          updatedAt: now,
-        ),
-        SpaceRecordsCompanion.insert(
-          id: 'work',
-          name: 'Work',
-          color: 0xFF4A6FA5,
-          position: const Value(1),
-          createdAt: now,
-          updatedAt: now,
-        ),
+        for (final space in missing)
+          SpaceRecordsCompanion.insert(
+            id: space.id,
+            name: space.name,
+            color: space.colorValue,
+            position: Value(space.position),
+            createdAt: now,
+            updatedAt: now,
+          ),
       ]);
     });
   }
@@ -170,12 +207,12 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  Stream<List<EntryOccurrence>> watchEntriesBetween(LocalDate start, LocalDate end) {
+  Stream<List<EntryOccurrence>> watchEntriesBetween(LocalDate start, LocalDate end, String viewerTimeZone) {
     final query = select(entryRecords).join([
       leftOuterJoin(
         completionRecords,
         completionRecords.entryId.equalsExp(entryRecords.id) &
-            completionRecords.dateKey.isBetweenValues(start.key, end.key),
+            completionRecords.dateKey.isBetweenValues(start.addDays(-2).key, end.addDays(2).key),
       ),
     ])..where(entryRecords.deletedAt.isNull());
 
@@ -185,57 +222,83 @@ class AppDatabase extends _$AppDatabase {
 
       for (final row in rows) {
         final entryRow = row.readTable(entryRecords);
-        final entry = entries.putIfAbsent(entryRow.id, () => _entryFromRow(entryRow));
+        entries.putIfAbsent(entryRow.id, () => _entryFromRow(entryRow));
         final completion = row.readTableOrNull(completionRecords);
         if (completion != null) {
-          (completions[entry.id] ??= <LocalDate>{}).add(LocalDate.fromKey(completion.dateKey));
+          (completions[entryRow.id] ??= <LocalDate>{}).add(LocalDate.fromKey(completion.dateKey));
         }
       }
 
-      final occurrences = <EntryOccurrence>[];
-      for (final entry in entries.values) {
-        if (entry.status == EntryStatus.cancelled) continue;
-        final anchor = entry.date;
-        if (anchor == null) continue;
-
-        if (entry.recurrence == null) {
-          final last = entry.endDate ?? anchor;
-          if (!anchor.isAfter(end) && !last.isBefore(start)) {
-            occurrences.add(
-              EntryOccurrence(date: anchor, entry: entry, completed: entry.status == EntryStatus.done),
-            );
-          }
-          continue;
-        }
-
-        for (final date in entry.recurrence!.occurrencesBetween(start, end, anchor)) {
-          occurrences.add(
-            EntryOccurrence(
-              date: date,
-              entry: entry,
-              completed: completions[entry.id]?.contains(date) ?? false,
-            ),
-          );
-        }
-      }
-      occurrences.sort(_compareOccurrences);
-      return occurrences;
+      return expandEntries(
+        entries: entries.values,
+        start: start,
+        end: end,
+        viewerTimeZone: viewerTimeZone,
+        completions: completions,
+      );
     });
   }
 
-  Stream<List<ShiftOccurrence>> watchShiftsBetween(LocalDate start, LocalDate end) {
-    final query = select(shiftPatternRecords)
-      ..where((row) => row.deletedAt.isNull() & row.enabled.equals(true));
+  Stream<List<ShiftOccurrence>> watchShiftsBetween(LocalDate start, LocalDate end, String viewerTimeZone) {
+    final query = select(shiftPatternRecords).join([
+      leftOuterJoin(shiftSlotRecords, shiftSlotRecords.patternId.equalsExp(shiftPatternRecords.id)),
+      leftOuterJoin(shiftExceptionRecords, shiftExceptionRecords.patternId.equalsExp(shiftPatternRecords.id)),
+    ])..where(shiftPatternRecords.deletedAt.isNull() & shiftPatternRecords.enabled.equals(true));
+
     return query.watch().map((rows) {
-      final occurrences = <ShiftOccurrence>[];
+      final patterns = <String, ShiftPatternRow>{};
+      final slots = <String, Map<int, ShiftSlot>>{};
+      final exceptions = <String, Map<int, ShiftException>>{};
+
       for (final row in rows) {
-        final pattern = _patternFromRow(row);
-        occurrences.addAll(pattern.occurrencesBetween(start, end));
+        final patternRow = row.readTable(shiftPatternRecords);
+        patterns[patternRow.id] = patternRow;
+
+        final slotRow = row.readTableOrNull(shiftSlotRecords);
+        if (slotRow != null) {
+          (slots[patternRow.id] ??= <int, ShiftSlot>{})[slotRow.id] = ShiftSlot(
+            dayIndex: slotRow.dayIndex,
+            label: slotRow.label,
+            startMinute: slotRow.startMinute,
+            endMinute: slotRow.endMinute,
+          );
+        }
+
+        final exceptionRow = row.readTableOrNull(shiftExceptionRecords);
+        if (exceptionRow != null) {
+          (exceptions[patternRow.id] ??= <int, ShiftException>{})[exceptionRow.id] = ShiftException(
+            date: LocalDate.fromKey(exceptionRow.dateKey),
+            type: ShiftExceptionType.values.byName(exceptionRow.type),
+            startMinute: exceptionRow.startMinute,
+            endMinute: exceptionRow.endMinute,
+            note: exceptionRow.note,
+          );
+        }
       }
+
+      final occurrences = <ShiftOccurrence>[];
+      for (final patternRow in patterns.values) {
+        final pattern = _patternFromRow(
+          patternRow,
+          slots[patternRow.id]?.values.toList() ?? const <ShiftSlot>[],
+          exceptions[patternRow.id]?.values.toList() ?? const <ShiftException>[],
+        );
+        for (final occurrence in pattern.occurrencesBetween(
+          start.addDays(-2),
+          end.addDays(2),
+          viewerTimeZone: viewerTimeZone,
+        )) {
+          if (occurrence.displayDate.isBefore(start) || occurrence.displayDate.isAfter(end)) {
+            continue;
+          }
+          occurrences.add(occurrence);
+        }
+      }
+
       occurrences.sort((a, b) {
-        final byDate = a.date.compareTo(b.date);
+        final byDate = a.displayDate.compareTo(b.displayDate);
         if (byDate != 0) return byDate;
-        return a.slot.startMinute.compareTo(b.slot.startMinute);
+        return a.startAt.compareTo(b.startAt);
       });
       return occurrences;
     });
@@ -274,20 +337,53 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> saveShiftPattern(ShiftPattern pattern) {
-    final now = DateTime.now();
-    return into(shiftPatternRecords).insertOnConflictUpdate(
-      ShiftPatternRecordsCompanion(
-        id: Value(pattern.id),
-        spaceId: Value(pattern.spaceId),
-        name: Value(pattern.name),
-        cycleDays: Value(pattern.cycleDays),
-        anchorDateKey: Value(pattern.anchorDate.key),
-        slotsJson: Value(jsonEncode(pattern.slots.map((slot) => slot.toJson()).toList())),
-        enabled: Value(pattern.enabled),
-        createdAt: Value(now),
-        updatedAt: Value(now),
-      ),
-    );
+    return transaction(() async {
+      final now = DateTime.now();
+      final existing = await (select(
+        shiftPatternRecords,
+      )..where((row) => row.id.equals(pattern.id))).getSingleOrNull();
+      await into(shiftPatternRecords).insertOnConflictUpdate(
+        ShiftPatternRecordsCompanion(
+          id: Value(pattern.id),
+          spaceId: Value(pattern.spaceId),
+          name: Value(pattern.name),
+          timeZone: Value(pattern.timeZone),
+          cycleDays: Value(pattern.cycleDays),
+          anchorDateKey: Value(pattern.anchorDate.key),
+          enabled: Value(pattern.enabled),
+          createdAt: Value(existing?.createdAt ?? now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      await (delete(shiftSlotRecords)..where((row) => row.patternId.equals(pattern.id))).go();
+      await (delete(shiftExceptionRecords)..where((row) => row.patternId.equals(pattern.id))).go();
+
+      for (final slot in pattern.slots) {
+        await into(shiftSlotRecords).insert(
+          ShiftSlotRecordsCompanion.insert(
+            patternId: pattern.id,
+            dayIndex: slot.dayIndex,
+            label: Value(slot.label),
+            startMinute: slot.startMinute,
+            endMinute: slot.endMinute,
+          ),
+        );
+      }
+
+      for (final exception in pattern.exceptions) {
+        await into(shiftExceptionRecords).insert(
+          ShiftExceptionRecordsCompanion.insert(
+            patternId: pattern.id,
+            dateKey: exception.date.key,
+            type: exception.type.name,
+            startMinute: Value(exception.startMinute),
+            endMinute: Value(exception.endMinute),
+            note: Value(exception.note),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> softDeleteShiftPattern(String id) async {
@@ -296,7 +392,105 @@ class AppDatabase extends _$AppDatabase {
       ShiftPatternRecordsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
     );
   }
+
+  Future<void> _migrateToV2(Migrator m) async {
+    final safeZone = isKnownTimeZone(defaultTimeZone) ? defaultTimeZone : 'UTC';
+
+    // The old one-slot JSON has to be read before alterTable drops the column.
+    final legacyPatterns = await customSelect('SELECT id, slots_json FROM shift_pattern_records').get();
+
+    await m.addColumn(entryRecords, entryRecords.timeZone);
+    await m.addColumn(entryRecords, entryRecords.startAt);
+    await m.addColumn(entryRecords, entryRecords.endAt);
+    await m.createTable(shiftSlotRecords);
+    await m.createTable(shiftExceptionRecords);
+    await m.alterTable(TableMigration(shiftPatternRecords, newColumns: [shiftPatternRecords.timeZone]));
+
+    await update(shiftPatternRecords).write(ShiftPatternRecordsCompanion(timeZone: Value(safeZone)));
+
+    for (final row in legacyPatterns) {
+      final patternId = row.read<String>('id');
+      final raw = row.readNullable<String>('slots_json');
+      if (raw == null || raw.isEmpty) continue;
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) continue;
+
+      for (final value in decoded) {
+        if (value is! Map) continue;
+        final ShiftSlot slot;
+        try {
+          slot = ShiftSlot.fromJson(Map<String, Object?>.from(value));
+        } on FormatException {
+          // One malformed legacy slot must not make the whole plan unopenable.
+          continue;
+        }
+        await into(shiftSlotRecords).insert(
+          ShiftSlotRecordsCompanion.insert(
+            patternId: patternId,
+            dayIndex: slot.dayIndex,
+            label: Value(slot.label),
+            startMinute: slot.startMinute,
+            endMinute: slot.endMinute,
+          ),
+        );
+      }
+    }
+
+    final legacyEntries = await select(entryRecords).get();
+    for (final row in legacyEntries) {
+      final date = row.dateKey == null ? null : LocalDate.fromKey(row.dateKey!);
+      final startMinute = row.startMinute;
+      if (row.allDay || date == null || startMinute == null) {
+        if (!row.allDay && date != null && startMinute == null) {
+          await (update(entryRecords)..where((entry) => entry.id.equals(row.id))).write(
+            const EntryRecordsCompanion(allDay: Value(true)),
+          );
+        }
+        continue;
+      }
+
+      final endMinute = row.endMinute == null || row.endMinute! <= startMinute
+          ? startMinute + 60
+          : row.endMinute!;
+      await (update(entryRecords)..where((entry) => entry.id.equals(row.id))).write(
+        EntryRecordsCompanion(
+          timeZone: Value(safeZone),
+          startAt: Value(instantAt(date, startMinute, safeZone)),
+          endAt: Value(instantAt(date, endMinute, safeZone)),
+        ),
+      );
+    }
+
+    final personal = await (select(
+      spaceRecords,
+    )..where((row) => row.id.equals('personal'))).getSingleOrNull();
+    if (personal == null) {
+      final now = DateTime.now();
+      await into(spaceRecords).insert(
+        SpaceRecordsCompanion.insert(
+          id: 'personal',
+          name: 'Personal',
+          color: 0xFFB07D5C,
+          position: const Value(0),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+    await (update(
+      spaceRecords,
+    )..where((row) => row.id.equals('work'))).write(const SpaceRecordsCompanion(position: Value(1)));
+    await (update(
+      spaceRecords,
+    )..where((row) => row.id.equals('home'))).write(const SpaceRecordsCompanion(position: Value(2)));
+  }
 }
+
+const _defaultSpaces = <Space>[
+  Space(id: 'personal', name: 'Personal', colorValue: 0xFFB07D5C, position: 0),
+  Space(id: 'work', name: 'Work', colorValue: 0xFF4A6FA5, position: 1),
+  Space(id: 'home', name: 'Home', colorValue: 0xFF5B7F6B, position: 2),
+];
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
@@ -319,6 +513,7 @@ Entry _entryFromRow(EntryRow row) => Entry(
   endDate: row.endDateKey == null ? null : LocalDate.fromKey(row.endDateKey!),
   startMinute: row.startMinute,
   endMinute: row.endMinute,
+  timeZone: row.timeZone,
   allDay: row.allDay,
   status: EntryStatus.values.byName(row.status),
   recurrence: row.recurrenceJson == null
@@ -327,6 +522,8 @@ Entry _entryFromRow(EntryRow row) => Entry(
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
   deletedAt: row.deletedAt,
+  startAt: row.startAt?.toUtc(),
+  endAt: row.endAt?.toUtc(),
 );
 
 EntryRecordsCompanion _entryCompanion(Entry entry) => EntryRecordsCompanion(
@@ -339,6 +536,9 @@ EntryRecordsCompanion _entryCompanion(Entry entry) => EntryRecordsCompanion(
   endDateKey: Value(entry.endDate?.key),
   startMinute: Value(entry.startMinute),
   endMinute: Value(entry.endMinute),
+  timeZone: Value(entry.timeZone),
+  startAt: Value(entry.startAt),
+  endAt: Value(entry.endAt),
   allDay: Value(entry.allDay),
   status: Value(entry.status.name),
   recurrenceJson: Value(entry.recurrence == null ? null : jsonEncode(entry.recurrence!.toJson())),
@@ -347,22 +547,15 @@ EntryRecordsCompanion _entryCompanion(Entry entry) => EntryRecordsCompanion(
   deletedAt: Value(entry.deletedAt),
 );
 
-ShiftPattern _patternFromRow(ShiftPatternRow row) => ShiftPattern(
-  id: row.id,
-  spaceId: row.spaceId,
-  name: row.name,
-  cycleDays: row.cycleDays,
-  anchorDate: LocalDate.fromKey(row.anchorDateKey),
-  slots: (jsonDecode(row.slotsJson) as List)
-      .map((slot) => ShiftSlot.fromJson(Map<String, Object?>.from(slot as Map)))
-      .toList(),
-  enabled: row.enabled,
-);
-
-int _compareOccurrences(EntryOccurrence a, EntryOccurrence b) {
-  final byDate = a.date.compareTo(b.date);
-  if (byDate != 0) return byDate;
-  final byTime = (a.entry.startMinute ?? -1).compareTo(b.entry.startMinute ?? -1);
-  if (byTime != 0) return byTime;
-  return a.entry.title.compareTo(b.entry.title);
-}
+ShiftPattern _patternFromRow(ShiftPatternRow row, List<ShiftSlot> slots, List<ShiftException> exceptions) =>
+    ShiftPattern(
+      id: row.id,
+      spaceId: row.spaceId,
+      name: row.name,
+      timeZone: row.timeZone,
+      cycleDays: row.cycleDays,
+      anchorDate: LocalDate.fromKey(row.anchorDateKey),
+      slots: slots,
+      exceptions: exceptions,
+      enabled: row.enabled,
+    );

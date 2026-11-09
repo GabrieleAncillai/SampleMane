@@ -14,11 +14,13 @@ class PlannerRepository {
 
   Stream<List<Space>> watchSpaces() => _database.watchSpaces();
 
-  Stream<List<EntryOccurrence>> watchEntries(LocalDate start, LocalDate end) =>
-      _database.watchEntriesBetween(start, end);
+  /// Entries whose viewer-local date falls between [start] and [end].
+  Stream<List<EntryOccurrence>> watchEntries(LocalDate start, LocalDate end, String viewerTimeZone) =>
+      _database.watchEntriesBetween(start, end, viewerTimeZone);
 
-  Stream<List<ShiftOccurrence>> watchShifts(LocalDate start, LocalDate end) =>
-      _database.watchShiftsBetween(start, end);
+  /// Shifts whose viewer-local date falls between [start] and [end].
+  Stream<List<ShiftOccurrence>> watchShifts(LocalDate start, LocalDate end, String viewerTimeZone) =>
+      _database.watchShiftsBetween(start, end, viewerTimeZone);
 
   Future<void> saveEntry(Entry entry) => _database.saveEntry(entry);
 

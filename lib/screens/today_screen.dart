@@ -12,7 +12,8 @@ class TodayScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final today = LocalDate.fromDateTime(DateTime.now());
+    final deviceTimeZone = ref.watch(deviceTimeZoneProvider);
+    final today = localDateAt(ref.watch(nowProvider), deviceTimeZone);
     final range = (start: today, end: today);
     final spaces = ref.watch(spacesProvider).value ?? fallbackSpaces;
     final entries = ref.watch(entriesProvider(range));

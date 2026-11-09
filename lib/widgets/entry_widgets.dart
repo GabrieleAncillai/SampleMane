@@ -5,21 +5,35 @@ import 'package:mane_core/mane_core.dart';
 import '../screens/entry_editor.dart';
 import '../state/providers.dart';
 
-/// Formats minutes from midnight as a local time, and marks overnight ends.
-String formatMinutes(BuildContext context, int minutes, {bool markOvernight = false}) {
-  final normalized = minutes % 1440;
-  final time = TimeOfDay(hour: normalized ~/ 60, minute: normalized % 60);
-  final label = time.format(context);
-  if (markOvernight && minutes >= 1440) return '$label (+1)';
-  return label;
+/// Formats a UTC instant as a local time in [viewerTimeZone].
+String formatInstantTime(BuildContext context, DateTime instant, String viewerTimeZone) {
+  final local = localDateTimeAt(instant, viewerTimeZone);
+  return TimeOfDay(hour: local.hour, minute: local.minute).format(context);
 }
 
-String formatEntryTime(BuildContext context, Entry entry) {
-  if (entry.allDay || entry.startMinute == null) return 'All day';
-  final start = formatMinutes(context, entry.startMinute!);
-  final end = entry.endMinute == null ? null : formatMinutes(context, entry.endMinute!, markOvernight: true);
-  return end == null ? start : '$start – $end';
+String _formatRange(BuildContext context, DateTime startAt, DateTime endAt, String viewerTimeZone) {
+  final start = formatInstantTime(context, startAt, viewerTimeZone);
+  final end = formatInstantTime(context, endAt, viewerTimeZone);
+  final startLocal = localDateTimeAt(startAt, viewerTimeZone);
+  final endLocal = localDateTimeAt(endAt, viewerTimeZone);
+  final crossesDay =
+      startLocal.year != endLocal.year ||
+      startLocal.month != endLocal.month ||
+      startLocal.day != endLocal.day;
+  return crossesDay ? '$start – $end (+1)' : '$start – $end';
 }
+
+String formatEntryTime(BuildContext context, EntryOccurrence occurrence, String viewerTimeZone) {
+  final entry = occurrence.entry;
+  if (entry.allDay) return 'All day';
+  final startAt = occurrence.startAt ?? entry.startAt;
+  final endAt = occurrence.endAt ?? entry.endAt;
+  if (startAt == null || endAt == null) return 'All day';
+  return _formatRange(context, startAt, endAt, viewerTimeZone);
+}
+
+String formatShiftTime(BuildContext context, ShiftOccurrence occurrence, String viewerTimeZone) =>
+    _formatRange(context, occurrence.startAt, occurrence.endAt, viewerTimeZone);
 
 String kindLabel(EntryKind kind) => switch (kind) {
   EntryKind.task => 'Task',
@@ -46,10 +60,11 @@ class EntryTile extends ConsumerWidget {
     final isCompleted = occurrence.completed;
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
+    final viewerTimeZone = ref.watch(deviceTimeZoneProvider);
 
     final details = <String>[
       space.name,
-      formatEntryTime(context, entry),
+      formatEntryTime(context, occurrence, viewerTimeZone),
       if (entry.recurrence != null) entry.recurrence!.describe(),
       if (!dense && entry.notes.isNotEmpty) entry.notes,
     ];
@@ -95,16 +110,18 @@ class EntryTile extends ConsumerWidget {
   }
 }
 
-class ShiftTile extends StatelessWidget {
+class ShiftTile extends ConsumerWidget {
   const ShiftTile({super.key, required this.occurrence});
 
   final ShiftOccurrence occurrence;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final color = theme.colorScheme.tertiary;
+    final viewerTimeZone = ref.watch(deviceTimeZoneProvider);
     final slot = occurrence.slot;
+    final title = slot.label.isEmpty ? occurrence.pattern.name : '${occurrence.pattern.name} · ${slot.label}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -129,11 +146,10 @@ class ShiftTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${occurrence.pattern.name} · ${slot.label}', style: theme.textTheme.labelLarge),
+                  Text(title, style: theme.textTheme.labelLarge),
                   const SizedBox(height: 2),
                   Text(
-                    '${formatMinutes(context, slot.startMinute)} – '
-                    '${formatMinutes(context, slot.endMinute, markOvernight: true)}',
+                    formatShiftTime(context, occurrence, viewerTimeZone),
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
@@ -147,14 +163,19 @@ class ShiftTile extends StatelessWidget {
   }
 }
 
-class ShiftChip extends StatelessWidget {
+class ShiftChip extends ConsumerWidget {
   const ShiftChip({super.key, required this.occurrence});
 
   final ShiftOccurrence occurrence;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final viewerTimeZone = ref.watch(deviceTimeZoneProvider);
+    final label = occurrence.slot.label.isEmpty
+        ? occurrence.pattern.name
+        : '${occurrence.slot.label} · ${occurrence.pattern.name}';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -162,9 +183,7 @@ class ShiftChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        '${occurrence.slot.label} · '
-        '${formatMinutes(context, occurrence.slot.startMinute)}–'
-        '${formatMinutes(context, occurrence.slot.endMinute, markOvernight: true)}',
+        '$label · ${formatShiftTime(context, occurrence, viewerTimeZone)}',
         style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       ),
     );

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -9,8 +7,9 @@ import 'package:uuid/uuid.dart';
 import '../state/providers.dart';
 
 const _editorFallbackSpaces = <Space>[
-  Space(id: 'home', name: 'Home', colorValue: 0xFF5B7F6B),
-  Space(id: 'work', name: 'Work', colorValue: 0xFF4A6FA5),
+  Space(id: 'personal', name: 'Personal', colorValue: 0xFFB07D5C, position: 0),
+  Space(id: 'work', name: 'Work', colorValue: 0xFF4A6FA5, position: 1),
+  Space(id: 'home', name: 'Home', colorValue: 0xFF5B7F6B, position: 2),
 ];
 
 enum _Repeat { never, daily, weekly, monthly, yearly }
@@ -52,21 +51,27 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
   late int _startMinute;
   late int _endMinute;
   late _Repeat _repeat;
+  late String _deviceTimeZone;
   bool _saving = false;
 
   List<Space> get _spaces => widget.spaces.isEmpty ? _editorFallbackSpaces : widget.spaces;
+
+  /// The stored timezone for an existing timed entry; the device zone for a
+  /// new one. All-day entries carry no timezone at all.
+  String get _timeZone => widget.entry?.timeZone ?? _deviceTimeZone;
 
   @override
   void initState() {
     super.initState();
     final entry = widget.entry;
+    _deviceTimeZone = ref.read(deviceTimeZoneProvider);
     _titleController = TextEditingController(text: entry?.title ?? '');
     _notesController = TextEditingController(text: entry?.notes ?? '');
     _spaceId = entry != null && _spaces.any((space) => space.id == entry.spaceId)
         ? entry.spaceId
         : _spaces.first.id;
     _kind = entry?.kind ?? EntryKind.task;
-    _date = entry?.date ?? widget.initialDate ?? LocalDate.fromDateTime(DateTime.now());
+    _date = entry?.date ?? widget.initialDate ?? localDateAt(ref.read(nowProvider), _deviceTimeZone);
     _allDay = entry?.allDay ?? false;
     _startMinute = entry?.startMinute ?? 9 * 60;
     _endMinute = entry?.endMinute ?? 10 * 60;
@@ -200,6 +205,24 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
                     ),
                   ],
                 ),
+              if (!_allDay)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 6, 0, 0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.public, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Times are defined in $_timeZone',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 12),
               _LabeledDropdown<_Repeat>(
                 label: 'Repeat',
@@ -253,7 +276,8 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
 
   String _timeLabel(int minutes) {
     final normalized = minutes % 1440;
-    return TimeOfDay(hour: normalized ~/ 60, minute: normalized % 60).format(context);
+    final label = TimeOfDay(hour: normalized ~/ 60, minute: normalized % 60).format(context);
+    return minutes >= 1440 ? '$label (+1)' : label;
   }
 
   Future<void> _pickDate() async {
@@ -274,10 +298,9 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     );
     if (picked == null || !mounted) return;
     setState(() {
+      final duration = _endMinute - _startMinute;
       _startMinute = picked.hour * 60 + picked.minute;
-      if (_endMinute <= _startMinute) {
-        _endMinute = math.min(_startMinute + 60, 1439);
-      }
+      _endMinute = _startMinute + duration;
     });
   }
 
@@ -288,10 +311,10 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
     );
     if (picked == null || !mounted) return;
     setState(() {
-      _endMinute = picked.hour * 60 + picked.minute;
-      if (_endMinute <= _startMinute) {
-        _startMinute = math.max(0, _endMinute - 60);
-      }
+      var end = picked.hour * 60 + picked.minute;
+      // An end at or before the start means the entry runs into tomorrow.
+      if (end <= _startMinute) end += 1440;
+      _endMinute = end;
     });
   }
 
@@ -316,6 +339,7 @@ class _EntryEditorSheetState extends ConsumerState<EntryEditorSheet> {
       date: _date,
       startMinute: _allDay ? null : _startMinute,
       endMinute: _allDay ? null : _endMinute,
+      timeZone: _allDay ? null : _timeZone,
       allDay: _allDay,
       status: widget.entry?.status ?? EntryStatus.open,
       recurrence: _buildRecurrence(),
