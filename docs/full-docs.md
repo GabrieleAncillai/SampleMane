@@ -749,7 +749,8 @@ optional and documented, English and Spanish are complete, and `flutter
 analyze`, both test suites and both platform builds pass.
 
 The v0.1.5 through v0.5 work is complete. v1.0 is waiting only on the user's
-real-device notification, reboot, battery-optimization and timezone checklist.
+real-device notification, reboot, battery-optimization and timezone checklist,
+documented in [device-checklist.md](device-checklist.md).
 
 ## 10. Contributing
 

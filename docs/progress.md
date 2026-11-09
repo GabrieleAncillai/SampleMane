@@ -182,7 +182,10 @@ reboot, battery-optimization and timezone checklist.
 ## Known limitations
 
 - Real-device notification delivery, reboot rescheduling, battery optimization
-  and timezone changes still need the user's Android device checklist.
+  and timezone changes still need the user's Android device checklist. The
+  Pixel 9 emulator already verified permission, exact alarms, grouped delivery,
+  timezone travel and reboot rescheduling; OEM battery behavior and real LAN
+  peers are the remaining gap.
 - The Android manifest has the plugin boot receiver. A separate
   `TIMEZONE_CHANGED` receiver is not implemented; the app rebuilds the queue on
   resume and after the device zone is re-read.
@@ -242,3 +245,8 @@ reboot, battery-optimization and timezone checklist.
 - `flutter build apk --release --split-per-abi` — ok for armeabi-v7a, arm64-v8a
   and x86_64 with the local debug-key fallback; CI requires the real keystore.
 - Linux launch with isolated `XDG_DATA_HOME` — starts and stays up.
+- Pixel 9 emulator (debug 0.5.0): app launch, entry creation, notification
+  permission, exact-alarm access, two grouped reminders delivered, timezone
+  travel moved 9:00 AM Bogota to 3:00 PM Madrid, reboot kept the entry and
+  rescheduled both reminders; the 10-minute reminder fired after advancing the
+  clock. `dumpsys alarm` showed exact alarms after reboot.

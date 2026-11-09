@@ -28,6 +28,8 @@ reboot, battery and timezone checklist.
   use for each area.
 - [Contributing](CONTRIBUTING.md): setup, layout, house style and tests.
 - [Release](docs/release.md): signing, split APKs and GitHub Releases.
+- [Android device checklist](docs/device-checklist.md): the v1.0 real-device
+  notification, reboot, battery, timezone, LAN, MCP and widget checks.
 - [Agent brief](AGENTS.md): self-contained kickoff prompt for a coding agent.
 - [Unattended kickoff](KICKSTART.md): quality-first prompt for a long,
   unattended implementation run.
