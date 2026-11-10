@@ -40,15 +40,21 @@ void main() {
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const AppLockGate(child: Text('secret plan')),
+      builder: (context, child) => AppLockGate(graceSeconds: 0, child: child ?? const SizedBox.shrink()),
+      home: Builder(
+        builder: (context) => Center(
+          child: TextButton(
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('settings route')))),
+            child: const Text('open settings'),
+          ),
+        ),
+      ),
     ),
   );
 
-  testWidgets('locks the shell until the local PIN is entered', (tester) async {
-    await tester.pumpWidget(host());
-    await tester.pump();
-
-    expect(find.text('Enter your PIN'), findsOneWidget);
+  Future<void> unlock(WidgetTester tester) async {
     for (final digit in ['1', '2', '3', '4']) {
       await tester.tap(find.text(digit));
       await tester.pump();
@@ -56,8 +62,34 @@ void main() {
     await tester.tap(find.byIcon(Icons.check));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
+  }
+
+  testWidgets('locks the shell until the local PIN is entered', (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pump();
+
+    expect(find.text('Enter your PIN'), findsOneWidget);
+    await unlock(tester);
 
     expect(find.text('Enter your PIN'), findsNothing);
+  });
+
+  testWidgets('lock covers a route pushed above the shell', (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pump();
+    await unlock(tester);
+
+    await tester.tap(find.text('open settings'));
+    await tester.pumpAndSettle();
+    expect(find.text('settings route'), findsOneWidget);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(find.text('Enter your PIN'), findsOneWidget);
+    expect(find.text('settings route'), findsOneWidget);
   });
 
   testWidgets('wrong PIN keeps the gate closed', (tester) async {

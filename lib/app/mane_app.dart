@@ -25,9 +25,9 @@ class ManeApp extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: ManeTheme.systemBars(Theme.of(context).brightness),
-        child: child ?? const SizedBox.shrink(),
+        child: AppLockGate(child: child ?? const SizedBox.shrink()),
       ),
-      home: const AppLockGate(child: AppShell()),
+      home: const AppShell(),
     );
   }
 }

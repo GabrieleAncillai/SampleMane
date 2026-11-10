@@ -15,17 +15,16 @@ import 'pin_pad.dart';
 /// Covers the planner while the optional PIN lock is active. It never tears
 /// down the shell underneath, so notifications and background work keep going.
 class AppLockGate extends ConsumerStatefulWidget {
-  const AppLockGate({super.key, required this.child});
+  const AppLockGate({super.key, required this.child, this.graceSeconds = 30});
 
   final Widget child;
+  final int graceSeconds;
 
   @override
   ConsumerState<AppLockGate> createState() => _AppLockGateState();
 }
 
 class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingObserver {
-  static const graceSeconds = 30;
-
   bool _locked = false;
   bool _wasHidden = false;
   DateTime? _leftAt;
@@ -54,7 +53,11 @@ class _AppLockGateState extends ConsumerState<AppLockGate> with WidgetsBindingOb
     }
     if (state != AppLifecycleState.resumed || !_locked || !_wasHidden) return;
     _wasHidden = false;
-    final needsAuth = appLockNeedsAuth(leftAt: _leftAt, graceSeconds: graceSeconds, now: DateTime.now());
+    final needsAuth = appLockNeedsAuth(
+      leftAt: _leftAt,
+      graceSeconds: widget.graceSeconds,
+      now: DateTime.now(),
+    );
     if (!needsAuth) setState(() => _locked = false);
   }
 
