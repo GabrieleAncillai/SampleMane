@@ -47,8 +47,11 @@ should follow with little extra work.
 
 ## Status
 
-v0.9 shipped. Only the v1.0 device verification, accessibility/contrast audit and
-signed release remain in [completion-plan.md](completion-plan.md). Today, Week
+v0.9 shipped. The 2026-11-09 Huawei device pass closed install,
+notifications on API 29, timezone, LAN, MCP, backup/CSV and app lock; the widget,
+OEM battery, accessibility/contrast audit and signed release remain in
+[completion-plan.md](completion-plan.md). Reboot rescheduling is blocked by
+EMUI. See [device-run-2026-11-09.md](device-run-2026-11-09.md). Today, Week
 and Calendar tabs (with a 24-hour day timeline), tags, flexible shifts with
 per-slot checklists, reminders with custom times and actions, settings, backup
 and rotation, home inventory, shopping lists, interval maintenance, a soft

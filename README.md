@@ -12,17 +12,20 @@ No account, no cloud, no telemetry. LAN sync and a local MCP endpoint are
 planned, optional, automatic when possible, and never required for the core to
 work.
 
-**Status:** v0.9 shipped. Only the v1.0 device verification, accessibility/contrast
-audit and signed release remain in
-[docs/completion-plan.md](docs/completion-plan.md). Today, Week and Calendar
-tabs (with a day timeline), tags, flexible shifts, reminders with custom times
-and actions, settings, backup/restore and rotation, home inventory, shopping,
-maintenance, sleep, ICS import/export, GymMane schedule import, CSV interchange,
-companion import, optional LAN pairing with persistent read-only snapshots, a
-local MCP endpoint with streamable sessions and the full tool set, global
-search, an Android home-screen widget, the reference-style shell and UI kit,
-multi-day entries, per-slot shift checklists, an optional PIN app lock, work and
-quiet hours, and English/Spanish coverage are in place. See
+**Status:** v0.9 shipped. The 2026-11-09 Huawei device pass closed install,
+notifications on API 29, timezone, LAN, MCP, backup/CSV and app lock, and fixed
+an app-lock bypass, notification actions/snooze and CSV import duplication. The
+widget and OEM battery checks, the accessibility/contrast audit and the signed
+release remain in [docs/completion-plan.md](docs/completion-plan.md). Reboot
+rescheduling is blocked by EMUI and documented as an OEM limitation. Today,
+Week and Calendar tabs (with a day timeline), tags, flexible shifts, reminders
+with custom times and actions, settings, backup/restore and rotation, home
+inventory, shopping, maintenance, sleep, ICS import/export, GymMane schedule
+import, CSV interchange, companion import, optional LAN pairing with persistent
+read-only snapshots, a local MCP endpoint with streamable sessions and the full
+tool set, global search, an Android home-screen widget, the reference-style
+shell and UI kit, multi-day entries, per-slot shift checklists, an optional PIN
+app lock, work and quiet hours, and English/Spanish coverage are in place. See
 [docs/compliance-audit.md](docs/compliance-audit.md) for the verified gaps.
 
 ## Docs
@@ -40,6 +43,8 @@ quiet hours, and English/Spanish coverage are in place. See
 - [Release](docs/release.md): signing, split APKs and GitHub Releases.
 - [Android device checklist](docs/device-checklist.md): the v1.0 real-device
   notification, reboot, battery, timezone, LAN, MCP and widget checks.
+- [Device run, 2026-11-09](docs/device-run-2026-11-09.md): the Huawei pass,
+  fixed defects, reboot limitation and screenshot evidence.
 - [Agent brief](AGENTS.md): self-contained kickoff prompt for a coding agent.
 - [Unattended kickoff](KICKSTART.md): quality-first prompt for a long,
   unattended implementation run.

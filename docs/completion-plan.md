@@ -190,7 +190,7 @@ snapshot resource carries spaces, tags, entries, shifts, home and shopping and
 is persisted read-only with pruning on unpair; work-hours visibility, quiet
 hours and notification suppression are wired through settings, screens and the
 reminder planner; custom reminder times use `time_minute`; and Android
-notifications carry snooze/complete actions. Tests: 131 app tests and 85 core
+notifications carry snooze/complete actions. Tests: 135 app tests and 85 core
 tests.
 
 ### v1.0 Device verification, polish and release
@@ -203,6 +203,14 @@ tests.
 - [ ] Final English/Spanish ARB pass, including new surfaces.
 - [ ] Update all docs, roadmap checkboxes and screenshots.
 - [ ] Tag `v1.0.0` only after the device checklist and signed CI release pass.
+
+**2026-11-09 device pass:** install, notifications on API 29, timezone, LAN
+(manual host/port), MCP, backup/CSV after the fix and app lock pass. The pass
+fixed an app-lock bypass, notification actions/snooze and CSV import
+duplication. The widget and OEM battery checks still need the user. Reboot
+rescheduling fails on EMUI because `BOOT_COMPLETED` does not reach the plugin
+receiver; a manual launch rebuilds the queue without duplicates. Evidence and
+the full table are in `docs/device-run-2026-11-09.md`.
 
 ## 6. Feature matrix
 
@@ -278,6 +286,7 @@ acceptance tests for "the app is useful for a real week".
 | LAN security regression | Keep pinned TLS, signature and nonce tests; never merge remote data |
 | Work-hours hiding hides a deadline | Hiding is visual and reversible; reminders are suppressed only by explicit quiet hours |
 | Real-device OEM battery behavior | Device checklist; document OEM paths; keep inexact fallback |
+| EMUI does not deliver `BOOT_COMPLETED` | Document the manual-launch rebuild; keep the plugin receiver and test other OEMs |
 | Scope creep from the references | Only ship scenarios in section 7 plus the feature matrix |
 
 ## 9. Verification gates

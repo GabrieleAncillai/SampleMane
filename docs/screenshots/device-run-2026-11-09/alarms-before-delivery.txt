@@ -1,0 +1,42 @@
+      window=0 repeatInterval=0 count=0 flags=0x9
+      operation=PendingIntent{859e7ac: PendingIntentRecord{eae64d7 com.huawei.iaware broadcastIntent}}
+Batch{e95cd24 num=1 start=542061533 end=542061533 flgs=0x5}:
+    RTC_WAKEUP #0: Alarm{d93b59b type 0 when 1794269100000 PendingIntent{366266d: PendingIntentRecord{781c2a2 io.github.gabrieleancillai.mane broadcastIntent}}io.github.gabrieleancillai.mane procName io.github.gabrieleancillai.mane}
+      tag=*walarm*:io.github.gabrieleancillai.mane/com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver
+      type=0      wakeup=true expectedWhenElapsed=+14m5s527ms expectedMaxWhenElapsed=+14m5s527ms whenElapsed=+14m5s527ms maxWhenElapsed=+14m5s527ms when=2026-11-09 20:05:00.000
+      window=0 repeatInterval=0 count=0 flags=0x5
+      operation=PendingIntent{366266d: PendingIntentRecord{781c2a2 io.github.gabrieleancillai.mane broadcastIntent}}
+Batch{821808d num=1 start=542093716 end=542093716 flgs=0x9}:
+    ELAPSED_WAKEUP #0: Alarm{2c6d111 type 2 when 542093716 com.android.networkstack.inprocesscom.android.networkstack.inprocess procName system}
+      tag=*walarm*:DhcpClient.wlan0.RENEW
+      type=2      wakeup=true expectedWhenElapsed=+14m37s710ms expectedMaxWhenElapsed=+14m37s710ms whenElapsed=+14m37s710ms maxWhenElapsed=+14m37s710ms when=+14m37s710ms
+      window=0 repeatInterval=0 count=0 flags=0x9
+      operation=null
+      listener=android.app.AlarmManager$ListenerWrapper@6806276
+Batch{57ce242 num=1 start=542361533 end=542361533 flgs=0x5}:
+    RTC_WAKEUP #0: Alarm{46b74e4 type 0 when 1794269400000 PendingIntent{5ae5ef0: PendingIntentRecord{9cbbc69 io.github.gabrieleancillai.mane broadcastIntent}}io.github.gabrieleancillai.mane procName io.github.gabrieleancillai.mane}
+      tag=*walarm*:io.github.gabrieleancillai.mane/com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver
+      type=0      wakeup=true expectedWhenElapsed=+19m5s527ms expectedMaxWhenElapsed=+19m5s527ms whenElapsed=+19m5s527ms maxWhenElapsed=+19m5s527ms when=2026-11-09 20:10:00.000
+      window=0 repeatInterval=0 count=0 flags=0x5
+      operation=PendingIntent{5ae5ef0: PendingIntentRecord{9cbbc69 io.github.gabrieleancillai.mane broadcastIntent}}
+Batch{428a253 num=2 start=542847874 end=543302100 flgs=0x8}:
+    RTC_WAKEUP #1: Alarm{8883002 type 0 when 1794269886341 PendingIntent{23e9c78: PendingIntentRecord{de97350 com.android.vending broadcastIntent}}com.android.vending procName com.android.vending}
+      tag=*walarm*:com.google.android.finsky.gamestreaks.ACTION_STREAK_AT_RISK_CHECK
+      type=0      wakeup=true expectedWhenElapsed=+27m11s868ms expectedMaxWhenElapsed=+1h27m11s868ms whenElapsed=+27m11s868ms maxWhenElapsed=+1h27m11s868ms when=2026-11-09 20:18:06.341
+      window=+1h0m0s0ms repeatInterval=0 count=0 flags=0x0
+      operation=PendingIntent{23e9c78: PendingIntentRecord{de97350 com.android.vending broadcastIntent}}
+--
+      window=+2737d11h59m59s997ms repeatInterval=0 count=0 flags=0x0
+      operation=PendingIntent{61a4c66: PendingIntentRecord{95dcba7 com.google.android.gms startService}}
+Batch{ce8bb08 num=1 start=315900447265 end=315900447265 flgs=0x1}:
+    RTC_WAKEUP #0: Alarm{7c1d19c type 0 when 2109627485732 PendingIntent{8e4d3c0: PendingIntentRecord{872d8f9 io.github.gabrieleancillai.mane broadcastIntent}}io.github.gabrieleancillai.mane procName io.github.gabrieleancillai.mane}
+      tag=*walarm*:ACTION_FORCE_STOP_RESCHEDULE
+      type=0      wakeup=true expectedWhenElapsed=+3649d23h47m11s259ms expectedMaxWhenElapsed=+3649d23h47m11s259ms whenElapsed=+3649d23h47m11s259ms maxWhenElapsed=+3649d23h47m11s259ms when=2036-11-06 19:38:05.732
+      window=0 repeatInterval=0 count=0 flags=0x1
+      operation=PendingIntent{8e4d3c0: PendingIntentRecord{872d8f9 io.github.gabrieleancillai.mane broadcastIntent}}
+
+  Pending user blocked background alarms: 
+    none
+
+  Pending alarms per uid: [1000:42, u0a9:1, u0a11:1, u0a13:3, u0a32:1, u0a39:1, u0a43:2, u0a73:1, u0a82:1, u0a95:3, u0a120:3, u0a133:1, u0a162:15, u0a168:2, u0a177:1, u0a184:2, u0a191:1, u0a195:8]
+

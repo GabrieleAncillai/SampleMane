@@ -4,6 +4,11 @@ Status: v0.9, audited 2026-11-09. This audit covers the project rules in
 `AGENTS.md`, `CONTRIBUTING.md`, the public docs and the private scenario brief.
 The private brief is reviewed locally; its details are not copied here.
 
+A real-device pass on 2026-11-09 fixed an app-lock bypass above pushed routes,
+two notification-action/snooze defects and a CSV import duplication bug. The
+widget and OEM battery checks are still open; reboot rescheduling is blocked by
+EMUI. See `docs/device-run-2026-11-09.md`.
+
 ## Verdict
 
 The core promises are intact: offline-first storage, no accounts, no telemetry,
@@ -13,8 +18,10 @@ timeline, multi-day entries, recurrence exceptions, per-slot checklists,
 GymMane import, backup automation, CSV, home tracking, app lock, full MCP tools
 and sessions, persistent read-only LAN snapshots, work/quiet hours, custom
 reminder times and notification actions. The project is **not** v1.0-ready only
-because the real-device checklist, accessibility/contrast audit and signed
-release are still pending.
+because the real-device widget and OEM battery checks, the accessibility/contrast
+audit and the signed release are still pending. The 2026-11-09 Huawei pass
+closed the rest of the checklist except reboot, which EMUI blocks by not
+delivering `BOOT_COMPLETED`; see `docs/device-run-2026-11-09.md`.
 
 The completion work is in `docs/completion-plan.md`. The v0.6 M0 slice already
 fixed Android cloud backup, the CI gap and the documentation claims; the
@@ -31,7 +38,7 @@ product/visual and feature work is the active program.
 | GPL-3.0-only and attribution | Pass | `LICENSE`, `ADDITIONAL_TERMS.md`, `CREDITS.md`, About screen | Keep |
 | Android + Linux both build | Pass at v0.9 | Debug APK and Linux debug pass locally; release workflow builds both | Add Linux build to the normal CI |
 | No new dependency without reason | Pass | Existing stack only; no analytics/ads/Firebase/Supabase | Keep |
-| Do not weaken tests or security | Pass | 131 app + 85 core tests; pairing/TLS/replay, app-lock hashing, MCP auth/session and snapshot tests | Keep |
+| Do not weaken tests or security | Pass | 135 app + 85 core tests; pairing/TLS/replay, app-lock hashing and above-route coverage, MCP auth/session and snapshot tests | Keep |
 | Reference-first for components, styles, motion | Pass (v0.6) | Nunito, expanded `ManeColors`, `ManeType`, component themes, `lib/core/widgets` kit, floating shell and screen sweep; `test/visual_kit_test.dart` and `docs/screenshots/` | Keep |
 | Reference map describes shipped state | Pass (v0.6) | `docs/reference-map.md` now names the shipped kit and the visual deviation | Keep |
 | Every schema change has migration + real-row test | Pass | v1→v8 migration tests, including real v5, v6 and v7 fixtures | Keep |
@@ -45,6 +52,38 @@ product/visual and feature work is the active program.
 
 Severity: P0 blocks all use; P1 blocks v1.0 or can lose/leak data; P2 degrades a
 real scenario; P3 polish.
+
+### P1 — App lock could be bypassed by a pushed route (fixed during the device run)
+
+**Evidence:** `AppLockGate` wrapped only `AppShell` inside `MaterialApp.home`, so
+a route pushed above the shell rendered above the PIN overlay. Backgrounding
+for 35–45 seconds while Settings was open resumed to Settings without a prompt.
+
+**Remediation (done):** the gate is in `MaterialApp.builder`, above the
+Navigator, with `home: const AppShell()`. A widget regression test locks, pushes
+a route, resumes with `graceSeconds: 0` and asserts the PIN screen covers the
+route. Device-verified with a cold start and with Settings open.
+
+### P2 — Notification actions did nothing and snooze was cancelled (fixed during the device run)
+
+**Evidence:** actions defaulted to `showsUserInterface: false`, so they sent a
+broadcast to an undeclared receiver, and every resume rebuild called
+`cancelAllPendingNotifications()`, wiping one-off snoozes.
+
+**Remediation (done):** both actions use the foreground path. `NotificationService`
+tracks planner-owned IDs and cancels only those; `cancelAll()` still clears
+everything. A test asserts the foreground flag and that a scheduled snooze
+survives a rebuild. Device-verified with Snooze and Mark complete.
+
+### P2 — CSV re-import duplicated the plan (fixed during the device run)
+
+**Evidence:** importing an exported entries CSV into the same database doubled
+rows because dedupe only searched `source='csv'` rows.
+
+**Remediation (done):** `hasEntryLike(...)` matches live entries by title,
+space, date, all-day flag and minutes. The same 7-row CSV on the phone reported
+0 imported, 7 duplicates and left 7 entries. A regression test covers export and
+re-import into the same repository.
 
 ### P1 — Android auto-backup could copy pairing secrets to the cloud (fixed v0.6)
 

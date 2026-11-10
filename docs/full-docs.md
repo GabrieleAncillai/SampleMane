@@ -905,6 +905,15 @@ references or documents a deviation, the real-device checklist passes, and
 succeed. v0.9 is shipped; only the v1.0 device verification, accessibility
 and release work remains.
 
+**Device pass, 2026-11-09:** the Huawei MAR-LX3A run (Android 10 / API 29,
+debug 0.9.0+9) passed install, notifications, timezone, LAN with the manual
+host/port fallback, MCP, JSON backup and the entry CSV round-trip after fixing
+duplication, and app lock after fixing a pushed-route bypass. It also fixed
+notification actions and snooze survival. The widget and OEM battery checks
+still need the user. Reboot rescheduling fails on EMUI because `BOOT_COMPLETED`
+does not reach the plugin receiver; opening Mane rebuilds the queue without
+duplicates. See [device-run-2026-11-09.md](device-run-2026-11-09.md).
+
 ## 10. Contributing
 
 Mane is open source under GPL-3.0-only. Pull requests are welcome. Read

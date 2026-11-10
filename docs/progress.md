@@ -4,8 +4,11 @@ Keep this file current. A fresh context window should be able to resume from it.
 
 ## Current milestone
 
-v0.9 is complete. The active program is v1.0 only: real-device verification,
-the accessibility/contrast audit, final docs and a signed release. The
+v0.9 is complete. The v1.0 program is real-device verification, the
+accessibility/contrast audit, final docs and a signed release. The 2026-11-09
+Huawei run fixed the app-lock bypass, notification actions/snooze and CSV
+import duplication; see `docs/device-run-2026-11-09.md`. The widget and OEM
+battery checks still need the user, and reboot is blocked by EMUI. The
 constraint audit is in `docs/compliance-audit.md`.
 
 ## Reference notes
@@ -309,13 +312,46 @@ constraint audit is in `docs/compliance-audit.md`.
 - Validation: format check clean, analyze clean, both suites pass, Linux debug
   and Android debug APK build.
 
+### v1.0 device verification (in progress)
+
+- 2026-11-09: HUAWEI MAR-LX3A, Android 10 / API 29, debug 0.9.0+9. Full log in
+  `docs/device-run-2026-11-09.md`.
+- Fixed: the app-lock gate moved into `MaterialApp.builder`, above the Navigator,
+  so Settings and other pushed routes cannot cover the PIN pad. A regression
+  test locks, pushes a route, resumes and asserts the gate still covers it.
+- Fixed: notification actions use the foreground path (`showsUserInterface`),
+  and a resume rebuild cancels only planner-owned IDs so a one-off snooze
+  survives. Timezone lookup uses `timeZoneLocation()` and scheduling errors are
+  logged.
+- Fixed: CSV entry import now uses `hasEntryLike(...)`, matching any live entry
+  by title, space, date, all-day flag and minutes, not only earlier CSV rows.
+  The same CSV re-imported on the phone reported 0 imported, 7 duplicates and
+  left 7 entries.
+- Passed on the device: first launch/About, notifications on API 29 (delivery,
+  grouping, taps, edit time, custom time, quiet/work suppression, snooze,
+  complete), timezone travel, LAN pairing with manual host/port, MCP including
+  session `DELETE` and linked inventory, JSON backup/import, and app lock.
+- Blocked or failed: the widget needs the user's launcher; OEM battery needs the
+  EMUI path; reboot fails because EMUI does not deliver `BOOT_COMPLETED` even
+  with the app whitelisted and auto-launch enabled. Opening Mane rebuilt the
+  queue without duplicates.
+- Tests: 135 app/database/widget tests and 85 core tests.
+- Validation: format check clean (144 files), analyze clean, both suites pass,
+  Linux debug and Android debug APK build.
+
 ## Known limitations
 
-- Real-device notification delivery, reboot rescheduling, battery optimization
-  and timezone changes still need the user's Android device checklist. The
-  Pixel 9 emulator already verified permission, exact alarms, grouped delivery,
-  timezone travel and reboot rescheduling; OEM battery behavior and real LAN
-  peers are the remaining gap.
+- The 2026-11-09 real-device run passed install, notifications on API 29,
+  timezone, LAN, MCP, backup/CSV and app lock. The Android 13 permission and
+  Android 12 exact-alarm paths are N/A on that API 29 phone and are covered by
+  the Pixel 9 emulator baseline. The widget and OEM battery checks still need
+  the user.
+- Reboot rescheduling fails on EMUI 10: the queued alarms are persisted in
+  `scheduled_notifications.xml`, but `BOOT_COMPLETED` does not reach the plugin
+  receiver after a reboot. A manual launch rebuilds the queue without
+  duplicates. This is documented as an OEM limitation, not a pass.
+- Automatic backup rotation is implemented and unit-tested; pruning older copies
+  was not forced on the device by changing the clock.
 - The Android manifest has the plugin boot receiver. A separate
   `TIMEZONE_CHANGED` receiver is not implemented; the app rebuilds the queue on
   resume and after the device zone is re-read.
@@ -350,9 +386,10 @@ constraint audit is in `docs/compliance-audit.md`.
   never merged into the local plan. A companion app's ContentProvider is not
   integrated because no app and authority were specified; the documented JSON
   export is the v0.4 path and the GymMane JSON import is the v0.8 path.
-- mDNS depends on the platform daemon (Avahi on Linux, NSD on Android) and still
-  needs the user's real-device check. Pairing sessions live in memory and are
-  cancelled by an app restart.
+- mDNS depends on the platform daemon (Avahi on Linux, NSD on Android). The
+  phone reports "Network discovery is unavailable", so manual host/port is the
+  verified fallback. Pairing sessions live in memory and are cancelled by an app
+  restart.
 - The Android home-screen widget refreshes when the app starts or resumes; it
   is Android-only and has no configuration screen.
 - Accessibility is a first pass, not a certified screen-reader or contrast
@@ -376,7 +413,8 @@ constraint audit is in `docs/compliance-audit.md`.
 
 ## Next three steps
 
-1. Run the full real-device checklist, including the v0.7–v0.9 flows.
+1. Add the Mane widget on the phone and finish the OEM battery path, then record
+   both in `docs/device-run-2026-11-09.md`.
 2. Run the accessibility/contrast pass and fix what is fixable.
 3. Tag v1.0 only when every scenario in `docs/completion-plan.md` passes and a
    signed release succeeds.
@@ -390,13 +428,14 @@ constraint audit is in `docs/compliance-audit.md`.
   (143 hand-written Dart files; generated `.g.dart` and ARB outputs excluded,
   matching CI).
 - `flutter analyze --no-fatal-infos` — no issues.
-- `flutter test` — 131 passed (database, migrations v1→v8, timezone, calendar,
+- `flutter test` — 135 passed (database, migrations v1→v8, timezone, calendar,
   tags, reminders and custom times, backup and pairing-secret exclusion, shift
   editor and checklists, home inventory and purchase history, shopping grouping,
-  app lock, ICS, CSV, GymMane import, companion import, pairing crypto,
-  certificates, TLS pinning, replay rejection, MCP tools/sessions/SSE, sync
-  orchestration and snapshot persistence, search, widget data, l10n enforcement
-  and widget flows).
+  app lock and the pushed-route regression, ICS, CSV including same-plan
+  dedupe, GymMane import, companion import, pairing crypto, certificates, TLS
+  pinning, replay rejection, MCP tools/sessions/SSE, sync orchestration and
+  snapshot persistence, search, widget data, notification actions, l10n
+  enforcement and widget flows).
 - `(cd packages/mane_core && dart test)` — 85 passed (recurrence including
   constant-time ordinals, expansion, shifts, timezones, local windows, sleep).
 - `flutter build linux --debug` — ok, including the Bonsoir plugin.
@@ -410,3 +449,7 @@ constraint audit is in `docs/compliance-audit.md`.
   travel moved 9:00 AM Bogota to 3:00 PM Madrid, reboot kept the entry and
   rescheduled both reminders; the 10-minute reminder fired after advancing the
   clock. `dumpsys alarm` showed exact alarms after reboot.
+- Huawei MAR-LX3A (debug 0.9.0+9, Android 10): the full result table, fixed
+  defects, reboot limitation and screenshot list are in
+  `docs/device-run-2026-11-09.md`. The final APK was rebuilt and reinstalled; the
+  preserved plan launched normally.
