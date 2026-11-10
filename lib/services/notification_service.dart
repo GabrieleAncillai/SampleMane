@@ -12,13 +12,19 @@ import 'reminder_planner.dart';
 /// All schedule arithmetic lives in `reminder_planner.dart`; this class only
 /// initialises the plugin, asks for permissions and signs the plan.
 class NotificationService {
-  NotificationService();
+  NotificationService() : _plugin = FlutterLocalNotificationsPlugin();
+
+  @visibleForTesting
+  NotificationService.withPlugin(this._plugin, {String deviceTimeZone = 'UTC'})
+    : _deviceTimeZone = deviceTimeZone,
+      _ready = true;
 
   static const channelId = 'mane_reminders';
   static const channelName = 'Mane reminders';
   static const channelDescription = 'Entry and all-day reminders';
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin;
+  final Set<int> _scheduledIds = {};
   bool _ready = false;
   String _deviceTimeZone = 'UTC';
   String? _pendingEntryId;
@@ -34,6 +40,24 @@ class NotificationService {
   /// Action identifiers used by the Android notification buttons.
   static const snoozeAction = 'snooze';
   static const completeAction = 'complete';
+
+  /// Actions must open the app: the plugin's silent action path needs a
+  /// declared background receiver, whereas the foreground path delivers the
+  /// action to [onAction] and cancels the notification for us.
+  static const reminderDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      actions: [
+        AndroidNotificationAction(snoozeAction, 'Snooze 10 minutes', showsUserInterface: true),
+        AndroidNotificationAction(completeAction, 'Mark complete', showsUserInterface: true),
+      ],
+    ),
+    linux: LinuxNotificationDetails(),
+  );
 
   bool get isReady => _ready;
 
@@ -115,11 +139,17 @@ class NotificationService {
     }
   }
 
-  /// Replaces the pending queue with [plans].
+  /// Replaces the planner-owned pending queue with [plans].
+  ///
+  /// Only IDs this service scheduled are cancelled, so a one-off snooze is not
+  /// wiped by the resume rebuild that follows a notification action.
   Future<void> reschedule(List<PlannedReminder> plans) async {
     if (!_ready) return;
     try {
-      await _plugin.cancelAllPendingNotifications();
+      for (final id in _scheduledIds.toList()) {
+        await _plugin.cancel(id: id);
+        _scheduledIds.remove(id);
+      }
       if (plans.isEmpty) return;
 
       var exact = true;
@@ -132,45 +162,32 @@ class NotificationService {
           ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle;
 
-      const details = NotificationDetails(
-        android: AndroidNotificationDetails(
-          channelId,
-          channelName,
-          channelDescription: channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
-          actions: [
-            AndroidNotificationAction(snoozeAction, 'Snooze 10 minutes'),
-            AndroidNotificationAction(completeAction, 'Mark complete'),
-          ],
-        ),
-        linux: LinuxNotificationDetails(),
-      );
-
       for (final plan in plans) {
         try {
-          final scheduled = tz.TZDateTime.from(plan.fireAt, tz.getLocation(_deviceTimeZone));
+          final scheduled = tz.TZDateTime.from(plan.fireAt, timeZoneLocation(_deviceTimeZone));
           await _plugin.zonedSchedule(
             id: plan.notificationId,
             title: plan.title,
             body: plan.body.isEmpty ? null : plan.body,
             scheduledDate: scheduled,
-            notificationDetails: details,
+            notificationDetails: reminderDetails,
             androidScheduleMode: mode,
             payload: _encodePayload(plan.entryId, plan.date),
           );
-        } catch (_) {
-          // One bad row must not take the rest of the queue with it.
+          _scheduledIds.add(plan.notificationId);
+        } catch (error) {
+          debugPrint('Reminder schedule failed: $error');
         }
       }
-    } catch (_) {
-      // The plugin is best-effort on platforms without a notification daemon.
+    } catch (error) {
+      debugPrint('Reminder reschedule failed: $error');
     }
   }
 
   Future<void> cancelAll() async {
     if (!_ready) return;
     try {
+      _scheduledIds.clear();
       await _plugin.cancelAllPendingNotifications();
     } catch (_) {
       // Keep the planner usable when the platform channel is unavailable.
@@ -189,26 +206,13 @@ class NotificationService {
   }) async {
     if (!_ready) return;
     try {
-      final scheduled = tz.TZDateTime.from(fireAt, tz.getLocation(_deviceTimeZone));
+      final scheduled = tz.TZDateTime.from(fireAt, timeZoneLocation(_deviceTimeZone));
       await _plugin.zonedSchedule(
         id: notificationId,
         title: title,
         body: body.isEmpty ? null : body,
         scheduledDate: scheduled,
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            channelId,
-            channelName,
-            channelDescription: channelDescription,
-            importance: Importance.high,
-            priority: Priority.high,
-            actions: [
-              AndroidNotificationAction(snoozeAction, 'Snooze 10 minutes'),
-              AndroidNotificationAction(completeAction, 'Mark complete'),
-            ],
-          ),
-          linux: LinuxNotificationDetails(),
-        ),
+        notificationDetails: reminderDetails,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: _encodePayload(entryId, date),
       );
