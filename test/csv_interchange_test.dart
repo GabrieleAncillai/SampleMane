@@ -105,17 +105,60 @@ void main() {
         updatedAt: now,
       ),
     );
-    final service = CsvInterchangeService(repository);
-    final csv = await service.exportEntries(
+    final csv = await CsvInterchangeService(repository).exportEntries(
       start: LocalDate.parse('2026-11-09'),
       end: LocalDate.parse('2026-11-09'),
       viewerTimeZone: 'Europe/Madrid',
     );
-    final first = await service.importEntries(csv, defaultTimeZone: 'Europe/Madrid');
-    final second = await service.importEntries(csv, defaultTimeZone: 'Europe/Madrid');
+
+    final target = AppDatabase(NativeDatabase.memory(), defaultTimeZone: 'Europe/Madrid');
+    addTearDown(target.close);
+    await target.seedDefaults();
+    final targetService = CsvInterchangeService(PlannerRepository(target));
+    final first = await targetService.importEntries(csv, defaultTimeZone: 'Europe/Madrid');
+    final second = await targetService.importEntries(csv, defaultTimeZone: 'Europe/Madrid');
     expect(first.imported, 1);
     expect(second.imported, 0);
     expect(second.duplicates, 1);
+  });
+
+  test('re-importing an exported CSV into the same plan does not duplicate entries', () async {
+    final now = DateTime.utc(2026, 11, 1, 8);
+    await database.saveEntry(
+      Entry(
+        id: 'bins',
+        spaceId: 'home',
+        title: 'Bins',
+        date: LocalDate.parse('2026-11-09'),
+        allDay: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await database.saveEntry(
+      Entry(
+        id: 'standup',
+        spaceId: 'work',
+        title: 'Standup',
+        date: LocalDate.parse('2026-11-09'),
+        startMinute: 9 * 60,
+        endMinute: 9 * 60 + 30,
+        timeZone: 'Europe/Madrid',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    final start = LocalDate.parse('2026-11-09');
+    final service = CsvInterchangeService(repository);
+    final csv = await service.exportEntries(start: start, end: start, viewerTimeZone: 'Europe/Madrid');
+    final before = await database.watchEntriesBetween(start, start, 'Europe/Madrid').first;
+
+    final report = await service.importEntries(csv, defaultTimeZone: 'Europe/Madrid');
+    final after = await database.watchEntriesBetween(start, start, 'Europe/Madrid').first;
+
+    expect(report.imported, 0);
+    expect(report.duplicates, before.length);
+    expect(after.length, before.length);
   });
 
   test('shopping and inventory CSV round-trip and dedupe', () async {

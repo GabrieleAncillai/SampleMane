@@ -75,6 +75,22 @@ class PlannerRepository {
   Future<bool> hasImportedEntry(String source, String externalId) =>
       _database.hasImportedEntry(source, externalId);
 
+  Future<bool> hasEntryLike({
+    required String title,
+    required String spaceId,
+    required LocalDate date,
+    required bool allDay,
+    required int? startMinute,
+    required int? endMinute,
+  }) => _database.hasEntryLike(
+    title: title,
+    spaceId: spaceId,
+    date: date,
+    allDay: allDay,
+    startMinute: startMinute,
+    endMinute: endMinute,
+  );
+
   Future<Entry?> readImportedEntry(String source, String externalId) =>
       _database.readImportedEntry(source, externalId);
 

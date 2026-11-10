@@ -177,7 +177,16 @@ class CsvInterchangeService {
         startMinute: startMinute,
         endMinute: endMinute,
       );
-      if (await _repository.hasImportedEntry('csv', externalId)) {
+      final storedStart = allDay ? null : startMinute;
+      final storedEnd = allDay ? null : endMinute;
+      if (await _repository.hasEntryLike(
+        title: title,
+        spaceId: spaceId,
+        date: date,
+        allDay: allDay,
+        startMinute: storedStart,
+        endMinute: storedEnd,
+      )) {
         duplicates++;
         continue;
       }

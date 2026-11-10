@@ -1069,6 +1069,32 @@ class AppDatabase extends _$AppDatabase {
     return row != null;
   }
 
+  /// Whether a live entry already matches the identifying fields a CSV row can
+  /// express. CSV has no stable ids, so matching user entries as well as
+  /// earlier imports is what keeps a round-trip from duplicating the plan.
+  Future<bool> hasEntryLike({
+    required String title,
+    required String spaceId,
+    required LocalDate date,
+    required bool allDay,
+    required int? startMinute,
+    required int? endMinute,
+  }) async {
+    final row =
+        await (select(entryRecords)..where(
+              (row) =>
+                  row.deletedAt.isNull() &
+                  row.title.equals(title) &
+                  row.spaceId.equals(spaceId) &
+                  row.dateKey.equals(date.key) &
+                  row.allDay.equals(allDay) &
+                  row.startMinute.equalsNullable(startMinute) &
+                  row.endMinute.equalsNullable(endMinute),
+            ))
+            .getSingleOrNull();
+    return row != null;
+  }
+
   Future<Entry?> readImportedEntry(String source, String externalId) async {
     final row = await (select(
       entryRecords,
